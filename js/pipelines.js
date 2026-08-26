@@ -49,33 +49,42 @@ async function fetchPipelineData() {
         .replace(/^refs\/tags\//, 'Tag: ');
     }
 
-    function parseAuthor(runObj, triggerType) {
-      const candidate = 
-        runObj.requestedFor?.displayName || 
-        runObj.requestedBy?.displayName || 
-        runObj.requestedFor?.uniqueName || 
-        runObj.requestedBy?.uniqueName ||
-        runObj.variables?.['Build.RequestedFor']?.value ||
-        runObj.variables?.['Build.RequestedForEmail']?.value ||
-        runObj.triggerInfo?.['pr.sender.name'] ||
-        runObj.triggerInfo?.['ci.actor.name'] ||
-        runObj.lastChangedBy?.displayName ||
-        runObj.lastChangedBy?.uniqueName ||
-        runObj.sourceBranchAuthor?.displayName;
+    // Resolves the real triggering user (Display Name or Email) and rejects the pipeline name itself
+    function parseAuthor(runObj, pipelineName, triggerType) {
+      const candidates = [
+        runObj.requestedFor?.displayName,
+        runObj.requestedFor?.uniqueName,
+        runObj.requestedFor?.mailAddress,
+        runObj.requestedBy?.displayName,
+        runObj.requestedBy?.uniqueName,
+        runObj.requestedBy?.mailAddress,
+        runObj.variables?.['Build.RequestedFor']?.value,
+        runObj.variables?.['Build.RequestedForEmail']?.value,
+        runObj.variables?.['Build.QueuedBy']?.value,
+        runObj.variables?.['Build.QueuedByEmail']?.value,
+        runObj.triggerInfo?.['pr.sender.name'],
+        runObj.triggerInfo?.['ci.actor.name'],
+        runObj.lastChangedBy?.displayName,
+        runObj.lastChangedBy?.uniqueName
+      ];
 
-      if (candidate && candidate.trim() !== '') {
-        return candidate.trim();
+      for (const raw of candidates) {
+        if (raw && typeof raw === 'string') {
+          const val = raw.trim();
+          // Filter out empty values and strings that match the pipeline name or system accounts
+          if (
+            val !== '' && 
+            val.toLowerCase() !== (pipelineName || '').toLowerCase() &&
+            !val.toLowerCase().includes('microsoft.visualstudio.services')
+          ) {
+            return val;
+          }
+        }
       }
 
-      if (triggerType === 'Auto (Scheduled)') {
-        return 'Scheduled Timer';
-      }
-      if (triggerType === 'Auto (CI)') {
-        return 'CI Automation';
-      }
-      if (triggerType === 'Auto (PR)') {
-        return 'PR Automation';
-      }
+      if (triggerType === 'Auto (Scheduled)') return 'Scheduled Timer';
+      if (triggerType === 'Auto (CI)') return 'CI Automation';
+      if (triggerType === 'Auto (PR)') return 'PR Automation';
       return 'Automated System';
     }
 
@@ -102,10 +111,12 @@ async function fetchPipelineData() {
         try {
           let runsObtained = [];
 
+          // 1. Fetch Build Runs API
           const bUrl = `https://dev.azure.com/${org}/${project}/_apis/build/builds?definitions=${pipe.id}&$top=${perPipelineRuns}&queryOrder=finishTimeDescending&api-version=${API_VERSION}`;
           const bData = await fetchAzDo(bUrl, authHeader);
           runsObtained = bData?.value || [];
 
+          // 2. Fetch YAML Pipeline Runs API if empty
           if (runsObtained.length === 0) {
             const rUrl = `https://dev.azure.com/${org}/${project}/_apis/pipelines/${pipe.id}/runs?api-version=${API_VERSION}`;
             const rData = await fetchAzDo(rUrl, authHeader);
@@ -116,13 +127,12 @@ async function fetchPipelineData() {
               sourceBranch: yr.resources?.repositories?.self?.refName || yr.resources?.repositories?.self?.version || 'main',
               reason: yr.variables?.['Build.Reason']?.value || 'manual',
               requestedFor: { 
-                displayName: yr.variables?.['Build.RequestedFor']?.value || 
-                             yr.variables?.['Build.RequestedForEmail']?.value || 
-                             yr.variables?.['Build.QueuedBy']?.value || 
-                             yr.pipeline?.name 
+                displayName: yr.variables?.['Build.RequestedFor']?.value || yr.variables?.['Build.QueuedBy']?.value,
+                uniqueName: yr.variables?.['Build.RequestedForEmail']?.value || yr.variables?.['Build.QueuedByEmail']?.value
               },
               requestedBy: {
-                displayName: yr.variables?.['Build.RequestedFor']?.value || yr.variables?.['Build.QueuedBy']?.value
+                displayName: yr.variables?.['Build.RequestedFor']?.value || yr.variables?.['Build.QueuedBy']?.value,
+                uniqueName: yr.variables?.['Build.RequestedForEmail']?.value || yr.variables?.['Build.QueuedByEmail']?.value
               },
               result: yr.result || yr.state || 'unknown',
               finishTime: yr.finishedDate || yr.createdDate
@@ -134,7 +144,7 @@ async function fetchPipelineData() {
             const isSuccess = result === 'succeeded';
             const trigger = parseTriggerType(b.reason);
             const isAuto = trigger.startsWith('Auto');
-            const author = parseAuthor(b, trigger);
+            const author = parseAuthor(b, pipe.name, trigger);
             const branch = parseBranch(b.sourceBranch);
 
             summaryMap[pipe.name].total++;
