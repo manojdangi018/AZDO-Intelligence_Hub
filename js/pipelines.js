@@ -6,11 +6,11 @@ async function fetchPipelineData() {
 
   const authHeader = 'Basic ' + btoa(':' + pat);
   showSection('pipelines');
-  setStatus(`Scanning pipeline runs, branches and triggering users in descending order...`, 'info');
+  setStatus(`Fetching recent pipeline runs and triggered users in real-time...`, 'info');
 
   try {
-    // Step 1: Fetch definitions for the summary table
-    const defsUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/build/definitions?api-version=${API_VERSION}&$top=500`;
+    // 1. Fetch definitions to populate the summary table inventory
+    const defsUrl = `https://dev.azure.com/${org}/${project}/_apis/build/definitions?api-version=${API_VERSION}&$top=500`;
     let definitions = [];
     try {
       const defsData = await fetchAzDo(defsUrl, authHeader);
@@ -31,9 +31,10 @@ async function fetchPipelineData() {
       };
     });
 
-    // Step 2: Fetch project-wide build runs with complete user details
-    const totalToFetch = Math.max(perPipelineRuns * 10, 150);
-    const buildsUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/build/builds?api-version=${API_VERSION}&$top=${totalToFetch}&queryOrder=queueTimeDescending`;
+    // 2. Fetch project-level build runs with full entity expansion
+    // This provides exact requestedFor identities and sourceBranch refs for every single run
+    const totalRunsToScan = Math.max(perPipelineRuns * Math.min(definitions.length || 15, 30), 100);
+    const buildsUrl = `https://dev.azure.com/${org}/${project}/_apis/build/builds?api-version=${API_VERSION}&$top=${totalRunsToScan}&queryOrder=queueTimeDescending`;
     
     const buildsData = await fetchAzDo(buildsUrl, authHeader);
     const rawBuilds = buildsData?.value || [];
@@ -48,7 +49,7 @@ async function fetchPipelineData() {
       return 'Manual';
     }
 
-    // Resolves the exact active branch
+    // Resolves the real branch name without falling back to main
     function parseBranch(b) {
       let branch = b.sourceBranch || 
                    b.triggerInfo?.['pr.sourceBranch'] || 
@@ -56,7 +57,7 @@ async function fetchPipelineData() {
                    b.repository?.defaultBranch ||
                    '';
 
-      if (!branch) return 'main';
+      if (!branch) return 'N/A';
 
       return branch
         .replace(/^refs\/heads\//i, '')
@@ -64,27 +65,26 @@ async function fetchPipelineData() {
         .replace(/^refs\/tags\//i, 'Tag: ');
     }
 
-    // Resolves the actual user's Display Name or Email
-    function parseAuthor(b, pipeName, triggerType) {
-      const candidates = [
+    // Resolves the real user display name or email
+    function parseAuthor(b, triggerType) {
+      const nameCandidates = [
         b.requestedFor?.displayName,
         b.requestedBy?.displayName,
         b.requestedFor?.uniqueName,
         b.requestedBy?.uniqueName,
-        b.requestedFor?.mailAddress,
         b.triggerInfo?.['pr.sender.name'],
         b.triggerInfo?.['ci.actor.name'],
         b.lastChangedBy?.displayName,
         b.lastChangedBy?.uniqueName
       ];
 
-      for (const val of candidates) {
+      for (const val of nameCandidates) {
         if (val && typeof val === 'string') {
           const clean = val.trim();
           if (
             clean !== '' &&
             !clean.toLowerCase().includes('microsoft.visualstudio.services') &&
-            clean.toLowerCase() !== (pipeName || '').toLowerCase()
+            clean.toLowerCase() !== (b.definition?.name || '').toLowerCase()
           ) {
             return clean;
           }
@@ -105,7 +105,7 @@ async function fetchPipelineData() {
       const isSuccess = result === 'succeeded';
       const trigger = parseTriggerType(b.reason);
       const isAuto = trigger.startsWith('Auto');
-      const author = parseAuthor(b, pipeName, trigger);
+      const author = parseAuthor(b, trigger);
       const branch = parseBranch(b);
 
       if (!summaryMap[pipeName]) {
@@ -141,7 +141,7 @@ async function fetchPipelineData() {
       });
     });
 
-    // Sort strictly in descending order (latest runs at top)
+    // Sort strictly in descending order (latest runs first)
     allRuns.sort((a, b) => b.rawTimestamp - a.rawTimestamp);
 
     rawStore.pipelineSummaries = Object.values(summaryMap);
@@ -172,7 +172,7 @@ async function fetchPipelineData() {
     const chartData = activeSummaries.length > 0 ? activeSummaries.map(p => p.succeeded) : rawStore.pipelineSummaries.slice(0, 15).map(p => p.succeeded);
     renderChart(chartLabels, chartData, 'Successful Builds (Top Pipelines)');
 
-    setStatus(`Loaded ${rawStore.pipelineSummaries.length} pipelines with ${allRuns.length} total runs sorted by newest first.`, 'success');
+    setStatus(`Loaded ${rawStore.pipelineSummaries.length} pipelines with ${allRuns.length} total runs in descending order.`, 'success');
   } catch (err) {
     setStatus(`Error fetching pipelines: ${err.message}`, 'error');
   }
