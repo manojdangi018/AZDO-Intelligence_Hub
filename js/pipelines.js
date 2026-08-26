@@ -50,19 +50,31 @@ async function fetchPipelineData() {
     }
 
     function parseAuthor(runObj, triggerType) {
-      const userCandidate = runObj.requestedFor?.displayName || 
-                            runObj.requestedBy?.displayName || 
-                            runObj.variables?.['Build.RequestedFor']?.value ||
-                            runObj.lastChangedBy?.displayName;
+      const candidate = 
+        runObj.requestedFor?.displayName || 
+        runObj.requestedBy?.displayName || 
+        runObj.requestedFor?.uniqueName || 
+        runObj.requestedBy?.uniqueName ||
+        runObj.variables?.['Build.RequestedFor']?.value ||
+        runObj.variables?.['Build.RequestedForEmail']?.value ||
+        runObj.triggerInfo?.['pr.sender.name'] ||
+        runObj.triggerInfo?.['ci.actor.name'] ||
+        runObj.lastChangedBy?.displayName ||
+        runObj.lastChangedBy?.uniqueName ||
+        runObj.sourceBranchAuthor?.displayName;
 
-      if (triggerType === 'Manual') {
-        return userCandidate || 'Manual User';
+      if (candidate && candidate.trim() !== '') {
+        return candidate.trim();
       }
-      if (triggerType === 'Auto (PR)') {
-        return runObj.triggerInfo?.['pr.sender.name'] || userCandidate || 'PR Author';
-      }
+
       if (triggerType === 'Auto (Scheduled)') {
         return 'Scheduled Timer';
+      }
+      if (triggerType === 'Auto (CI)') {
+        return 'CI Automation';
+      }
+      if (triggerType === 'Auto (PR)') {
+        return 'PR Automation';
       }
       return 'Automated System';
     }
@@ -103,7 +115,15 @@ async function fetchPipelineData() {
               buildNumber: yr.name || `#${yr.id}`,
               sourceBranch: yr.resources?.repositories?.self?.refName || yr.resources?.repositories?.self?.version || 'main',
               reason: yr.variables?.['Build.Reason']?.value || 'manual',
-              requestedFor: { displayName: yr.variables?.['Build.RequestedFor']?.value || yr.variables?.['Build.RequestedForEmail']?.value || 'Manual User' },
+              requestedFor: { 
+                displayName: yr.variables?.['Build.RequestedFor']?.value || 
+                             yr.variables?.['Build.RequestedForEmail']?.value || 
+                             yr.variables?.['Build.QueuedBy']?.value || 
+                             yr.pipeline?.name 
+              },
+              requestedBy: {
+                displayName: yr.variables?.['Build.RequestedFor']?.value || yr.variables?.['Build.QueuedBy']?.value
+              },
               result: yr.result || yr.state || 'unknown',
               finishTime: yr.finishedDate || yr.createdDate
             }));
