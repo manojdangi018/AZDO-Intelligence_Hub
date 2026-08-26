@@ -31,6 +31,7 @@ async function fetchPipelineData() {
         }
       });
     }
+
     function parseTriggerType(reasonStr) {
       const r = (reasonStr || '').toLowerCase();
       if (r.includes('batchedci') || r.includes('individualci') || r === 'ci') return 'Auto (CI)';
