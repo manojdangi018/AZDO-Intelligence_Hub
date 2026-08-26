@@ -6,9 +6,10 @@ async function fetchPipelineData() {
 
   const authHeader = 'Basic ' + btoa(':' + pat);
   showSection('pipelines');
-  setStatus(`Scanning up to ${perPipelineRuns} runs per pipeline with accurate branch, trigger & author details...`, 'info');
+  setStatus(`Scanning pipeline definitions and recent runs in descending order...`, 'info');
 
   try {
+    // 1. Fetch modern & classic pipeline definitions
     const modernUrl = `https://dev.azure.com/${org}/${project}/_apis/pipelines?api-version=${API_VERSION}`;
     const classicUrl = `https://dev.azure.com/${org}/${project}/_apis/build/definitions?api-version=${API_VERSION}`;
 
@@ -41,41 +42,57 @@ async function fetchPipelineData() {
       return 'Manual';
     }
 
-    function parseBranch(refStr) {
-      if (!refStr) return 'main';
-      return refStr
-        .replace(/^refs\/heads\//, '')
-        .replace(/^refs\/pull\/\d+\/merge/, 'PR Merge')
-        .replace(/^refs\/tags\//, 'Tag: ');
+    // Resolves branch name without defaulting to main
+    function parseBranch(bObj) {
+      const rawBranch = bObj.sourceBranch || 
+                        bObj.resources?.repositories?.self?.refName || 
+                        bObj.resources?.repositories?.self?.version ||
+                        bObj.triggerInfo?.['pr.sourceBranch'] ||
+                        bObj.parameters?.['system.pullRequest.sourceBranch'];
+
+      if (!rawBranch) return 'main';
+
+      return rawBranch
+        .replace(/^refs\/heads\//i, '')
+        .replace(/^refs\/pull\/\d+\/merge/i, 'PR Merge')
+        .replace(/^refs\/tags\//i, 'Tag: ');
     }
 
-    function parseAuthor(runObj, triggerType) {
-      const candidate = 
-        runObj.requestedFor?.displayName || 
-        runObj.requestedBy?.displayName || 
-        runObj.requestedFor?.uniqueName || 
-        runObj.requestedBy?.uniqueName ||
-        runObj.variables?.['Build.RequestedFor']?.value ||
-        runObj.variables?.['Build.RequestedForEmail']?.value ||
-        runObj.triggerInfo?.['pr.sender.name'] ||
-        runObj.triggerInfo?.['ci.actor.name'] ||
-        runObj.lastChangedBy?.displayName ||
-        runObj.lastChangedBy?.uniqueName ||
-        runObj.sourceBranchAuthor?.displayName;
+    // Extracts the real triggering user name / email
+    function parseAuthor(bObj, pipeName, triggerType) {
+      const candidates = [
+        bObj.requestedFor?.displayName,
+        bObj.requestedBy?.displayName,
+        bObj.requestedFor?.uniqueName,
+        bObj.requestedBy?.uniqueName,
+        bObj.requestedFor?.mailAddress,
+        bObj.requestedBy?.mailAddress,
+        bObj.triggerInfo?.['pr.sender.name'],
+        bObj.triggerInfo?.['ci.actor.name'],
+        bObj.triggerInfo?.['pr.sender.email'],
+        bObj.lastChangedBy?.displayName,
+        bObj.lastChangedBy?.uniqueName,
+        bObj.variables?.['Build.RequestedFor']?.value,
+        bObj.variables?.['Build.RequestedForEmail']?.value,
+        bObj.variables?.['Build.QueuedBy']?.value
+      ];
 
-      if (candidate && candidate.trim() !== '') {
-        return candidate.trim();
+      for (const raw of candidates) {
+        if (raw && typeof raw === 'string') {
+          const val = raw.trim();
+          if (
+            val !== '' && 
+            val.toLowerCase() !== (pipeName || '').toLowerCase() &&
+            !val.toLowerCase().includes('microsoft.visualstudio.services')
+          ) {
+            return val;
+          }
+        }
       }
 
-      if (triggerType === 'Auto (Scheduled)') {
-        return 'Scheduled Timer';
-      }
-      if (triggerType === 'Auto (CI)') {
-        return 'CI Automation';
-      }
-      if (triggerType === 'Auto (PR)') {
-        return 'PR Automation';
-      }
+      if (triggerType === 'Auto (Scheduled)') return 'Scheduled Timer';
+      if (triggerType === 'Auto (CI)') return 'CI Automation';
+      if (triggerType === 'Auto (PR)') return 'PR Automation';
       return 'Automated System';
     }
 
@@ -93,7 +110,7 @@ async function fetchPipelineData() {
 
     let allRuns = [];
     const pipeList = Array.from(pipelineMap.values());
-    const BATCH_SIZE = 10;
+    const BATCH_SIZE = 8;
 
     for (let i = 0; i < pipeList.length; i += BATCH_SIZE) {
       const batch = pipeList.slice(i, i + BATCH_SIZE);
@@ -102,10 +119,12 @@ async function fetchPipelineData() {
         try {
           let runsObtained = [];
 
-          const bUrl = `https://dev.azure.com/${org}/${project}/_apis/build/builds?definitions=${pipe.id}&$top=${perPipelineRuns}&queryOrder=finishTimeDescending&api-version=${API_VERSION}`;
+          // Query build runs endpoint
+          const bUrl = `https://dev.azure.com/${org}/${project}/_apis/build/builds?definitions=${pipe.id}&$top=${perPipelineRuns}&queryOrder=queueTimeDescending&api-version=${API_VERSION}`;
           const bData = await fetchAzDo(bUrl, authHeader);
           runsObtained = bData?.value || [];
 
+          // Query pipelines runs endpoint if definition runs were empty
           if (runsObtained.length === 0) {
             const rUrl = `https://dev.azure.com/${org}/${project}/_apis/pipelines/${pipe.id}/runs?api-version=${API_VERSION}`;
             const rData = await fetchAzDo(rUrl, authHeader);
@@ -113,19 +132,18 @@ async function fetchPipelineData() {
 
             runsObtained = rawYamlRuns.map(yr => ({
               buildNumber: yr.name || `#${yr.id}`,
-              sourceBranch: yr.resources?.repositories?.self?.refName || yr.resources?.repositories?.self?.version || 'main',
+              sourceBranch: yr.resources?.repositories?.self?.refName || yr.resources?.repositories?.self?.version,
               reason: yr.variables?.['Build.Reason']?.value || 'manual',
               requestedFor: { 
-                displayName: yr.variables?.['Build.RequestedFor']?.value || 
-                             yr.variables?.['Build.RequestedForEmail']?.value || 
-                             yr.variables?.['Build.QueuedBy']?.value || 
-                             yr.pipeline?.name 
+                displayName: yr.variables?.['Build.RequestedFor']?.value || yr.variables?.['Build.QueuedBy']?.value,
+                uniqueName: yr.variables?.['Build.RequestedForEmail']?.value || yr.variables?.['Build.QueuedByEmail']?.value
               },
               requestedBy: {
                 displayName: yr.variables?.['Build.RequestedFor']?.value || yr.variables?.['Build.QueuedBy']?.value
               },
               result: yr.result || yr.state || 'unknown',
-              finishTime: yr.finishedDate || yr.createdDate
+              finishTime: yr.finishedDate || yr.createdDate,
+              queueTime: yr.createdDate || yr.finishedDate
             }));
           }
 
@@ -134,8 +152,8 @@ async function fetchPipelineData() {
             const isSuccess = result === 'succeeded';
             const trigger = parseTriggerType(b.reason);
             const isAuto = trigger.startsWith('Auto');
-            const author = parseAuthor(b, trigger);
-            const branch = parseBranch(b.sourceBranch);
+            const author = parseAuthor(b, pipe.name, trigger);
+            const branch = parseBranch(b);
 
             summaryMap[pipe.name].total++;
             if (isSuccess) summaryMap[pipe.name].succeeded++;
@@ -144,6 +162,10 @@ async function fetchPipelineData() {
             if (isAuto) summaryMap[pipe.name].autoTriggers++;
             else summaryMap[pipe.name].manualTriggers++;
 
+            // Timestamp parsing for strict descending order
+            const rawTime = b.finishTime || b.startTime || b.queueTime || b.createdDate;
+            const parsedDate = rawTime ? new Date(rawTime) : new Date(0);
+
             allRuns.push({
               name: pipe.name,
               buildNumber: b.buildNumber || b.id,
@@ -151,12 +173,16 @@ async function fetchPipelineData() {
               reason: trigger,
               author: author,
               result: b.result || b.status || 'unknown',
-              finishTime: b.finishTime ? new Date(b.finishTime).toLocaleString() : (b.startTime ? 'In Progress' : 'Queued')
+              rawTimestamp: parsedDate.getTime(),
+              finishTime: rawTime ? parsedDate.toLocaleString() : (b.startTime ? 'In Progress' : 'Queued')
             });
           });
         } catch (err) {}
       }));
     }
+
+    // Sort all runs in strict descending order (newest runs first)
+    allRuns.sort((a, b) => b.rawTimestamp - a.rawTimestamp);
 
     rawStore.pipelineSummaries = Object.values(summaryMap);
     rawStore.pipelineSummariesIndex = 0;
@@ -186,7 +212,7 @@ async function fetchPipelineData() {
     const chartData = activeSummaries.length > 0 ? activeSummaries.map(p => p.succeeded) : rawStore.pipelineSummaries.slice(0, 15).map(p => p.succeeded);
     renderChart(chartLabels, chartData, 'Successful Builds (Top Pipelines)');
 
-    setStatus(`Loaded ${pipelineMap.size} pipelines with ${allRuns.length} total runs (${perPipelineRuns} runs scanned per pipeline).`, 'success');
+    setStatus(`Loaded ${pipelineMap.size} pipelines with ${allRuns.length} total runs sorted by newest first.`, 'success');
   } catch (err) {
     setStatus(`Error fetching pipelines: ${err.message}`, 'error');
   }
@@ -256,7 +282,7 @@ function renderPipelineTableBatch(append = false) {
   const html = nextBatch.map(r => `
     <tr class="hover:bg-slate-50 transition">
       <td class="p-4 font-semibold text-slate-900">${r.name}</td>
-      <td class="p-4 font-mono text-xs text-blue-600">#${r.buildNumber}</td>
+      <td class="p-4 font-mono text-xs text-blue-600 font-bold">#${r.buildNumber}</td>
       <td class="p-4 text-xs font-mono text-slate-700 font-semibold">${r.branch}</td>
       <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-semibold ${r.reason.includes('Auto') ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-700'}">${r.reason}</span></td>
       <td class="p-4 text-xs font-medium text-slate-800">${r.author}</td>
