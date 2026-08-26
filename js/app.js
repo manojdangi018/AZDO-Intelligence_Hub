@@ -1,0 +1,492 @@
+let chartInstance = null;
+let currentFocusTarget = null;
+let cachedRepos = [];
+let currentChartData = { labels: [], values: [], label: 'Overview' };
+let currentChartType = 'bar';
+let activeViewSection = 'view-repositories';
+let activeCategory = 'repositories';
+const PAGE_SIZE = 10;
+const PIPELINE_PAGE_SIZE = 25;
+
+let rawStore = {
+  repos: [], repoIndex: 0,
+  repoPrs: [], repoPrsIndex: 0,
+  access: [], accessIndex: 0,
+  commits: [], commitsIndex: 0,
+  pipelines: [], pipelineIndex: 0,
+  pipelineSummaries: [], pipelineSummariesIndex: 0,
+  workitems: [], workitemsIndex: 0
+};
+
+function extractOrgName(input) {
+  let cleaned = input.trim().replace(/^https?:\/\//, '').replace(/^dev\.azure\.com\//, '');
+  return cleaned.split('/')[0] || '';
+}
+
+function showModal(message, targetFocusId) {
+  currentFocusTarget = targetFocusId;
+  document.getElementById('modalMessage').textContent = message;
+  document.getElementById('validationModal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('validationModal').classList.add('hidden');
+  if (currentFocusTarget) {
+    const target = document.getElementById(currentFocusTarget);
+    if (target) {
+      target.focus();
+      target.classList.add('ring-2', 'ring-red-400');
+      setTimeout(() => target.classList.remove('ring-2', 'ring-red-400'), 1500);
+    }
+  }
+}
+
+function setStatus(msg, type = 'info') {
+  const el = document.getElementById('statusBar');
+  el.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'bg-green-50', 'text-green-700', 'bg-blue-50', 'text-blue-700');
+  if (type === 'error') el.classList.add('bg-red-50', 'text-red-700');
+  else if (type === 'success') el.classList.add('bg-green-50', 'text-green-700');
+  else el.classList.add('bg-blue-50', 'text-blue-700');
+  el.textContent = msg;
+}
+
+function updatePathPreview(org = '', project = '') {
+  const linkEl = document.getElementById('generatedUrlLink');
+  let url = 'https://dev.azure.com/';
+  if (org) url += org;
+  if (org && project) url += `/${project}`;
+
+  linkEl.textContent = url;
+  linkEl.href = url;
+  const activePath = document.getElementById('activePathLink');
+  if (activePath) { activePath.textContent = url; activePath.href = url; }
+  if (org) {
+    linkEl.className = 'text-blue-600 font-mono underline hover:text-blue-800 cursor-pointer';
+    linkEl.target = '_blank';
+  } else {
+    linkEl.className = 'text-slate-400 font-mono underline cursor-default';
+    linkEl.removeAttribute('target');
+  }
+}
+
+function initCredentials() {
+  const savedOrg = localStorage.getItem('azdo_org');
+  const savedPat = localStorage.getItem('azdo_pat');
+  if (savedOrg) document.getElementById('targetOrg').value = savedOrg;
+  if (savedPat) {
+    document.getElementById('targetPat').value = savedPat;
+    document.getElementById('chkRememberCreds').checked = true;
+  }
+  handleOrgChange();
+}
+
+function toggleRememberCreds() {
+  const isChecked = document.getElementById('chkRememberCreds').checked;
+  if (isChecked) {
+    localStorage.setItem('azdo_org', document.getElementById('targetOrg').value.trim());
+    localStorage.setItem('azdo_pat', document.getElementById('targetPat').value.trim());
+  } else {
+    localStorage.removeItem('azdo_org');
+    localStorage.removeItem('azdo_pat');
+  }
+}
+
+function handleOrgChange() {
+  const org = extractOrgName(document.getElementById('targetOrg').value);
+  updatePathPreview(org);
+  const projectBadge = document.getElementById('overviewProjectBadge');
+  if (projectBadge) projectBadge.textContent = '—';
+  resetDropdown('projectSelect', '-- Load PAT first --');
+  document.getElementById('step5Container').classList.add('hidden');
+  if (document.getElementById('chkRememberCreds').checked) {
+    localStorage.setItem('azdo_org', document.getElementById('targetOrg').value.trim());
+  }
+  setConnectionBadge(false);
+}
+
+function resetDropdown(id, placeholder) {
+  const el = document.getElementById(id);
+  el.innerHTML = `<option value="">${placeholder}</option>`;
+  el.disabled = true;
+  el.classList.add('bg-slate-100', 'cursor-not-allowed');
+  el.classList.remove('bg-white');
+}
+
+function enableDropdown(id) {
+  const el = document.getElementById(id);
+  el.disabled = false;
+  el.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  el.classList.add('bg-white');
+}
+
+async function loadProjectsList() {
+  const org = extractOrgName(document.getElementById('targetOrg').value);
+  const pat = document.getElementById('targetPat').value.trim();
+
+  if (!org) return showModal('Please enter the Organization Name or URL first.', 'targetOrg');
+  if (!pat) return showModal('Please enter your Personal Access Token (PAT).', 'targetPat');
+
+  if (document.getElementById('chkRememberCreds').checked) {
+    localStorage.setItem('azdo_org', org);
+    localStorage.setItem('azdo_pat', pat);
+  }
+
+  const authHeader = 'Basic ' + btoa(':' + pat);
+  setStatus(`Loading projects from https://dev.azure.com/${org}...`, 'info');
+
+  try {
+    const url = `https://dev.azure.com/${org}/_apis/projects?api-version=${API_VERSION}&$top=500`;
+    const data = await fetchAzDo(url, authHeader);
+    const projects = data.value || [];
+
+    const projDropdown = document.getElementById('projectSelect');
+    projDropdown.innerHTML = '<option value="">-- Select a Project --</option>';
+
+    projects.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.name;
+      opt.textContent = p.name;
+      projDropdown.appendChild(opt);
+    });
+
+    enableDropdown('projectSelect');
+    document.getElementById('step5Container').classList.add('hidden');
+    setStatus(`Loaded ${projects.length} projects successfully! Please choose a project.`, 'success');
+    setConnectionBadge(true);
+  } catch (err) {
+    setStatus(`Error loading projects: ${err.message}`, 'error');
+    setConnectionBadge(false);
+  }
+}
+
+async function handleProjectSelection() {
+  const org = extractOrgName(document.getElementById('targetOrg').value);
+  const project = document.getElementById('projectSelect').value;
+  const pat = document.getElementById('targetPat').value.trim();
+
+  if (!project) {
+    document.getElementById('step5Container').classList.add('hidden');
+    updatePathPreview(org);
+    return;
+  }
+
+  updatePathPreview(org, project);
+  const projectBadge = document.getElementById('overviewProjectBadge');
+  if (projectBadge) projectBadge.textContent = project || '—';
+
+  const authHeader = 'Basic ' + btoa(':' + pat);
+  try {
+    const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories?api-version=${API_VERSION}`;
+    const data = await fetchAzDo(url, authHeader);
+    cachedRepos = data.value || [];
+  } catch (e) {
+    console.warn('Could not prefetch repos:', e);
+  }
+
+  renderActiveSubstep();
+}
+
+function renderActiveSubstep() {
+  const project = document.getElementById('projectSelect').value;
+  const step5 = document.getElementById('step5Container');
+  const subRepo = document.getElementById('substepRepo');
+  const subAccess = document.getElementById('substepAccess');
+  const subActivity = document.getElementById('substepActivity');
+  const subPipelines = document.getElementById('substepPipelines');
+  const subWorkItems = document.getElementById('substepWorkItems');
+
+  if (!project) {
+    step5.classList.add('hidden');
+    return;
+  }
+
+  step5.classList.remove('hidden');
+  [subRepo, subAccess, subActivity, subPipelines, subWorkItems].forEach(el => el.classList.add('hidden'));
+
+  if (activeCategory === 'repositories') {
+    subRepo.classList.remove('hidden');
+    populateRepoDropdown();
+  } else if (activeCategory === 'user_access') {
+    subAccess.classList.remove('hidden');
+  } else if (activeCategory === 'user_activity') {
+    subActivity.classList.remove('hidden');
+  } else if (activeCategory === 'pipelines') {
+    subPipelines.classList.remove('hidden');
+  } else if (activeCategory === 'work_items') {
+    subWorkItems.classList.remove('hidden');
+  }
+}
+
+function showSection(viewId) {
+  activeViewSection = `view-${viewId}`;
+  ['repositories', 'access', 'activity', 'pipelines', 'workitems'].forEach(v => {
+    document.getElementById(`view-${v}`).classList.toggle('hidden', v !== viewId);
+  });
+}
+
+function selectExplore(category) {
+  activeCategory = category;
+  const categorySelect = document.getElementById('categorySelect');
+  if (categorySelect) categorySelect.value = category;
+
+  const viewMap = {
+    repositories: 'repositories',
+    pipelines: 'pipelines',
+    work_items: 'workitems',
+    user_activity: 'activity',
+    user_access: 'access'
+  };
+  const viewId = viewMap[category] || 'repositories';
+
+  document.querySelectorAll('.sidebar-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === viewId);
+  });
+
+  if (typeof showSection === 'function') showSection(viewId);
+  renderActiveSubstep();
+}
+
+function setConnectionBadge(connected) {
+  const text = document.getElementById('connectionBadgeText');
+  const badge = document.getElementById('connectionBadge');
+  const disconnectBtn = document.getElementById('btnDisconnect');
+  if (!text || !badge) return;
+  
+  text.textContent = connected ? 'Connected' : 'Ready to connect';
+  badge.classList.toggle('connected', !!connected);
+  
+  if (disconnectBtn) {
+    disconnectBtn.classList.toggle('hidden', !connected);
+  }
+}
+
+function disconnectSession() {
+  rawStore = {
+    repos: [], repoIndex: 0,
+    repoPrs: [], repoPrsIndex: 0,
+    access: [], accessIndex: 0,
+    commits: [], commitsIndex: 0,
+    pipelines: [], pipelineIndex: 0,
+    pipelineSummaries: [], pipelineSummariesIndex: 0,
+    workitems: [], workitemsIndex: 0
+  };
+  cachedRepos = [];
+
+  document.getElementById('targetPat').value = '';
+  resetDropdown('projectSelect', '-- Load PAT first --');
+  document.getElementById('step5Container').classList.add('hidden');
+  document.getElementById('overviewProjectBadge').textContent = '—';
+
+  document.getElementById('kpi-1-label').textContent = 'Repository';
+  document.getElementById('kpi-1-val').textContent = '-';
+  document.getElementById('kpi-1-val').className = 'text-2xl font-extrabold text-slate-800 mt-1 truncate';
+  document.getElementById('kpi-2-label').textContent = 'Branches';
+  document.getElementById('kpi-2-val').textContent = '0';
+  document.getElementById('kpi-3-label').textContent = 'Total PRs';
+  document.getElementById('kpi-3-val').textContent = '0';
+  document.getElementById('kpi-4-label').textContent = 'Active PRs';
+  document.getElementById('kpi-4-val').textContent = '0';
+  document.getElementById('kpi-5-label').textContent = 'Completed PRs';
+  document.getElementById('kpi-5-val').textContent = '0';
+
+  document.getElementById('branchesTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`;
+  document.getElementById('repoPrsTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`;
+  document.getElementById('accessTableBody').innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Enter a User ID or click "Fetch User Access" to load access permissions.</td></tr>`;
+  document.getElementById('userCommitsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">Enter a user email/ID and click search.</td></tr>`;
+  document.getElementById('userPrTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No pull request activity loaded.</td></tr>`;
+  document.getElementById('pipelineSummaryTableBody').innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">Click "Fetch Pipeline Runs" to scan pipeline definitions.</td></tr>`;
+  document.getElementById('pipelineTableBody').innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No build runs loaded.</td></tr>`;
+  document.getElementById('workItemsTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Query work items to view backlog.</td></tr>`;
+
+  ['seeMoreRepoContainer', 'seeMoreRepoPrsContainer', 'seeMoreAccessContainer', 'seeMoreCommitsContainer', 'seeMorePipelineSummaryContainer', 'seeMorePipelinesContainer', 'seeMoreWorkItemsContainer'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+
+  renderChart([], [], 'Overview');
+  setConnectionBadge(false);
+  setStatus('Disconnected from Azure DevOps. Enter credentials to connect again.', 'info');
+}
+
+function filterActiveTable() {
+  const query = document.getElementById('tableFilterInput').value.toLowerCase();
+  const activeSection = document.getElementById(activeViewSection);
+  if (!activeSection) return;
+
+  const rows = activeSection.querySelectorAll('tbody tr');
+  rows.forEach(r => {
+    const text = r.textContent.toLowerCase();
+    r.style.display = text.includes(query) ? '' : 'none';
+  });
+}
+
+function exportToExcelFile(sheetsData, baseFileName) {
+  if (typeof XLSX === 'undefined') {
+    alert('Excel library is still loading, please try again in a moment.');
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+  let hasData = false;
+
+  for (const [sheetName, data] of Object.entries(sheetsData)) {
+    if (data && data.length > 0) {
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31));
+      hasData = true;
+    }
+  }
+
+  if (!hasData) return;
+  XLSX.writeFile(wb, `${baseFileName}_${Date.now()}.xlsx`);
+}
+
+function exportCurrentTableToXLSX() {
+  if (activeViewSection === 'view-repositories') {
+    const branchData = (rawStore.repos || []).map(b => ({
+      "Repository": b.repo,
+      "Branch Name": b.branch,
+      "Status / Health": b.isStale ? "Stale" : "Active",
+      "Last Author": b.author,
+      "Last Commit Date": b.date,
+      "Commit Message": b.msg
+    }));
+
+    const prData = (rawStore.repoPrs || []).map(p => ({
+      "Repository": p.repo,
+      "PR Title": p.title,
+      "Source Branch": p.source,
+      "Target Branch": p.target,
+      "Creator": p.creator,
+      "Status": p.status,
+      "Created Date": p.createdDate
+    }));
+
+    exportToExcelFile({ "Branches": branchData, "Pull Requests": prData }, "AzureDevOps_Repositories_Telemetry");
+  } 
+  else if (activeViewSection === 'view-access') {
+    const accessData = (rawStore.access || []).map(a => ({
+      "Team / Group Name": a.team,
+      "User Display Name": a.name,
+      "User Principal / Email": a.email
+    }));
+    exportToExcelFile({ "Access & Permissions": accessData }, "AzureDevOps_Security_Access");
+  } 
+  else if (activeViewSection === 'view-activity') {
+    const commitData = (rawStore.commits || []).map(c => ({
+      "Repository": c.repo,
+      "Branch": c.branch,
+      "Commit ID": c.commitId,
+      "Commit Date": c.date,
+      "Message": c.comment
+    }));
+    exportToExcelFile({ "User Commits": commitData }, "AzureDevOps_User_Activity");
+  } 
+  else if (activeViewSection === 'view-pipelines') {
+    const pipelineData = (rawStore.pipelines || []).map(r => ({
+      "Pipeline Name": r.name,
+      "Build Number": r.buildNumber,
+      "Branch": r.branch,
+      "Triggered By": r.author,
+      "Result": r.result,
+      "Finish Time": r.finishTime
+    }));
+    exportToExcelFile({ "Pipelines": pipelineData }, "AzureDevOps_Pipelines");
+  } 
+  else if (activeViewSection === 'view-workitems') {
+    const wiData = (rawStore.workitems || []).map(w => ({
+      "ID": w.id,
+      "Work Item Type": w.type,
+      "Title": w.title,
+      "Assigned To": w.assignedTo,
+      "State": w.state,
+      "Created Date": w.createdDate
+    }));
+    exportToExcelFile({ "Work Items": wiData }, "AzureDevOps_WorkItems");
+  }
+}
+
+function changeChartType(type) {
+  currentChartType = type.toLowerCase() === 'pie' ? 'pie' : type;
+  renderChart(currentChartData.labels, currentChartData.values, currentChartData.label);
+}
+
+function renderChart(labels, data, datasetLabel) {
+  currentChartData = { labels, values: data, label: datasetLabel };
+  const ctx = document.getElementById('analyticsChart').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+
+  const palette = ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16', '#f43f5e', '#a855f7'];
+  const isPie = currentChartType === 'pie' || currentChartType === 'doughnut';
+  const isLine = currentChartType === 'line';
+
+  if (typeof ChartDataLabels !== 'undefined') {
+    Chart.register(ChartDataLabels);
+  }
+
+  chartInstance = new Chart(ctx, {
+    type: currentChartType,
+    data: {
+      labels: labels.length ? labels : ['No Data'],
+      datasets: [{
+        label: datasetLabel,
+        data: data.length ? data : [0],
+        backgroundColor: isPie ? palette : '#3b82f6',
+        borderColor: isLine ? '#2563eb' : undefined,
+        pointBackgroundColor: isLine ? '#2563eb' : undefined,
+        pointRadius: isLine ? 5 : undefined,
+        fill: isLine ? false : undefined,
+        borderRadius: currentChartType === 'bar' ? 6 : 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: isPie ? 10 : 25,
+          bottom: 10
+        }
+      },
+      plugins: {
+        legend: { 
+          display: isPie,
+          position: 'right'
+        },
+        datalabels: {
+          display: true,
+          color: isPie ? '#ffffff' : '#1e293b',
+          font: {
+            weight: 'bold',
+            size: 11
+          },
+          anchor: isPie ? 'center' : 'end',
+          align: isPie ? 'center' : 'top',
+          offset: isPie ? 0 : 2,
+          formatter: function(value) {
+            return value > 0 ? value : (isPie ? '' : '0');
+          }
+        }
+      },
+      scales: isPie ? {} : {
+        y: { 
+          beginAtZero: true, 
+          grid: { color: '#f1f5f9' },
+          ticks: { precision: 0 }
+        },
+        x: { 
+          grid: { display: false },
+          ticks: {
+            autoSkip: false,
+            maxRotation: 45,
+            minRotation: 20
+          }
+        }
+      }
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){ 
+  initCredentials(); 
+  selectExplore('repositories'); 
+});
