@@ -99,6 +99,66 @@
     .explore-grid { grid-template-columns: 1fr; }
     .project-selector-card { padding: 20px; }
   }
+
+  .project-repository-inspection {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+  }
+  .project-repository-inspection .inspection-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(280px, .7fr);
+    gap: 10px;
+    align-items: end;
+    margin-top: 10px;
+  }
+  .project-repository-inspection .inspection-input {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid #93c5fd;
+    border-radius: 10px;
+    padding: 0 14px;
+    background: #fff;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 500;
+    outline: none;
+  }
+  .project-repository-inspection .inspection-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+  }
+  .project-repository-inspection .inspection-button {
+    min-height: 46px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 10px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 6px 14px rgba(37,99,235,.18);
+  }
+  .project-repository-inspection .inspection-button:hover {
+    background: #1d4ed8;
+  }
+  .project-repository-inspection .inspection-help {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.45;
+    padding-bottom: 4px;
+  }
+  @media (max-width: 900px) {
+    .project-repository-inspection .inspection-row {
+      grid-template-columns: 1fr;
+    }
+    .project-repository-inspection .inspection-button {
+      width: 100%;
+    }
+  }
+
 </style>
 
 </head>
@@ -235,6 +295,40 @@
           </div>
 
           <div id="projectStatusBar" class="status-bar hidden"></div>
+
+          <!-- Repository inspection: restored from the previous working UI -->
+          <div id="projectRepositoryInspection" class="project-repository-inspection">
+            <div class="text-[11px] font-semibold text-blue-900">
+              5. SELECT OR TYPE REPOSITORY <span class="text-red-500">*</span>
+            </div>
+
+            <div class="inspection-row">
+              <div>
+                <input
+                  list="repoDatalist"
+                  id="repoSelect"
+                  placeholder="Type or select repository..."
+                  onfocus="this.value=''"
+                  onblur="if(!this.value) this.value='-- All Repositories --'"
+                  class="inspection-input"
+                />
+                <datalist id="repoDatalist"></datalist>
+              </div>
+
+              <button
+                id="btnInspectRepositories"
+                onclick="fetchRepositoryData()"
+                class="inspection-button"
+              >
+                Inspect
+              </button>
+
+              <div class="inspection-help">
+                Select <strong>"-- All Repositories --"</strong> or type an individual
+                repository to scan branches, branch policies, commits and pull-request health.
+              </div>
+            </div>
+          </div>
         </div>
 
         <button class="wizard-back" onclick="returnToConnectionScreen()">← Change organization / PAT</button>
@@ -248,13 +342,7 @@
         </select>
 
         <div id="step5Container">
-          <div id="substepRepo">
-            <input list="repoDatalist" id="repoSelect" placeholder="Type or select repository..." />
-            <datalist id="repoDatalist"></datalist>
-            <button onclick="fetchRepositoryData()">Inspect</button>
-          </div>
-
-          <div id="substepAccess">
+                    <div id="substepAccess">
             <input type="text" id="targetAccessUserQuery" placeholder="e.g. user@domain.com or First Last" />
             <button onclick="fetchUserAccessData()">Fetch User Access</button>
           </div>
@@ -753,6 +841,29 @@
     // Keep the existing category value synchronized for any legacy JS that depends on it.
     const cat = document.getElementById('categorySelect');
     if (cat) cat.value = '';
+
+    // Restore the previous repository selector behavior on the project screen.
+    // The existing repository JS populates the datalist from cachedRepos.
+    if (typeof window.populateRepoDropdown === 'function') {
+      window.populateRepoDropdown();
+    } else if (Array.isArray(window.cachedRepos)) {
+      const datalist = document.getElementById('repoDatalist');
+      const repoInput = document.getElementById('repoSelect');
+      if (datalist && repoInput) {
+        datalist.innerHTML = '';
+        const allOpt = document.createElement('option');
+        allOpt.value = '-- All Repositories --';
+        datalist.appendChild(allOpt);
+
+        window.cachedRepos.forEach(r => {
+          if (!r || !r.name) return;
+          const opt = document.createElement('option');
+          opt.value = r.name;
+          datalist.appendChild(opt);
+        });
+        repoInput.value = '-- All Repositories --';
+      }
+    }
   };
 
   // selectExplore already exists in the application. This wrapper keeps the new Explore
