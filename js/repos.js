@@ -992,6 +992,10 @@ async function fetchRepositoryData() {
       0;
 
 
+    rawStore.policyBranchesIndex =
+      0;
+
+
     rawStore.repoPrs =
       allPRs;
 
@@ -1090,6 +1094,11 @@ async function fetchRepositoryData() {
 
 
     renderRepoTableBatch(
+      false
+    );
+
+
+    renderPolicyBranchesTableBatch(
       false
     );
 
@@ -1347,6 +1356,153 @@ function renderRepoTableBatch(
 
   }
 
+}
+
+
+// ============================================================
+// BRANCHES WITH POLICIES
+// Shows only branches where at least one active policy applies.
+// ============================================================
+
+function getPolicyBranches() {
+
+  if (!Array.isArray(rawStore.repos)) {
+    return [];
+  }
+
+  return rawStore.repos.filter(
+    b => b.hasPolicy === true &&
+      Array.isArray(b.policies) &&
+      b.policies.length > 0
+  );
+}
+
+
+function renderPolicyBranchesTableBatch(
+  append = false
+) {
+
+  const tbody =
+    document.getElementById(
+      'policyBranchesTableBody'
+    );
+
+  const container =
+    document.getElementById(
+      'seeMorePolicyBranchesContainer'
+    );
+
+  const remainingEl =
+    document.getElementById(
+      'policyBranchesRemainingCount'
+    );
+
+  if (!tbody || !container || !remainingEl) {
+    return;
+  }
+
+  const policyBranches =
+    getPolicyBranches();
+
+  if (!append) {
+    tbody.innerHTML = '';
+    rawStore.policyBranchesIndex = 0;
+  }
+
+  if (policyBranches.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="p-4 text-center text-slate-400">
+          No branches with policies found.
+        </td>
+      </tr>
+    `;
+    container.classList.add('hidden');
+    remainingEl.textContent = '0';
+    return;
+  }
+
+  const nextBatch =
+    policyBranches.slice(
+      rawStore.policyBranchesIndex,
+      rawStore.policyBranchesIndex + PAGE_SIZE
+    );
+
+  rawStore.policyBranchesIndex += nextBatch.length;
+
+  const html = nextBatch.map(b => {
+
+    const policiesHtml =
+      `<div class="flex flex-wrap gap-1 max-w-xl">` +
+      (b.minReviewers > 0
+        ? `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-1.5 py-0.5 rounded">${b.minReviewers} Required Reviewer${b.minReviewers > 1 ? 's' : ''}</span>`
+        : '') +
+      b.policies.map(p =>
+        `<span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold px-1.5 py-0.5 rounded">${p}</span>`
+      ).join('') +
+      `</div>`;
+
+    return `
+      <tr class="hover:bg-slate-50 transition">
+        <td class="p-4 font-semibold text-slate-900">${b.repo}</td>
+        <td class="p-4">
+          <span class="font-mono text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-semibold">
+            ${b.branch}
+          </span>
+        </td>
+        <td class="p-4">
+          <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2 py-1 rounded">
+            ${b.minReviewers > 0 ? b.minReviewers : '0'}
+          </span>
+        </td>
+        <td class="p-4">${policiesHtml}</td>
+        <td class="p-4 text-xs font-medium text-slate-700">${b.author || 'Unknown'}</td>
+        <td class="p-4 text-xs text-slate-500">${b.date || 'N/A'}</td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.insertAdjacentHTML('beforeend', html);
+
+  const remaining =
+    policyBranches.length - rawStore.policyBranchesIndex;
+
+  if (remaining > 0) {
+    container.classList.remove('hidden');
+    remainingEl.textContent = remaining;
+  } else {
+    container.classList.add('hidden');
+    remainingEl.textContent = '0';
+  }
+}
+
+
+function exportPolicyBranchesToXLSX() {
+
+  const policyBranches =
+    getPolicyBranches();
+
+  if (policyBranches.length === 0) {
+    if (typeof showModal === 'function') {
+      showModal('No branches with policies are available to export.');
+    }
+    return;
+  }
+
+  const data = policyBranches.map(b => ({
+    "Repository": b.repo,
+    "Branch Name": b.branch,
+    "Required Reviewers": b.minReviewers || 0,
+    "Branch Policies": Array.isArray(b.policies) ? b.policies.join(', ') : 'None',
+    "Last Author": b.author || 'Unknown',
+    "Last Commit Date": b.date || 'N/A',
+    "Commit Message": b.msg || ''
+  }));
+
+  exportToExcelFile(
+    { "Branches With Policies": data },
+    "AzureDevOps_Branches_With_Policies"
+  );
 }
 
 
