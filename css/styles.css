@@ -127,3 +127,138 @@ table td{font-size:12px!important}
   .app-subtitle{font-size:11px}
   .kpi-grid{grid-template-columns:1fr}
 }
+
+/* ============================================================
+   DEVOPS INTELLIGENCE BRANDING / WATERMARK
+   Visual-only changes. Existing layout and JavaScript are unchanged.
+   ============================================================ */
+
+/* Keep the existing fixed sidebar behavior. */
+.app-sidebar{
+  z-index:50;
+}
+
+/* Keep decorative watermark behind the application. */
+.app-shell{
+  position:relative;
+  z-index:1;
+}
+
+/* Full-page, very subtle DevOps watermark. */
+body{
+  position:relative;
+  overflow-x:hidden;
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background-image:url("../devops-watermark.png");
+  background-repeat:repeat;
+  background-size:260px 260px;
+  background-position:35px 35px;
+  opacity:.012;
+}
+
+/* Use the supplied AD logo correctly. */
+.brand-mark{
+  overflow:hidden;
+  position:relative;
+}
+
+.brand-mark img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+  border-radius:inherit;
+}
+
+/* Subtle watermark on the left/right edges of each table card. */
+.dashboard-content > section > div{
+  position:relative;
+  overflow:hidden;
+}
+
+.dashboard-content > section > div::before,
+.dashboard-content > section > div::after{
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  width:58px;
+  pointer-events:none;
+  z-index:0;
+  background-image:url("../devops-watermark.png");
+  background-repeat:repeat-y;
+  background-size:58px 58px;
+  opacity:.018;
+}
+
+.dashboard-content > section > div::before{
+  left:0;
+  background-position:center top;
+}
+
+.dashboard-content > section > div::after{
+  right:0;
+  background-position:center top;
+}
+
+/* Keep table/card content above decorative watermarks. */
+.dashboard-content > section > div > *{
+  position:relative;
+  z-index:1;
+}
+
+/* Small watermark inside the connection card. */
+.connection-card{
+  position:relative;
+  overflow:hidden;
+}
+
+.connection-card::after{
+  content:"";
+  position:absolute;
+  right:20px;
+  bottom:12px;
+  width:110px;
+  height:110px;
+  pointer-events:none;
+  z-index:0;
+  background-image:url("../devops-watermark.png");
+  background-repeat:no-repeat;
+  background-size:contain;
+  background-position:center;
+  opacity:.018;
+}
+
+.connection-card > *{
+  position:relative;
+  z-index:1;
+}
+
+@media (max-width:760px){
+  body::before{
+    background-size:190px 190px;
+    opacity:.01;
+  }
+
+  .dashboard-content > section > div::before,
+  .dashboard-content > section > div::after{
+    width:42px;
+    background-size:42px 42px;
+    opacity:.014;
+  }
+
+  .connection-card::after{
+    width:80px;
+    height:80px;
+    right:10px;
+    bottom:8px;
+  }
+}
+
