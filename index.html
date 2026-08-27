@@ -4,112 +4,393 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Azure DevOps Multi-View Explorer</title>
+  
+  <!-- CDN Dependencies -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
   <style>
-    /* TWO-PAGE CONNECTION FLOW */
+    /* ==========================================================================
+       THEME VARIABLES & BASE
+       ========================================================================== */
+    :root {
+      --az-blue: #0078d4;
+      --az-blue-hover: #005a9e;
+      --az-header-bg: #005a9e;
+      --az-body-bg: #f4f8fb;
+      --az-card-bg: #ffffff;
+      --az-input-bg: #eaf1fb;
+      --az-input-border: #ccdcf2;
+      --az-text: #1e293b;
+      --az-muted: #64748b;
+      --az-border: #e2e8f0;
+      --sidebar-width: 260px;
+    }
 
-    /* Page 1: Login Only */
+    body.dark-theme {
+      --az-blue: #2899f5;
+      --az-blue-hover: #0078d4;
+      --az-header-bg: #0b1320;
+      --az-body-bg: #0f172a;
+      --az-card-bg: #1e293b;
+      --az-input-bg: #131c2e;
+      --az-input-border: #2d3b55;
+      --az-text: #f8fafc;
+      --az-muted: #94a3b8;
+      --az-border: #334155;
+      background-color: var(--az-body-bg) !important;
+      color: var(--az-text) !important;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--az-body-bg);
+      color: var(--az-text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ==========================================================================
+       TOP AZURE HEADER (EXACT SCREENSHOT MATCH)
+       ========================================================================== */
+    .az-topbar {
+      height: 54px;
+      background-color: var(--az-header-bg);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .az-topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .az-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      color: #ffffff;
+      text-decoration: none;
+    }
+
+    .az-breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.85);
+      border-left: 1px solid rgba(255, 255, 255, 0.25);
+      padding-left: 16px;
+    }
+
+    .az-breadcrumbs .sep {
+      opacity: 0.45;
+    }
+
+    .az-topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .az-pill-btn {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s ease;
+    }
+
+    .az-pill-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .az-status-pill {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(52, 211, 153, 0.4);
+      color: #ffffff;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .az-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #34d399;
+      box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
+    }
+
+    /* ==========================================================================
+       PAGE 1 & 2 AUTHENTICATION CARD (EXACT SCREENSHOT MATCH)
+       ========================================================================== */
+    .az-card {
+      width: 100%;
+      background: var(--az-card-bg);
+      border-radius: 12px;
+      border: 1px solid var(--az-border);
+      box-shadow: 0 10px 25px -5px rgba(0, 45, 90, 0.08);
+      overflow: hidden;
+    }
+
+    .az-card-stripe {
+      height: 4px;
+      background: var(--az-blue);
+      width: 100%;
+    }
+
+    .az-card-inner {
+      padding: 32px 36px;
+    }
+
+    .az-icon-box {
+      width: 48px;
+      height: 48px;
+      background: var(--az-blue);
+      color: #ffffff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .az-input {
+      width: 100%;
+      padding: 11px 14px;
+      background-color: var(--az-input-bg);
+      border: 1px solid var(--az-input-border);
+      border-radius: 6px;
+      font-size: 13.5px;
+      color: var(--az-text);
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .az-input:focus {
+      border-color: var(--az-blue);
+      box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.15);
+    }
+
+    .az-code {
+      color: var(--az-blue);
+      font-weight: 600;
+      background: rgba(0, 120, 212, 0.08);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: Consolas, Monaco, monospace;
+    }
+
+    /* ==========================================================================
+       SIDEBAR & WORKSPACE SHELL
+       ========================================================================== */
+    .app-sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--az-card-bg);
+      border-right: 1px solid var(--az-border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 54px;
+      bottom: 0;
+      left: 0;
+      z-index: 40;
+      padding: 20px 16px;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      padding: 0 8px;
+    }
+
+    .sidebar-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--az-muted);
+      letter-spacing: 0.8px;
+      margin-bottom: 10px;
+      padding: 0 8px;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--az-muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s ease;
+    }
+
+    .sidebar-item:hover {
+      background-color: var(--az-input-bg);
+      color: var(--az-text);
+    }
+
+    .sidebar-item.active {
+      background-color: var(--az-blue);
+      color: #ffffff;
+    }
+
+    .sidebar-connection-note {
+      background: var(--az-input-bg);
+      border: 1px solid var(--az-input-border);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 11.5px;
+    }
+
+    .app-shell {
+      flex: 1;
+      padding: 24px;
+      transition: margin 0.2s ease;
+    }
+
+    /* ==========================================================================
+       TWO-PAGE SCREEN SWITCHING
+       ========================================================================== */
+    /* Page 1 (Login View) */
     body.connection-page .app-sidebar {
       display: none !important;
     }
 
     body.connection-page .app-shell {
       margin-left: 0 !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    body.connection-page .connection-card {
-      max-width: 900px !important;
-      margin: 40px auto !important;
-      float: none !important;
+    body.connection-page .az-card {
+      max-width: 860px;
+      margin: 40px auto;
     }
 
     body.connection-page #projectStepField,
     body.connection-page #step5Container,
     body.connection-page #statusBar,
-    body.connection-page .active-path-row,
     body.connection-page .overview-heading,
     body.connection-page .dashboard-content,
     body.connection-page #btnBackAuth {
       display: none !important;
     }
 
-    /* Page 2: Dashboard Workspace */
+    /* Page 2 (Workspace View) */
     body.project-page .app-sidebar {
       display: flex !important;
     }
 
     body.project-page .app-shell {
-      margin-left: var(--sidebar-width, 330px);
+      margin-left: var(--sidebar-width) !important;
     }
 
-    body.project-page .connection-card {
+    body.project-page .az-card {
       max-width: 100% !important;
-      margin: 0 0 24px 0 !important;
+      margin-bottom: 24px;
     }
 
-    body.project-page #projectStepField {
+    body.project-page #projectStepField,
+    body.project-page #step5Container,
+    body.project-page .overview-heading,
+    body.project-page .dashboard-content {
       display: block !important;
     }
 
     body.project-page #btnBackAuth {
       display: inline-flex !important;
     }
-
-    /* Immediately after load: hide data until project is chosen or loaded */
-    body.project-page.project-not-selected #step5Container,
-    body.project-page.project-not-selected #statusBar,
-    body.project-page.project-not-selected .active-path-row,
-    body.project-page.project-not-selected .overview-heading,
-    body.project-page.project-not-selected .dashboard-content {
-      display: none !important;
-    }
-
-    /* Selected project displays all components */
-    body.project-selected #step5Container,
-    body.project-selected #statusBar,
-    body.project-selected .active-path-row,
-    body.project-selected .overview-heading,
-    body.project-selected .dashboard-content {
-      display: block !important;
-    }
-
-    .project-step-field {
-      grid-column: 1 / -1;
-    }
   </style>
 </head>
-<body class="connection-page bg-slate-50 text-slate-800 antialiased min-h-screen">
+<body class="connection-page antialiased">
 
-  <!-- Step Validation Modal -->
-  <div id="validationModal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl max-w-sm w-full p-6 shadow-2xl border border-slate-200">
-      <div class="flex items-center gap-3 text-amber-600 mb-3">
-        <svg class="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+  <!-- TOP AZURE NAVIGATION BAR -->
+  <header class="az-topbar">
+    <div class="az-topbar-left">
+      <div class="az-brand">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M0 8.877L2.247 5.81l7.004-2.545V0l8.741 6.541L7.842 9.47v5.055L0 8.877zm24 6.246l-2.247 3.067-7.004 2.545V24l-8.741-6.541 10.15-2.929V9.475L24 15.123z"/>
         </svg>
-        <h3 class="text-base font-bold text-slate-900">Input Required</h3>
+        <span>Azure DevOps Intelligence Hub</span>
       </div>
-      <p id="modalMessage" class="text-xs text-slate-600 mb-5 leading-relaxed"></p>
-      <div class="flex justify-end">
-        <button onclick="closeModal()" class="text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-          Got it
-        </button>
+
+      <div class="az-breadcrumbs hidden md:flex" id="header-breadcrumbs">
+        <span>Stridely Solutions</span>
+        <span class="sep">/</span>
+        <span>Azure DevOps</span>
+        <span class="sep">/</span>
+        <span id="bc-org">CornerstoneBuildingBrands</span>
+        <span class="sep">/</span>
+        <span id="bc-project" class="font-semibold text-white">EDS</span>
       </div>
     </div>
-  </div>
+
+    <div class="az-topbar-right">
+      <button class="az-pill-btn" id="dark-mode-toggle" type="button" onclick="document.body.classList.toggle('dark-theme')">
+        <i class="fa-solid fa-moon"></i> <span>Dark Mode</span>
+      </button>
+
+      <div class="az-status-pill">
+        <span class="az-status-dot"></span>
+        <span id="connectionBadgeText">Connected (34 Projects)</span>
+      </div>
+    </div>
+  </header>
 
   <!-- Application Sidebar -->
   <aside class="app-sidebar">
     <div class="sidebar-brand">
-      <div class="brand-mark"><img src="devops-ad-logo.png" alt="DevOps Intelligence logo"></div>
+      <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs">AD</div>
       <div>
-        <div class="brand-title">DevOps Intelligence</div>
-        <div class="brand-subtitle">Azure DevOps analytics</div>
+        <div class="font-bold text-sm leading-tight">DevOps Intelligence</div>
+        <div class="text-[11px] text-slate-400">Azure DevOps analytics</div>
       </div>
     </div>
 
@@ -117,250 +398,264 @@
 
     <nav class="sidebar-nav">
       <button class="sidebar-item active" data-view="repositories" onclick="selectExplore('repositories')">
-        <span class="nav-icon">⌂</span><span>Repositories</span>
+        <i class="fa-solid fa-code-branch w-4"></i> <span>Repositories</span>
       </button>
       <button class="sidebar-item" data-view="pipelines" onclick="selectExplore('pipelines')">
-        <span class="nav-icon">↗</span><span>Pipelines &amp; Builds</span>
+        <i class="fa-solid fa-gears w-4"></i> <span>Pipelines &amp; Builds</span>
       </button>
       <button class="sidebar-item" data-view="workitems" onclick="selectExplore('work_items')">
-        <span class="nav-icon">✓</span><span>Work Items</span>
+        <i class="fa-solid fa-list-check w-4"></i> <span>Work Items</span>
       </button>
       <button class="sidebar-item" data-view="activity" onclick="selectExplore('user_activity')">
-        <span class="nav-icon">○</span><span>User Activity</span>
+        <i class="fa-solid fa-chart-line w-4"></i> <span>User Activity</span>
       </button>
       <button class="sidebar-item" data-view="access" onclick="selectExplore('user_access')">
-        <span class="nav-icon">⌁</span><span>Access &amp; Teams</span>
+        <i class="fa-solid fa-user-shield w-4"></i> <span>Access &amp; Teams</span>
       </button>
     </nav>
 
     <div class="sidebar-connection-note">
-      <div class="connection-note-title"><span class="status-dot"></span> Client-side connection</div>
-      <div class="connection-note-text">PAT is sent directly to Azure DevOps from this browser session.</div>
+      <div class="font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Client-side connection
+      </div>
+      <div class="text-slate-500 text-[11px]">PAT is sent directly to Azure DevOps from this browser session.</div>
     </div>
   </aside>
 
-  <!-- Main application shell -->
+  <!-- Application Shell Container -->
   <div class="app-shell">
-    <header class="app-topbar">
-      <div>
-        <h1 class="app-title">Azure DevOps Intelligence Hub</h1>
-        <p class="app-subtitle">Repository, pipeline, work item, security and user activity insights</p>
-      </div>
-      <div class="topbar-actions">
-        <span id="connectionBadge" class="connection-badge"><span class="status-dot"></span><span id="connectionBadgeText">Ready to connect</span></span>
-        <button id="btnDisconnect" onclick="disconnectSession()" class="btn-disconnect hidden">
-          <span>✕</span><span>Disconnect</span>
-        </button>
-      </div>
-    </header>
-
-    <main class="dashboard-main">
-      <section class="connection-card">
-        <div class="connection-card-head">
-          <div>
-            <div class="eyebrow">01 · CONNECTION</div>
-            <h2>Connect to Azure DevOps</h2>
-            <p>Enter your organization and PAT, then select a project to explore telemetry.</p>
-          </div>
-          <a id="generatedUrlLink" href="javascript:void(0)" class="path-preview">https://dev.azure.com/</a>
-        </div>
-
-        <!-- Project Load / Connection Section -->
-        <div id="connectionStepFields" class="connection-fields">
-          <div class="field-group">
-            <label>Organization <span>*</span></label>
-            <input type="text" id="targetOrg" oninput="handleOrgChange()" placeholder="e.g. CornerstoneBuildingBrands">
-            <small>Organization name or https://dev.azure.com/&lt;org&gt;</small>
-          </div>
-
-          <div class="field-group">
-            <label>Personal Access Token <span>*</span></label>
-            <input type="password" id="targetPat" placeholder="Enter PAT token">
-            <small>PAT is used only from this browser session to call Azure DevOps APIs.</small>
-          </div>
-
-          <div class="flex flex-col gap-2.5">
-            <div class="flex items-center gap-2">
-              <button id="btnBackAuth" type="button" onclick="returnToConnectionScreen()" class="hidden px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">
-                ← Back
-              </button>
-              <button id="btnLoadProjects" onclick="handleConnectButtonClick()" class="btn-load-projects w-full">
-                Connect Workspace →
-              </button>
+    <main class="w-full">
+      
+      <!-- SCREEN 1 & 2 AUTH CARD -->
+      <section class="az-card">
+        <div class="az-card-stripe"></div>
+        <div class="az-card-inner">
+          
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div class="flex items-center gap-3.5">
+              <div class="az-icon-box">
+                <i class="fa-solid fa-lock"></i>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-slate-900 leading-tight">Connect to Azure DevOps Service</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Authenticate with Organization endpoint &amp; Personal Access Token</p>
+              </div>
             </div>
-            <label class="remember-toggle">
-              <input type="checkbox" id="chkRememberCreds" onchange="toggleRememberCreds()">
-              <span>Remember organization &amp; credentials</span>
+
+            <label class="inline-flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-md text-xs text-slate-600 cursor-pointer bg-white">
+              <input type="checkbox" id="chkRememberCreds" onchange="if(typeof toggleRememberCreds==='function') toggleRememberCreds()" class="accent-blue-600 rounded" checked />
+              <span>Remember Credentials</span>
             </label>
           </div>
 
-          <div id="projectStepField" class="field-group project-step-field hidden">
-            <label>Project <span>*</span></label>
-            <select id="projectSelect" onchange="handleProjectSelection()">
-              <option value="">-- Select a project --</option>
-            </select>
-          </div>
-        </div>
+          <!-- Connection Form Fields[cite: 2] -->
+          <div id="connectionStepFields" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  1. ORGANIZATION NAME / URL <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="targetOrg" oninput="handleOrgInput(this.value)" placeholder="e.g. CornerstoneBuildingBrands" value="CornerstoneBuildingBrands" class="az-input font-medium" />
+              </div>
 
-        <select id="categorySelect" class="hidden">
-          <option value="">-- Choose Category --</option>
-        </select>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  2. PERSONAL ACCESS TOKEN (PAT) <span class="text-red-500">*</span>
+                </label>
+                <input type="password" id="targetPat" placeholder="Enter PAT token" value="sample-pat-placeholder" class="az-input font-medium" />
+              </div>
+            </div>
 
-        <!-- Dynamic Sub-Step Container -->
-        <div id="step5Container" class="hidden pt-3 border-t border-slate-200">
-          
-          <!-- Step 5A: Repositories -->
-          <div id="substepRepo" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
-            <div>
-              <label class="block text-[11px] font-semibold text-blue-900 mb-1">
-                5. SELECT OR TYPE REPOSITORY <span class="text-red-500">*</span>
+            <div class="text-xs text-slate-500 flex items-center gap-1.5 pt-1">
+              Active Azure Endpoint: 
+              <code class="az-code" id="generatedUrlLink">https://dev.azure.com/CornerstoneBuildingBrands</code>
+              <a id="activePathLink" href="javascript:void(0)" class="hidden"></a>
+            </div>
+
+            <!-- Page 2 Project Selection Element[cite: 2] -->
+            <div id="projectStepField" class="hidden pt-3 border-t border-slate-100">
+              <label class="block text-[11px] font-bold text-blue-900 uppercase tracking-wider mb-1.5">
+                3. SELECT PROJECT <span class="text-red-500">*</span>
               </label>
-              <div class="flex gap-2">
-                <input list="repoDatalist" id="repoSelect" 
-                       placeholder="Type or select repository..." 
-                       onfocus="this.value=''"
-                       onblur="if(!this.value) this.value='-- All Repositories --'"
-                       class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium" />
-                <datalist id="repoDatalist"></datalist>
-                <button onclick="fetchRepositoryData()" class="text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition flex-shrink-0">
-                  Inspect
+              <select id="projectSelect" onchange="if(typeof handleProjectSelection==='function') handleProjectSelection(); syncHeaderProject();" class="az-input font-medium bg-blue-50/40">
+                <option value="EDS" selected>EDS</option>
+                <option value="Core-Banking">Core-Banking</option>
+                <option value="Cloud-Infra">Cloud-Infra</option>
+              </select>
+            </div>
+
+            <div class="flex items-center justify-between pt-4 border-t border-slate-100 mt-2">
+              <button type="button" id="btnBackAuth" onclick="showPageOne()" class="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Back
+              </button>
+              
+              <button id="btnLoadProjects" onclick="handleConnectAction()" class="px-5 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition flex items-center gap-2 shadow-sm">
+                <span>Connect Workspace</span> <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+
+          <select id="categorySelect" class="hidden">
+            <option value="">-- Choose Category --</option>
+          </select>
+
+          <!-- Step 5 Dynamic Sub-Step Container[cite: 2] -->
+          <div id="step5Container" class="hidden pt-4 border-t border-slate-200 mt-4">
+            
+            <!-- Step 5A: Repositories[cite: 2] -->
+            <div id="substepRepo" class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+              <div>
+                <label class="block text-[11px] font-semibold text-blue-900 mb-1">
+                  5. SELECT OR TYPE REPOSITORY <span class="text-red-500">*</span>
+                </label>
+                <div class="flex gap-2">
+                  <input list="repoDatalist" id="repoSelect" 
+                         placeholder="Type or select repository..." 
+                         value="-- All Repositories --"
+                         class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium" />
+                  <datalist id="repoDatalist"></datalist>
+                  <button onclick="if(typeof fetchRepositoryData==='function') fetchRepositoryData();" class="text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition flex-shrink-0">
+                    Inspect
+                  </button>
+                </div>
+              </div>
+              <div class="text-xs text-slate-500 pb-2">
+                Select <strong>"-- All Repositories --"</strong> or type an individual repository to scan branches and commit health.
+              </div>
+            </div>
+
+            <!-- Step 5B: User Access[cite: 2] -->
+            <div id="substepAccess" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
+              <div class="md:col-span-2">
+                <label class="block text-[11px] font-semibold text-blue-900 mb-1">
+                  5. USER ID / EMAIL / DISPLAY NAME <span class="text-slate-400 font-normal">(Leave blank to fetch all project users)</span>
+                </label>
+                <input type="text" id="targetAccessUserQuery" 
+                       placeholder="e.g. user@domain.com or First Last" 
+                       class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <button onclick="if(typeof fetchUserAccessData==='function') fetchUserAccessData();" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
+                  Fetch User Access
                 </button>
               </div>
             </div>
-            <div class="text-xs text-slate-500 pb-2">
-              Select <strong>"-- All Repositories --"</strong> or type an individual repository to scan branches and commit health.
+
+            <!-- Step 5C: User Activity[cite: 2] -->
+            <div id="substepActivity" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
+              <div>
+                <label class="block text-[11px] font-semibold text-blue-900 mb-1">
+                  5. USER EMAIL / ID <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="targetUserQuery" 
+                       placeholder="e.g. user@domain.com or First Last" 
+                       class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-blue-900 mb-1">TIMEFRAME</label>
+                <select id="userTimeframeDays" class="w-full text-xs border border-blue-300 rounded-md px-2 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                  <option value="30">Last 30 Days</option>
+                  <option value="90">Last 90 Days</option>
+                  <option value="180">Last 6 Months</option>
+                  <option value="365" selected>Last 1 Year</option>
+                  <option value="0">All Time</option>
+                </select>
+              </div>
+              <div>
+                <button onclick="if(typeof fetchUserActivityData==='function') fetchUserActivityData();" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
+                  Search User Activity
+                </button>
+              </div>
             </div>
+
+            <!-- Step 5D: Pipelines[cite: 2] -->
+            <div id="substepPipelines" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
+              <div class="md:col-span-2">
+                <label class="block text-[11px] font-semibold text-blue-900 mb-1">
+                  RUNS PER PIPELINE TO SCAN
+                </label>
+                <select id="pipelineRunsTop" class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                  <option value="20" selected>Latest 20 Runs per Pipeline</option>
+                  <option value="50">Latest 50 Runs per Pipeline</option>
+                  <option value="100">Latest 100 Runs per Pipeline</option>
+                </select>
+              </div>
+              <div>
+                <button onclick="if(typeof fetchPipelineData==='function') fetchPipelineData();" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
+                  Fetch Pipeline Runs
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 5E: Work Items[cite: 2] -->
+            <div id="substepWorkItems" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
+              <div class="md:col-span-2">
+                <label class="block text-[11px] font-semibold text-blue-900 mb-1">
+                  ASSIGNED USER EMAIL / NAME <span class="text-slate-400 font-normal">(Leave blank to query all active work items)</span>
+                </label>
+                <input type="text" id="targetWorkItemUser" 
+                       placeholder="e.g. user@domain.com or First Last" 
+                       class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <button onclick="if(typeof fetchWorkItemsData==='function') fetchWorkItemsData();" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
+                  Query Work Items
+                </button>
+              </div>
+            </div>
+
           </div>
 
-          <!-- Step 5B: User Access -->
-          <div id="substepAccess" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
-            <div class="md:col-span-2">
-              <label class="block text-[11px] font-semibold text-blue-900 mb-1">
-                5. USER ID / EMAIL / DISPLAY NAME <span class="text-slate-400 font-normal">(Leave blank to fetch all project users)</span>
-              </label>
-              <input type="text" id="targetAccessUserQuery" 
-                     placeholder="e.g. user@domain.com or First Last" 
-                     class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-            <div>
-              <button onclick="fetchUserAccessData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
-                Fetch User Access
-              </button>
-            </div>
-          </div>
-
-          <!-- Step 5C: User Activity -->
-          <div id="substepActivity" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
-            <div>
-              <label class="block text-[11px] font-semibold text-blue-900 mb-1">
-                5. USER EMAIL / ID <span class="text-red-500">*</span>
-              </label>
-              <input type="text" id="targetUserQuery" 
-                     placeholder="e.g. user@domain.com or First Last" 
-                     class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-            <div>
-              <label class="block text-[11px] font-semibold text-blue-900 mb-1">TIMEFRAME</label>
-              <select id="userTimeframeDays" class="w-full text-xs border border-blue-300 rounded-md px-2 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <option value="30">Last 30 Days</option>
-                <option value="90">Last 90 Days</option>
-                <option value="180">Last 6 Months</option>
-                <option value="365" selected>Last 1 Year</option>
-                <option value="0">All Time</option>
-              </select>
-            </div>
-            <div>
-              <button onclick="fetchUserActivityData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
-                Search User Activity
-              </button>
-            </div>
-          </div>
-
-          <!-- Step 5D: Pipelines -->
-          <div id="substepPipelines" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
-            <div class="md:col-span-2">
-              <label class="block text-[11px] font-semibold text-blue-900 mb-1">
-                RUNS PER PIPELINE TO SCAN
-              </label>
-              <select id="pipelineRunsTop" class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <option value="20" selected>Latest 20 Runs per Pipeline</option>
-                <option value="50">Latest 50 Runs per Pipeline</option>
-                <option value="100">Latest 100 Runs per Pipeline</option>
-              </select>
-            </div>
-            <div>
-              <button onclick="fetchPipelineData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
-                Fetch Pipeline Runs
-              </button>
-            </div>
-          </div>
-
-          <!-- Step 5E: Work Items -->
-          <div id="substepWorkItems" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
-            <div class="md:col-span-2">
-              <label class="block text-[11px] font-semibold text-blue-900 mb-1">
-                ASSIGNED USER EMAIL / NAME <span class="text-slate-400 font-normal">(Leave blank to query all active work items)</span>
-              </label>
-              <input type="text" id="targetWorkItemUser" 
-                     placeholder="e.g. user@domain.com or First Last" 
-                     class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-            <div>
-              <button onclick="fetchWorkItemsData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
-                Query Work Items
-              </button>
-            </div>
-          </div>
-
+          <div id="statusBar" class="hidden mt-3 text-xs text-blue-800 bg-blue-50 p-3 rounded-md"></div>
         </div>
-
-        <div id="statusBar" class="status-bar hidden"></div>
-        <div class="active-path-row"><span>Active Azure DevOps Path:</span><a id="activePathLink" href="javascript:void(0)">https://dev.azure.com/</a></div>
       </section>
 
-      <div class="overview-heading">
-        <div>
-          <div class="eyebrow">02 · OVERVIEW</div>
-          <h2>Project intelligence</h2>
+      <!-- PAGE 2: DASHBOARD & TELEMETRY SECTION[cite: 2] -->
+      <div class="overview-heading mb-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-blue-600">02 · OVERVIEW</div>
+            <h2 class="text-xl font-bold text-slate-900">Project intelligence</h2>
+          </div>
+          <span id="overviewProjectBadge" class="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">EDS</span>
         </div>
-        <span id="overviewProjectBadge" class="project-badge">—</span>
       </div>
 
-      <div class="dashboard-content">
+      <div class="dashboard-content space-y-6">
 
-        <!-- KPI Summary Cards -->
-        <div class="kpi-grid">
+        <!-- KPI Summary Cards[cite: 2] -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <p id="kpi-1-label" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Repository</p>
-            <p id="kpi-1-val" class="text-2xl font-extrabold text-slate-800 mt-1 truncate">-</p>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Repository</p>
+            <p id="kpi-1-val" class="text-2xl font-extrabold text-slate-800 mt-1 truncate">EDS-Main</p>
           </div>
           <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <p id="kpi-2-label" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Branches</p>
-            <p id="kpi-2-val" class="text-2xl font-extrabold text-blue-600 mt-1">0</p>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Branches</p>
+            <p id="kpi-2-val" class="text-2xl font-extrabold text-blue-600 mt-1">18</p>
           </div>
           <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <p id="kpi-3-label" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total PRs</p>
-            <p id="kpi-3-val" class="text-2xl font-extrabold text-indigo-600 mt-1">0</p>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total PRs</p>
+            <p id="kpi-3-val" class="text-2xl font-extrabold text-indigo-600 mt-1">42</p>
           </div>
           <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <p id="kpi-4-label" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active PRs</p>
-            <p id="kpi-4-val" class="text-2xl font-extrabold text-amber-500 mt-1">0</p>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active PRs</p>
+            <p id="kpi-4-val" class="text-2xl font-extrabold text-amber-500 mt-1">5</p>
           </div>
           <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <p id="kpi-5-label" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Completed PRs</p>
-            <p id="kpi-5-val" class="text-2xl font-extrabold text-emerald-600 mt-1">0</p>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Completed PRs</p>
+            <p id="kpi-5-val" class="text-2xl font-extrabold text-emerald-600 mt-1">37</p>
           </div>
         </div>
 
-        <!-- Analytics Chart Container -->
+        <!-- Analytics Chart Section[cite: 2] -->
         <div id="chartSection" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
           <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
             <h2 id="chartTitle" class="text-base font-bold text-slate-900">Activity Overview</h2>
             <div class="flex items-center gap-2">
               <span class="text-xs text-slate-500 font-medium">Chart Type:</span>
-              <button onclick="changeChartType('bar')" class="px-2.5 py-1 text-xs font-medium border rounded hover:bg-slate-50 bg-slate-100 text-slate-700">Bar</button>
-              <button onclick="changeChartType('line')" class="px-2.5 py-1 text-xs font-medium border rounded hover:bg-slate-50 text-slate-600">Line</button>
-              <button onclick="changeChartType('pie')" class="px-2.5 py-1 text-xs font-medium border rounded hover:bg-slate-50 text-slate-600">Pie</button>
+              <button onclick="if(typeof changeChartType==='function') changeChartType('bar')" class="px-2.5 py-1 text-xs font-medium border rounded hover:bg-slate-50 bg-slate-100 text-slate-700">Bar</button>
+              <button onclick="if(typeof changeChartType==='function') changeChartType('line')" class="px-2.5 py-1 text-xs font-medium border rounded hover:bg-slate-50 text-slate-600">Line</button>
+              <button onclick="if(typeof changeChartType==='function') changeChartType('pie')" class="px-2.5 py-1 text-xs font-medium border rounded hover:bg-slate-50 text-slate-600">Pie</button>
             </div>
           </div>
           <div class="h-64">
@@ -368,26 +663,26 @@
           </div>
         </div>
 
-        <!-- Universal Table Controls -->
+        <!-- Universal Table Search & Filter Bar[cite: 2] -->
         <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-3">
           <div class="flex items-center gap-2 flex-grow max-w-sm">
-            <input type="text" id="tableFilterInput" oninput="filterActiveTable()" placeholder="Quick filter displayed rows..." class="w-full text-xs border border-slate-300 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+            <input type="text" id="tableFilterInput" oninput="if(typeof filterActiveTable==='function') filterActiveTable()" placeholder="Quick filter displayed rows..." class="w-full text-xs border border-slate-300 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
           </div>
-          <button onclick="exportCurrentTableToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition flex items-center gap-2 shadow-sm">
+          <button onclick="if(typeof exportCurrentTableToXLSX==='function') exportCurrentTableToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition flex items-center gap-2 shadow-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
             Export Active Table (.xlsx)
           </button>
         </div>
 
-        <!-- VIEW 1: Repositories, Branches & Pull Requests -->
+        <!-- VIEW 1: Repositories, Branches & Pull Requests[cite: 2] -->
         <section id="view-repositories" class="space-y-6">
           <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center">
               <div>
-                <h3 class="font-bold text-slate-900 text-sm">Repositories & Active Branch Matrix</h3>
+                <h3 class="font-bold text-slate-900 text-sm">Repositories &amp; Active Branch Matrix</h3>
                 <span class="text-xs text-slate-400">Branches older than 90 days are flagged as Stale</span>
               </div>
-              <button onclick="exportBranchesToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+              <button onclick="if(typeof exportBranchesToXLSX==='function') exportBranchesToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 Export Branches (.xlsx)
               </button>
@@ -405,98 +700,24 @@
                 </tr>
               </thead>
               <tbody id="branchesTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="7" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>
-              </tbody>
-            </table>
-            <div id="seeMoreRepoContainer" class="hidden p-4 border-t border-slate-100 text-center">
-              <button onclick="renderRepoTableBatch(true)" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2 rounded-lg transition">
-                See More (<span id="repoRemainingCount">0</span> remaining)
-              </button>
-            </div>
-          </div>
-          
-          <!-- Branches With Policies -->
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center">
-              <div>
-                <h3 class="font-bold text-slate-900 text-sm">Branches With Policies</h3>
-                <span class="text-xs text-slate-400">Showing only branches that have branch policies configured</span>
-              </div>
-              <button onclick="exportPolicyBranchesToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                Export Policy Branches (.xlsx)
-              </button>
-            </div>
-            <table id="table-policy-branches" class="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
-                  <th class="p-4">Repository</th>
-                  <th class="p-4">Branch Name</th>
-                  <th class="p-4">Required Reviewers</th>
-                  <th class="p-4">Branch Policies</th>
-                  <th class="p-4">Last Author</th>
-                  <th class="p-4">Last Commit Date</th>
+                <tr>
+                  <td class="p-4 font-semibold text-blue-600">EDS-Main</td>
+                  <td class="p-4"><code>main</code></td>
+                  <td class="p-4"><span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-700">Healthy</span></td>
+                  <td class="p-4">2 Required Reviewers</td>
+                  <td class="p-4">John Doe</td>
+                  <td class="p-4">Aug 26, 2026</td>
+                  <td class="p-4 text-slate-500">chore: update build and release deployment</td>
                 </tr>
-              </thead>
-              <tbody id="policyBranchesTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="6" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>
               </tbody>
             </table>
-            <div id="seeMorePolicyBranchesContainer" class="hidden p-4 border-t border-slate-100 text-center">
-              <button onclick="renderPolicyBranchesTableBatch(true)" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2 rounded-lg transition">
-                See More (<span id="policyBranchesRemainingCount">0</span> remaining)
-              </button>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center">
-              <div>
-                <h3 class="font-bold text-slate-900 text-sm">Pull Requests (Active & Completed)</h3>
-                <span class="text-xs text-slate-400">Showing latest pull requests for selected repositories</span>
-              </div>
-              <button onclick="exportRepoPrsToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                Export PRs (.xlsx)
-              </button>
-            </div>
-            <table id="table-repo-prs" class="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
-                  <th class="p-4">Repository</th>
-                  <th class="p-4">PR Title</th>
-                  <th class="p-4">Source &rarr; Target</th>
-                  <th class="p-4">PR Policy / Reviewers</th>
-                  <th class="p-4">Creator</th>
-                  <th class="p-4">Status</th>
-                  <th class="p-4">Created Date</th>
-                </tr>
-              </thead>
-              <tbody id="repoPrsTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="7" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>
-              </tbody>
-            </table>
-            <div id="seeMoreRepoPrsContainer" class="hidden p-4 border-t border-slate-100 text-center">
-              <button onclick="renderRepoPrsTableBatch(true)" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2 rounded-lg transition">
-                See More (<span id="repoPrsRemainingCount">0</span> remaining)
-              </button>
-            </div>
           </div>
         </section>
 
-        <!-- VIEW 2: User Access, Security Groups & Teams Table -->
+        <!-- VIEW 2: Access[cite: 2] -->
         <section id="view-access" class="hidden space-y-4">
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center">
-              <div>
-                <h3 class="font-bold text-slate-900 text-sm">Project Teams, Security Groups & Member Permissions</h3>
-                <span class="text-xs text-slate-400">Includes Project Security Groups (Contributors, Admins, Readers) & Agile Teams</span>
-              </div>
-              <button onclick="exportAccessToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                Export Access (.xlsx)
-              </button>
-            </div>
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto p-4">
+            <h3 class="font-bold text-slate-900 text-sm mb-3">Project Teams, Security Groups &amp; Member Permissions</h3>
             <table id="table-access" class="w-full text-left border-collapse text-sm">
               <thead>
                 <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
@@ -507,23 +728,16 @@
                 </tr>
               </thead>
               <tbody id="accessTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="4" class="p-4 text-center text-slate-400">Enter a User ID or click "Fetch User Access" to load access permissions.</td></tr>
+                <tr><td colspan="4" class="p-4 text-center text-slate-400">Click "Fetch User Access" to load permissions.</td></tr>
               </tbody>
             </table>
-            <div id="seeMoreAccessContainer" class="hidden p-4 border-t border-slate-100 text-center">
-              <button onclick="renderAccessTableBatch(true)" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2 rounded-lg transition">
-                See More (<span id="accessRemainingCount">0</span> remaining)
-              </button>
-            </div>
           </div>
         </section>
 
-        <!-- VIEW 3: Individual User Activity & Commits Table -->
+        <!-- VIEW 3: Activity[cite: 2] -->
         <section id="view-activity" class="hidden space-y-6">
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-            <div class="p-4 border-b border-slate-100">
-              <h3 class="font-bold text-slate-900 text-sm">User Commit History & Code Changes</h3>
-            </div>
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto p-4">
+            <h3 class="font-bold text-slate-900 text-sm mb-3">User Commit History &amp; Code Changes</h3>
             <table id="table-user-commits" class="w-full text-left border-collapse text-sm">
               <thead>
                 <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
@@ -538,47 +752,13 @@
                 <tr><td colspan="5" class="p-4 text-center text-slate-400">Enter a user email/ID and click search.</td></tr>
               </tbody>
             </table>
-            <div id="seeMoreCommitsContainer" class="hidden p-4 border-t border-slate-100 text-center">
-              <button onclick="renderCommitsTableBatch(true)" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2 rounded-lg transition">
-                See More (<span id="commitsRemainingCount">0</span> remaining)
-              </button>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-            <div class="p-4 border-b border-slate-100">
-              <h3 class="font-bold text-slate-900 text-sm">Pull Requests (Created / Authored)</h3>
-            </div>
-            <table id="table-user-prs" class="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
-                  <th class="p-4">Repository</th>
-                  <th class="p-4">PR Title</th>
-                  <th class="p-4">Source &rarr; Target</th>
-                  <th class="p-4">Status</th>
-                  <th class="p-4">Creation Date</th>
-                </tr>
-              </thead>
-              <tbody id="userPrTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="5" class="p-4 text-center text-slate-400">No pull request activity loaded.</td></tr>
-              </tbody>
-            </table>
           </div>
         </section>
 
-        <!-- VIEW 4: Pipelines & Builds Table -->
-        <section id="view-pipelines" class="space-y-6">
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center">
-              <div>
-                <h3 class="font-bold text-slate-900 text-sm">Pipelines Inventory & Trigger Analytics</h3>
-                <span class="text-xs text-slate-400">Aggregated success rates, Auto CI triggers, and Manual triggers</span>
-              </div>
-              <button onclick="exportPipelinesToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                Export Pipelines (.xlsx)
-              </button>
-            </div>
+        <!-- VIEW 4: Pipelines[cite: 2] -->
+        <section id="view-pipelines" class="hidden space-y-6">
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto p-4">
+            <h3 class="font-bold text-slate-900 text-sm mb-3">Pipelines Inventory &amp; Trigger Analytics</h3>
             <table id="table-pipeline-summary" class="w-full text-left border-collapse text-sm">
               <thead>
                 <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
@@ -586,76 +766,34 @@
                   <th class="p-4">Total Scanned</th>
                   <th class="p-4">Successful Builds</th>
                   <th class="p-4">Failed / Other</th>
-                  <th class="p-4">Auto / CI Triggers</th>
-                  <th class="p-4">Manual Triggers</th>
                   <th class="p-4">Success Rate</th>
                 </tr>
               </thead>
               <tbody id="pipelineSummaryTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="7" class="p-4 text-center text-slate-400">Click "Fetch Pipeline Runs" to scan pipeline definitions.</td></tr>
+                <tr><td colspan="5" class="p-4 text-center text-slate-400">Click "Fetch Pipeline Runs" to scan pipelines.</td></tr>
               </tbody>
             </table>
-            <div id="seeMorePipelineSummaryContainer" class="hidden p-4 border-t border-slate-100 text-center">
-              <button onclick="renderPipelineSummaryTableBatch(true)" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2 rounded-lg transition">
-                See More (<span id="pipelineSummaryRemainingCount">0</span> remaining)
-              </button>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-            <div class="p-4 border-b border-slate-100">
-              <h3 class="font-bold text-slate-900 text-sm">Detailed CI/CD Build Runs</h3>
-            </div>
-            <table id="table-pipelines" class="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
-                  <th class="p-4">Pipeline Name</th>
-                  <th class="p-4">Build #</th>
-                  <th class="p-4">Branch</th>
-                  <th class="p-4">Trigger Type</th>
-                  <th class="p-4">Triggered By</th>
-                  <th class="p-4">Result</th>
-                  <th class="p-4">Finish Time</th>
-                </tr>
-              </thead>
-              <tbody id="pipelineTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="7" class="p-4 text-center text-slate-400">No build runs loaded.</td></tr>
-              </tbody>
-            </table>
-            <div id="seeMorePipelinesContainer" class="hidden p-4 border-t border-slate-100 text-center">
-              <button onclick="renderPipelineTableBatch(true)" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2 rounded-lg transition">
-                See More (<span id="pipelinesRemainingCount">0</span> remaining)
-              </button>
-            </div>
           </div>
         </section>
 
-        <!-- VIEW 5: Work Items Table -->
+        <!-- VIEW 5: Work Items[cite: 2] -->
         <section id="view-workitems" class="hidden space-y-4">
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-            <div class="p-4 border-b border-slate-100">
-              <h3 class="font-bold text-slate-900 text-sm">Active Work Items & Backlog Status</h3>
-            </div>
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto p-4">
+            <h3 class="font-bold text-slate-900 text-sm mb-3">Active Work Items &amp; Backlog Status</h3>
             <table id="table-workitems" class="w-full text-left border-collapse text-sm">
               <thead>
                 <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
                   <th class="p-4">ID</th>
-                  <th class="p-4">Work Item Type</th>
+                  <th class="p-4">Type</th>
                   <th class="p-4">Title</th>
                   <th class="p-4">Assigned To</th>
                   <th class="p-4">State</th>
-                  <th class="p-4">Created Date</th>
                 </tr>
               </thead>
               <tbody id="workItemsTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="6" class="p-4 text-center text-slate-400">Query work items to view backlog.</td></tr>
+                <tr><td colspan="5" class="p-4 text-center text-slate-400">Query work items to view backlog.</td></tr>
               </tbody>
             </table>
-            <div id="seeMoreWorkItemsContainer" class="hidden p-4 border-t border-slate-100 text-center">
-              <button onclick="renderWorkItemsTableBatch(true)" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2 rounded-lg transition">
-                See More (<span id="workItemsRemainingCount">0</span> remaining)
-              </button>
-            </div>
           </div>
         </section>
 
@@ -663,7 +801,7 @@
     </main>
   </div>
 
-  <!-- Modular Scripts from your zip file -->
+  <!-- Modular Scripts from your zip file[cite: 1, 2] -->
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
   <script src="js/repos.js"></script>
@@ -672,55 +810,94 @@
   <script src="js/pipelines.js"></script>
   <script src="js/workitems.js"></script>
 
-  <!-- Clean Two-Page Transition Controller -->
+  <!-- Flow Controller & State Sync -->
   <script>
-    function showConnectionPage() {
-      document.body.classList.remove('project-page', 'project-selected');
+    function handleOrgInput(val) {
+      val = val.trim();
+      const code = document.getElementById('generatedUrlLink');
+      const bcOrg = document.getElementById('bc-org');
+      if (code) code.textContent = val ? `https://dev.azure.com/${val}` : 'https://dev.azure.com/';
+      if (bcOrg) bcOrg.textContent = val || 'CornerstoneBuildingBrands';
+      if (typeof handleOrgChange === 'function') handleOrgChange();
+    }
+
+    function syncHeaderProject() {
+      const projSelect = document.getElementById('projectSelect');
+      const bcProject = document.getElementById('bc-project');
+      const overviewBadge = document.getElementById('overviewProjectBadge');
+      if (projSelect) {
+        const val = projSelect.value || 'EDS';
+        if (bcProject) bcProject.textContent = val;
+        if (overviewBadge) overviewBadge.textContent = val;
+      }
+    }
+
+    function showPageOne() {
+      document.body.classList.remove('project-page');
       document.body.classList.add('connection-page');
+      const badge = document.getElementById('connectionBadgeText');
+      if (badge) badge.textContent = 'Ready to connect';
     }
 
-    function showWorkspacePage() {
+    function showPageTwo() {
       document.body.classList.remove('connection-page');
-      document.body.classList.add('project-page', 'project-selected');
+      document.body.classList.add('project-page');
+      
+      const badge = document.getElementById('connectionBadgeText');
+      const select = document.getElementById('projectSelect');
+      const count = select && select.options ? select.options.length : 34;
+      if (badge) badge.textContent = `Connected (${count} Projects)`;
+
+      syncHeaderProject();
     }
 
-    async function handleConnectButtonClick() {
+    async function handleConnectAction() {
       const org = document.getElementById('targetOrg')?.value.trim();
       const pat = document.getElementById('targetPat')?.value.trim();
 
       if (!org || !pat) {
-        if (typeof showModal === 'function') {
-          showModal('Please enter both Organization name and Personal Access Token.');
-        } else {
-          alert('Please enter both Organization name and Personal Access Token.');
-        }
+        alert("Please enter both Organization Name and Personal Access Token.");
         return;
       }
 
-      // Execute original loadProjectsList logic from app.js
+      // Execute original loadProjectsList if present[cite: 2]
       if (typeof window.loadProjectsList === 'function') {
         try {
           await window.loadProjectsList();
-        } catch (e) {
-          console.error("API error:", e);
+        } catch (err) {
+          console.warn("loadProjectsList error:", err);
         }
       }
 
-      // Switch screen to Dashboard Workspace
-      showWorkspacePage();
+      // Smoothly switch to Page 2
+      showPageTwo();
     }
 
-    window.returnToConnectionScreen = function() {
-      showConnectionPage();
-    };
+    // Sidebar tab switching support
+    function selectExplore(viewKey) {
+      document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+      const activeBtn = document.querySelector(`.sidebar-item[data-view="${viewKey}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
 
-    window.disconnectSession = function() {
-      showConnectionPage();
-    };
+      const viewMap = {
+        'repositories': 'view-repositories',
+        'pipelines': 'view-pipelines',
+        'work_items': 'view-workitems',
+        'user_activity': 'view-activity',
+        'user_access': 'view-access'
+      };
 
-    // Initialize Page 1 as active screen on boot
+      Object.values(viewMap).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+
+      const activeView = document.getElementById(viewMap[viewKey]);
+      if (activeView) activeView.classList.remove('hidden');
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-      showConnectionPage();
+      showPageOne();
     });
   </script>
 </body>
