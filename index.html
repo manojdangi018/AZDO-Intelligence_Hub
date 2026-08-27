@@ -9,6 +9,55 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="css/styles.css" />
+
+    <style>
+      /* Connection wizard: Page 1 shows only Organization + PAT. */
+      body.connection-page .app-sidebar {
+        display: none;
+      }
+
+      body.connection-page .app-shell {
+        margin-left: 0 !important;
+      }
+
+      body.connection-page #projectStepField,
+      body.connection-page #step5Container,
+      body.connection-page #statusBar,
+      body.connection-page .active-path-row,
+      body.connection-page .overview-heading,
+      body.connection-page .dashboard-content {
+        display: none !important;
+      }
+
+      body.connection-page .connection-card {
+        max-width: 970px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      /* Page 2 keeps the existing application layout and project selector. */
+      body.project-page .connection-step-only {
+        display: none !important;
+      }
+
+      body.project-page #projectStepField {
+        display: block !important;
+      }
+
+      body.project-page #step5Container {
+        display: none !important;
+      }
+
+      body.project-page .overview-heading,
+      body.project-page .dashboard-content {
+        display: none;
+      }
+
+      .project-step-field {
+        grid-column: 1 / -1;
+      }
+    </style>
+
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
 
@@ -93,7 +142,7 @@
         </div>
 
         <!-- Project Load / Connection Section -->
-        <div class="connection-fields">
+        <div id="connectionStepFields" class="connection-fields">
           <div class="field-group">
             <label>Organization <span>*</span></label>
             <input type="text" id="targetOrg" oninput="handleOrgChange()" placeholder="e.g. CornerstoneBuildingBrands">
@@ -114,7 +163,7 @@
             </label>
           </div>
 
-          <div class="field-group">
+          <div id="projectStepField" class="field-group project-step-field hidden">
             <label>Project <span>*</span></label>
             <select id="projectSelect" disabled onchange="handleProjectSelection()">
               <option value="">-- Load PAT first --</option>
@@ -591,5 +640,76 @@
   <script src="js/activity.js"></script>
   <script src="js/pipelines.js"></script>
   <script src="js/workitems.js"></script>
+
+<script>
+(function () {
+  const originalLoadProjectsList = window.loadProjectsList;
+  const originalDisconnectSession = window.disconnectSession;
+
+  function showConnectionPage() {
+    document.body.classList.remove('project-page');
+    document.body.classList.add('connection-page');
+
+    const sidebar = document.querySelector('.app-sidebar');
+    if (sidebar) sidebar.style.display = 'none';
+
+    const projectField = document.getElementById('projectStepField');
+    if (projectField) projectField.classList.add('hidden');
+
+    const projectSelect = document.getElementById('projectSelect');
+    if (projectSelect) projectSelect.value = '';
+
+    const badge = document.getElementById('connectionBadgeText');
+    if (badge) badge.textContent = 'Ready to connect';
+  }
+
+  function showProjectPage() {
+    document.body.classList.remove('connection-page');
+    document.body.classList.add('project-page');
+
+    const sidebar = document.querySelector('.app-sidebar');
+    if (sidebar) sidebar.style.display = '';
+
+    const projectField = document.getElementById('projectStepField');
+    if (projectField) projectField.classList.remove('hidden');
+
+    const badge = document.getElementById('connectionBadgeText');
+    if (badge) badge.textContent = 'Connected';
+  }
+
+  // Page 1: keep the existing Azure DevOps connection/load logic unchanged,
+  // then move to Page 2 only after projects have actually loaded.
+  window.loadProjectsList = async function () {
+    if (typeof originalLoadProjectsList === 'function') {
+      await originalLoadProjectsList();
+    }
+
+    const select = document.getElementById('projectSelect');
+    if (select && !select.disabled && select.options.length > 1) {
+      showProjectPage();
+    }
+  };
+
+  window.returnToConnectionScreen = function () {
+    showConnectionPage();
+  };
+
+  // Disconnect returns the user to Page 1.
+  window.disconnectSession = function () {
+    if (typeof originalDisconnectSession === 'function') {
+      originalDisconnectSession();
+    }
+    showConnectionPage();
+  };
+
+  // Page 1 is the initial screen.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', showConnectionPage);
+  } else {
+    showConnectionPage();
+  }
+})();
+</script>
+
 </body>
 </html>
