@@ -9,7 +9,6 @@ async function fetchPipelineData() {
   setStatus(`Scanning pipeline definitions and recent runs in descending order...`, 'info');
 
   try {
-    // 1. Fetch modern & classic pipeline definitions
     const modernUrl = `https://dev.azure.com/${org}/${project}/_apis/pipelines?api-version=${API_VERSION}`;
     const classicUrl = `https://dev.azure.com/${org}/${project}/_apis/build/definitions?api-version=${API_VERSION}`;
 
@@ -42,966 +41,388 @@ async function fetchPipelineData() {
       });
     }
 
-
-    // ==========================================================
-    // TRIGGER TYPE
-    // ==========================================================
-
     function parseTriggerType(reasonStr) {
       const r = (reasonStr || '').toLowerCase();
 
-      if (
-        r.includes('batchedci') ||
-        r.includes('individualci') ||
-        r === 'ci'
-      ) {
+      if (r.includes('batchedci') || r.includes('individualci') || r === 'ci') {
         return 'Auto (CI)';
       }
 
-      if (
-        r.includes('pullrequest') ||
-        r.includes('validatepr')
-      ) {
+      if (r.includes('pullrequest') || r.includes('validatepr')) {
         return 'Auto (PR)';
       }
 
-      if (
-        r.includes('schedule')
-      ) {
+      if (r.includes('schedule')) {
         return 'Auto (Scheduled)';
       }
 
-      if (
-        r.includes('buildcompletion') ||
-        r.includes('triggered')
-      ) {
+      if (r.includes('buildcompletion') || r.includes('triggered')) {
         return 'Auto (Triggered)';
       }
 
-      if (
-        r.includes('manual') ||
-        r.includes('usercreated') ||
-        r.includes('none')
-      ) {
+      if (r.includes('manual') || r.includes('usercreated') || r.includes('none')) {
         return 'Manual';
       }
 
       return 'Manual';
     }
 
-
-    // ==========================================================
-    // BRANCH
-    // ==========================================================
-    // Resolves the branch that actually triggered the run.
-    // IMPORTANT: Do not default to "main".
-    // ==========================================================
-
+    // Azure DevOps Build objects expose the actual source branch in sourceBranch.
+    // YAML Pipeline Run objects expose it under resources.repositories.<repo>.refName.
     function parseBranch(bObj) {
+      const directBranch =
+        bObj?.sourceBranch ||
+        bObj?.resources?.repositories?.self?.refName ||
+        bObj?.resources?.repositories?.self?.version ||
+        bObj?.triggerInfo?.['pr.sourceBranch'] ||
+        bObj?.triggerInfo?.['ci.sourceBranch'] ||
+        bObj?.parameters?.['system.pullRequest.sourceBranch'] ||
+        bObj?.variables?.['Build.SourceBranch']?.value ||
+        bObj?.variables?.['Build.SourceBranchName']?.value;
 
-      const rawBranch =
-        bObj.sourceBranch ||
-
-        bObj.resources?.repositories?.self?.refName ||
-
-        bObj.resources?.repositories?.self?.version ||
-
-        bObj.triggerInfo?.['pr.sourceBranch'] ||
-
-        bObj.parameters?.['system.pullRequest.sourceBranch'] ||
-
-        bObj.variables?.['Build.SourceBranch']?.value ||
-
-        bObj.variables?.['Build.SourceBranchName']?.value;
-
-
-      if (!rawBranch) {
+      if (!directBranch) {
         return 'Unknown Branch';
       }
 
-
-      return String(rawBranch)
-        .replace(
-          /^refs\/heads\//i,
-          ''
-        )
-        .replace(
-          /^refs\/pull\/\d+\/merge/i,
-          'PR Merge'
-        )
-        .replace(
-          /^refs\/tags\//i,
-          'Tag: '
-        );
-
+      return String(directBranch)
+        .replace(/^refs\/heads\//i, '')
+        .replace(/^refs\/pull\/(\d+)\/merge$/i, 'PR Merge #$1')
+        .replace(/^refs\/tags\//i, 'Tag: ');
     }
 
+    function cleanIdentity(value) {
+      if (!value) return '';
 
-    // ==========================================================
-    // TRIGGERED BY / AUTHOR
-    // ==========================================================
-    // Priority:
-    //
-    // 1. Pipeline Runs API createdBy
-    // 2. Build requestedBy
-    // 3. Build requestedFor
-    // 4. Trigger information
-    // 5. Build variables
-    //
-    // This prevents "Automated System" from being shown when
-    // Azure DevOps actually provides the initiating user.
-    // ==========================================================
+      const text = String(value).trim();
+      if (!text) return '';
 
-    function parseAuthor(
-      bObj,
-      pipeName,
-      triggerType
-    ) {
+      const lower = text.toLowerCase();
+
+      const blocked = [
+        'microsoft.visualstudio.services',
+        'build service',
+        'project collection build service',
+        'project collection service accounts',
+        'automated system',
+        'azure devops'
+      ];
+
+      if (blocked.some(x => lower.includes(x))) {
+        return '';
+      }
+
+      return text;
+    }
+
+    // For a manual build, requestedFor is the identity on whose behalf
+    // the build was queued. requestedBy is the identity that queued it.
+    // For CI/PR builds Azure DevOps may legitimately return a service identity.
+    function parseAuthor(bObj, pipeName, triggerType) {
+      const requestedFor = cleanIdentity(
+        bObj?.requestedFor?.displayName ||
+        bObj?.requestedFor?.uniqueName ||
+        bObj?.requestedFor?.mailAddress
+      );
+
+      const requestedBy = cleanIdentity(
+        bObj?.requestedBy?.displayName ||
+        bObj?.requestedBy?.uniqueName ||
+        bObj?.requestedBy?.mailAddress
+      );
 
       const candidates = [
-
-        // Pipeline Runs API
-        bObj.createdBy?.displayName,
-        bObj.createdBy?.uniqueName,
-        bObj.createdBy?.mailAddress,
-
-        // Build Runs API
-        bObj.requestedBy?.displayName,
-        bObj.requestedBy?.uniqueName,
-        bObj.requestedBy?.mailAddress,
-
-        bObj.requestedFor?.displayName,
-        bObj.requestedFor?.uniqueName,
-        bObj.requestedFor?.mailAddress,
-
-        // Trigger information
-        bObj.triggerInfo?.['pr.sender.name'],
-        bObj.triggerInfo?.['pr.sender.email'],
-
-        bObj.triggerInfo?.['ci.actor.name'],
-        bObj.triggerInfo?.['ci.actor.email'],
-
-        // Other Azure DevOps identity fields
-        bObj.lastChangedBy?.displayName,
-        bObj.lastChangedBy?.uniqueName,
-
-        // Pipeline variables
-        bObj.variables?.['Build.RequestedFor']?.value,
-        bObj.variables?.['Build.RequestedForEmail']?.value,
-
-        bObj.variables?.['Build.QueuedBy']?.value,
-        bObj.variables?.['Build.QueuedByEmail']?.value
-
+        requestedFor,
+        requestedBy,
+        cleanIdentity(bObj?.createdBy?.displayName),
+        cleanIdentity(bObj?.createdBy?.uniqueName),
+        cleanIdentity(bObj?.triggerInfo?.['pr.sender.name']),
+        cleanIdentity(bObj?.triggerInfo?.['ci.actor.name']),
+        cleanIdentity(bObj?.triggerInfo?.['pr.sender.email']),
+        cleanIdentity(bObj?.triggerInfo?.['ci.actor.email']),
+        cleanIdentity(bObj?.lastChangedBy?.displayName),
+        cleanIdentity(bObj?.lastChangedBy?.uniqueName),
+        cleanIdentity(bObj?.variables?.['Build.RequestedFor']?.value),
+        cleanIdentity(bObj?.variables?.['Build.RequestedForEmail']?.value),
+        cleanIdentity(bObj?.variables?.['Build.QueuedBy']?.value),
+        cleanIdentity(bObj?.variables?.['Build.QueuedByEmail']?.value)
       ];
 
-
-      const ignoredValues = [
-
-        '',
-
-        'automated system',
-
-        'build service',
-
-        'azure devops',
-
-        'microsoft.visualstudio.services'
-
-      ];
-
-
-      for (
-        const raw of candidates
-      ) {
-
+      for (const candidate of candidates) {
         if (
-          raw &&
-          typeof raw === 'string'
+          candidate &&
+          candidate.toLowerCase() !== (pipeName || '').toLowerCase()
         ) {
-
-          const val =
-            raw.trim();
-
-          const lower =
-            val.toLowerCase();
-
-
-          if (
-            val !== '' &&
-
-            lower !==
-              (
-                pipeName || ''
-              ).toLowerCase() &&
-
-            !ignoredValues.some(
-              ignored =>
-                lower === ignored ||
-                lower.includes(ignored)
-            )
-          ) {
-
-            return val;
-
-          }
-
+          return candidate;
         }
-
       }
 
-
-      // Automatic triggers
-      if (
-        triggerType ===
-        'Auto (Scheduled)'
-      ) {
-        return 'Scheduled Timer';
-      }
-
-
-      if (
-        triggerType ===
-        'Auto (CI)'
-      ) {
-        return 'CI Automation';
-      }
-
-
-      if (
-        triggerType ===
-        'Auto (PR)'
-      ) {
-        return 'PR Automation';
-      }
-
+      if (triggerType === 'Auto (Scheduled)') return 'Scheduled Timer';
+      if (triggerType === 'Auto (CI)') return 'CI Automation';
+      if (triggerType === 'Auto (PR)') return 'PR Automation';
+      if (triggerType === 'Auto (Triggered)') return 'Pipeline Automation';
 
       return 'Automated System';
-
     }
 
+    // Get the authoritative Build object. The Build API documents
+    // sourceBranch, requestedBy and requestedFor on the Build response.
+    // This is intentionally called for every returned build because the
+    // list response in some Azure DevOps configurations does not contain
+    // all identity/repository fields needed by the UI.
+    async function getBuildDetails(buildId) {
+      if (!buildId) return null;
 
-    // ==========================================================
-    // SUMMARY STORAGE
-    // ==========================================================
+      const url =
+        `https://dev.azure.com/${org}/${project}` +
+        `/_apis/build/builds/${encodeURIComponent(buildId)}` +
+        `?api-version=7.1`;
+
+      try {
+        return await fetchAzDo(url, authHeader);
+      } catch (err) {
+        console.warn(
+          `[Azure DevOps Pipeline] Unable to get build details for ${buildId}:`,
+          err
+        );
+        return null;
+      }
+    }
+
+    // Get the individual YAML Pipeline Run. The Run API provides repository
+    // refName even when the list response is incomplete.
+    async function getPipelineRunDetails(pipelineId, runId) {
+      if (!pipelineId || !runId) return null;
+
+      const url =
+        `https://dev.azure.com/${org}/${project}` +
+        `/_apis/pipelines/${encodeURIComponent(pipelineId)}/runs/${encodeURIComponent(runId)}` +
+        `?api-version=7.1`;
+
+      try {
+        return await fetchAzDo(url, authHeader);
+      } catch (err) {
+        console.warn(
+          `[Azure DevOps Pipeline] Unable to get pipeline run details for ${pipelineId}/${runId}:`,
+          err
+        );
+        return null;
+      }
+    }
 
     let summaryMap = {};
 
-
-    pipelineMap.forEach(
-      (pipe, name) => {
-
-        summaryMap[name] = {
-
-          name: name,
-
-          total: 0,
-
-          succeeded: 0,
-
-          failed: 0,
-
-          autoTriggers: 0,
-
-          manualTriggers: 0
-
-        };
-
-      }
-    );
-
+    pipelineMap.forEach((pipe, name) => {
+      summaryMap[name] = {
+        name: name,
+        total: 0,
+        succeeded: 0,
+        failed: 0,
+        autoTriggers: 0,
+        manualTriggers: 0
+      };
+    });
 
     let allRuns = [];
-
-
-    const pipeList =
-      Array.from(
-        pipelineMap.values()
-      );
-
-
+    const pipeList = Array.from(pipelineMap.values());
     const BATCH_SIZE = 8;
 
-
-    // ==========================================================
-    // PROCESS PIPELINES
-    // ==========================================================
-
-    for (
-      let i = 0;
-      i < pipeList.length;
-      i += BATCH_SIZE
-    ) {
-
-      const batch =
-        pipeList.slice(
-          i,
-          i + BATCH_SIZE
-        );
-
-
-      await Promise.all(
-
-        batch.map(
-          async pipe => {
-
-            try {
-
-              let runsObtained = [];
-
-
-              // =================================================
-              // BUILD RUNS API
-              // =================================================
-
-              const bUrl =
-                `https://dev.azure.com/${org}/${project}/_apis/build/builds` +
-                `?definitions=${pipe.id}` +
-                `&$top=${perPipelineRuns}` +
-                `&queryOrder=queueTimeDescending` +
-                `&api-version=${API_VERSION}`;
-
-
-              const bData =
-                await fetchAzDo(
-                  bUrl,
-                  authHeader
-                );
-
-
-              runsObtained =
-                bData?.value || [];
-
-
-              // =================================================
-              // YAML PIPELINE RUNS API
-              // =================================================
-
-              if (
-                runsObtained.length === 0
-              ) {
-
-                const rUrl =
-                  `https://dev.azure.com/${org}/${project}` +
-                  `/_apis/pipelines/${pipe.id}/runs` +
-                  `?api-version=${API_VERSION}`;
-
-
-                const rData =
-                  await fetchAzDo(
-                    rUrl,
-                    authHeader
-                  );
-
-
-                const rawYamlRuns =
-                  (
-                    rData?.value || []
-                  ).slice(
-                    0,
-                    perPipelineRuns
-                  );
-
-
-                runsObtained =
-                  rawYamlRuns.map(
-                    yr => ({
-
-                      id:
-                        yr.id,
-
-
-                      buildNumber:
-                        yr.name ||
-                        `#${yr.id}`,
-
-
-                      // Actual source branch
-                      sourceBranch:
-                        yr.resources
-                          ?.repositories
-                          ?.self
-                          ?.refName ||
-
-                        yr.resources
-                          ?.repositories
-                          ?.self
-                          ?.version ||
-
-                        yr.variables
-                          ?.['Build.SourceBranch']
-                          ?.value ||
-
-                        yr.variables
-                          ?.['Build.SourceBranchName']
-                          ?.value,
-
-
-                      reason:
-                        yr.variables
-                          ?.['Build.Reason']
-                          ?.value ||
-
-                        yr.reason ||
-
-                        'manual',
-
-
-                      // IMPORTANT:
-                      // Preserve createdBy from Pipeline Runs API.
-                      createdBy:
-                        yr.createdBy,
-
-
-                      requestedFor: {
-
-                        displayName:
-                          yr.variables
-                            ?.['Build.RequestedFor']
-                            ?.value ||
-
-                          yr.variables
-                            ?.['Build.QueuedBy']
-                            ?.value,
-
-                        uniqueName:
-                          yr.variables
-                            ?.['Build.RequestedForEmail']
-                            ?.value ||
-
-                          yr.variables
-                            ?.['Build.QueuedByEmail']
-                            ?.value
-
-                      },
-
-
-                      requestedBy: {
-
-                        displayName:
-                          yr.variables
-                            ?.['Build.QueuedBy']
-                            ?.value ||
-
-                          yr.variables
-                            ?.['Build.RequestedFor']
-                            ?.value,
-
-                        uniqueName:
-                          yr.variables
-                            ?.['Build.QueuedByEmail']
-                            ?.value ||
-
-                          yr.variables
-                            ?.['Build.RequestedForEmail']
-                            ?.value
-
-                      },
-
-
-                      variables:
-                        yr.variables,
-
-
-                      result:
-                        yr.result ||
-                        yr.state ||
-                        'unknown',
-
-
-                      finishTime:
-                        yr.finishedDate ||
-                        yr.createdDate,
-
-
-                      queueTime:
-                        yr.createdDate ||
-                        yr.finishedDate
-
-                    })
-                  );
-
-              }
-
-
-              // =================================================
-              // ENRICH BUILD DETAILS WHEN REQUIRED
-              // =================================================
-
-              const enrichedRuns =
-                await Promise.all(
-
-                  runsObtained.map(
-                    async b => {
-
-                      const initialBranch =
-                        parseBranch(b);
-
-
-                      const initialTrigger =
-                        parseTriggerType(
-                          b.reason
-                        );
-
-
-                      const initialAuthor =
-                        parseAuthor(
-                          b,
-                          pipe.name,
-                          initialTrigger
-                        );
-
-
-                      // Only fetch build details if we don't
-                      // already have branch/user information.
-                      const needsDetail =
-
-                        b.id &&
-
-                        (
-                          initialBranch ===
-                            'Unknown Branch' ||
-
-                          initialAuthor ===
-                            'Automated System'
-                        );
-
-
-                      if (
-                        !needsDetail
-                      ) {
-
-                        return b;
-
-                      }
-
-
-                      try {
-
-                        const detailUrl =
-                          `https://dev.azure.com/${org}/${project}` +
-                          `/_apis/build/builds/${b.id}` +
-                          `?api-version=${API_VERSION}`;
-
-
-                        const detail =
-                          await fetchAzDo(
-                            detailUrl,
-                            authHeader
-                          );
-
-
-                        if (
-                          detail
-                        ) {
-
-                          return {
-
-                            ...b,
-
-                            ...detail,
-
-
-                            sourceBranch:
-                              detail.sourceBranch ||
-                              b.sourceBranch,
-
-
-                            reason:
-                              detail.reason ||
-                              b.reason,
-
-
-                            result:
-                              detail.result ||
-                              b.result,
-
-
-                            finishTime:
-                              detail.finishTime ||
-                              b.finishTime,
-
-
-                            queueTime:
-                              detail.queueTime ||
-                              b.queueTime
-
-                          };
-
-                        }
-
-                      } catch (
-                        detailErr
-                      ) {
-
-                        console.warn(
-                          `[Azure DevOps Pipeline] Could not enrich build ${b.id}:`,
-                          detailErr
-                        );
-
-                      }
-
-
-                      return b;
-
-                    }
-                  )
-
-                );
-
-
-              // =================================================
-              // PROCESS RUNS
-              // =================================================
-
-              enrichedRuns.forEach(
-                b => {
-
-                  const result =
-                    (
-                      b.result ||
-                      b.status ||
-                      'unknown'
-                    ).toLowerCase();
-
-
-                  const isSuccess =
-                    result ===
-                    'succeeded';
-
-
-                  const trigger =
-                    parseTriggerType(
-                      b.reason
-                    );
-
-
-                  const isAuto =
-                    trigger.startsWith(
-                      'Auto'
-                    );
-
-
-                  const author =
-                    parseAuthor(
-                      b,
-                      pipe.name,
-                      trigger
-                    );
-
-
-                  const branch =
-                    parseBranch(b);
-
-
-                  summaryMap[
-                    pipe.name
-                  ].total++;
-
-
-                  if (
-                    isSuccess
-                  ) {
-
-                    summaryMap[
-                      pipe.name
-                    ].succeeded++;
-
-                  } else {
-
-                    summaryMap[
-                      pipe.name
-                    ].failed++;
-
-                  }
-
-
-                  if (
-                    isAuto
-                  ) {
-
-                    summaryMap[
-                      pipe.name
-                    ].autoTriggers++;
-
-                  } else {
-
-                    summaryMap[
-                      pipe.name
-                    ].manualTriggers++;
-
-                  }
-
-
-                  // =================================================
-                  // TIMESTAMP
-                  // =================================================
-
-                  const rawTime =
-                    b.finishTime ||
-                    b.startTime ||
-                    b.queueTime ||
-                    b.createdDate;
-
-
-                  const parsedDate =
-                    rawTime
-                      ? new Date(
-                          rawTime
-                        )
-                      : new Date(0);
-
-
-                  // =================================================
-                  // FINAL RUN OBJECT
-                  // =================================================
-
-                  allRuns.push({
-
-                    name:
-                      pipe.name,
-
-
-                    buildNumber:
-                      b.buildNumber ||
-                      b.id,
-
-
-                    branch:
-                      branch,
-
-
-                    reason:
-                      trigger,
-
-
-                    author:
-                      author,
-
-
-                    result:
-                      b.result ||
-                      b.status ||
-                      'unknown',
-
-
-                    rawTimestamp:
-                      parsedDate.getTime(),
-
-
-                    finishTime:
-                      rawTime
-                        ? parsedDate.toLocaleString()
-                        : (
-                            b.startTime
-                              ? 'In Progress'
-                              : 'Queued'
-                          )
-
-                  });
-
+    for (let i = 0; i < pipeList.length; i += BATCH_SIZE) {
+      const batch = pipeList.slice(i, i + BATCH_SIZE);
+
+      await Promise.all(batch.map(async (pipe) => {
+        try {
+          let runsObtained = [];
+
+          const bUrl =
+            `https://dev.azure.com/${org}/${project}/_apis/build/builds` +
+            `?definitions=${encodeURIComponent(pipe.id)}` +
+            `&$top=${perPipelineRuns}` +
+            `&queryOrder=queueTimeDescending` +
+            `&api-version=7.1`;
+
+          const bData = await fetchAzDo(bUrl, authHeader);
+          runsObtained = bData?.value || [];
+
+          // Build list is the preferred source because it contains
+          // sourceBranch, requestedBy and requestedFor.
+          if (runsObtained.length > 0) {
+            const detailedRuns = await Promise.all(
+              runsObtained.map(async (build) => {
+                const detail = await getBuildDetails(build.id);
+
+                if (!detail) {
+                  return build;
                 }
-              );
 
+                return {
+                  ...build,
+                  ...detail,
+                  sourceBranch: detail.sourceBranch || build.sourceBranch,
+                  requestedBy: detail.requestedBy || build.requestedBy,
+                  requestedFor: detail.requestedFor || build.requestedFor,
+                  triggerInfo: detail.triggerInfo || build.triggerInfo,
+                  repository: detail.repository || build.repository,
+                  variables: detail.variables || build.variables,
+                  reason: detail.reason || build.reason,
+                  result: detail.result || build.result,
+                  status: detail.status || build.status,
+                  finishTime: detail.finishTime || build.finishTime,
+                  startTime: detail.startTime || build.startTime,
+                  queueTime: detail.queueTime || build.queueTime,
+                  createdDate: detail.queueTime || build.createdDate
+                };
+              })
+            );
 
-            } catch (
-              err
-            ) {
+            runsObtained = detailedRuns;
+          }
 
-              // Preserve existing behaviour:
-              // don't stop other pipelines if one pipeline fails.
-              console.warn(
-                `[Azure DevOps Pipeline] Error processing pipeline ${pipe.name}:`,
-                err
-              );
+          // Fallback for pipeline definitions where the Build list does not
+          // return runs. The Pipeline Runs API exposes repository refName.
+          if (runsObtained.length === 0) {
+            const rUrl =
+              `https://dev.azure.com/${org}/${project}` +
+              `/_apis/pipelines/${encodeURIComponent(pipe.id)}/runs` +
+              `?$top=${perPipelineRuns}` +
+              `&api-version=7.1`;
 
+            const rData = await fetchAzDo(rUrl, authHeader);
+            const rawYamlRuns = (rData?.value || []).slice(0, perPipelineRuns);
+
+            runsObtained = await Promise.all(
+              rawYamlRuns.map(async (yr) => {
+                const detail = await getPipelineRunDetails(pipe.id, yr.id);
+                const run = detail || yr;
+
+                const selfRepo =
+                  run?.resources?.repositories?.self ||
+                  Object.values(run?.resources?.repositories || {})[0] ||
+                  null;
+
+                return {
+                  id: run.id,
+                  buildNumber: run.name || `#${run.id}`,
+                  sourceBranch:
+                    selfRepo?.refName ||
+                    selfRepo?.version ||
+                    run.variables?.['Build.SourceBranch']?.value ||
+                    run.variables?.['Build.SourceBranchName']?.value,
+                  reason:
+                    run.variables?.['Build.Reason']?.value ||
+                    run.reason ||
+                    'manual',
+                  createdBy: run.createdBy,
+                  requestedFor: run.requestedFor,
+                  requestedBy: run.requestedBy,
+                  triggerInfo: run.triggerInfo,
+                  variables: run.variables,
+                  result: run.result || run.state || 'unknown',
+                  finishTime: run.finishedDate || run.createdDate,
+                  startTime: run.startedDate,
+                  queueTime: run.createdDate
+                };
+              })
+            );
+          }
+
+          // Process each normalized run.
+          runsObtained.forEach(b => {
+            const result = (b.result || b.status || 'unknown').toLowerCase();
+            const isSuccess = result === 'succeeded';
+            const trigger = parseTriggerType(b.reason);
+            const isAuto = trigger.startsWith('Auto');
+            const author = parseAuthor(b, pipe.name, trigger);
+            const branch = parseBranch(b);
+
+            summaryMap[pipe.name].total++;
+
+            if (isSuccess) {
+              summaryMap[pipe.name].succeeded++;
+            } else {
+              summaryMap[pipe.name].failed++;
             }
 
-          }
-        )
+            if (isAuto) {
+              summaryMap[pipe.name].autoTriggers++;
+            } else {
+              summaryMap[pipe.name].manualTriggers++;
+            }
 
-      );
+            const rawTime =
+              b.finishTime ||
+              b.startTime ||
+              b.queueTime ||
+              b.createdDate;
 
+            const parsedDate = rawTime
+              ? new Date(rawTime)
+              : new Date(0);
+
+            allRuns.push({
+              name: pipe.name,
+              buildNumber: b.buildNumber || b.id,
+              branch: branch,
+              reason: trigger,
+              author: author,
+              result: b.result || b.status || 'unknown',
+              rawTimestamp: parsedDate.getTime(),
+              finishTime: rawTime
+                ? parsedDate.toLocaleString()
+                : (b.startTime ? 'In Progress' : 'Queued')
+            });
+          });
+        } catch (err) {
+          console.warn(
+            `[Azure DevOps Pipeline] Error processing pipeline ${pipe.name}:`,
+            err
+          );
+        }
+      }));
     }
 
+    allRuns.sort((a, b) => b.rawTimestamp - a.rawTimestamp);
 
-    // ==========================================================
-    // SORT NEWEST FIRST
-    // ==========================================================
+    rawStore.pipelineSummaries = Object.values(summaryMap);
+    rawStore.pipelineSummariesIndex = 0;
+    rawStore.pipelines = allRuns;
+    rawStore.pipelineIndex = 0;
 
-    allRuns.sort(
-      (a, b) =>
-        b.rawTimestamp -
-        a.rawTimestamp
+    const totalSuccessful = rawStore.pipelineSummaries.reduce(
+      (acc, p) => acc + p.succeeded,
+      0
     );
 
-
-    // ==========================================================
-    // SAVE RAW DATA
-    // ==========================================================
-
-    rawStore.pipelineSummaries =
-      Object.values(
-        summaryMap
-      );
-
-
-    rawStore.pipelineSummariesIndex =
-      0;
-
-
-    rawStore.pipelines =
-      allRuns;
-
-
-    rawStore.pipelineIndex =
-      0;
-
-
-    // ==========================================================
-    // KPIs
-    // ==========================================================
-
-    const totalSuccessful =
-      rawStore.pipelineSummaries.reduce(
-        (acc, p) =>
-          acc + p.succeeded,
-        0
-      );
-
-
-    const totalAuto =
-      rawStore.pipelineSummaries.reduce(
-        (acc, p) =>
-          acc + p.autoTriggers,
-        0
-      );
-
-
-    document.getElementById(
-      'kpi-1-label'
-    ).textContent =
-      'Active Scope';
-
-
-    document.getElementById(
-      'kpi-1-val'
-    ).textContent =
-      `${project} (${pipelineMap.size} Pipelines)`;
-
-
-    document.getElementById(
-      'kpi-1-val'
-    ).className =
-      'text-2xl font-extrabold text-slate-800 mt-1 truncate';
-
-
-    document.getElementById(
-      'kpi-2-label'
-    ).textContent =
-      'Total Pipelines';
-
-
-    document.getElementById(
-      'kpi-2-val'
-    ).textContent =
-      pipelineMap.size;
-
-
-    document.getElementById(
-      'kpi-3-label'
-    ).textContent =
-      'Successful Builds';
-
-
-    document.getElementById(
-      'kpi-3-val'
-    ).textContent =
-      totalSuccessful;
-
-
-    document.getElementById(
-      'kpi-4-label'
-    ).textContent =
-      'Auto / CI Triggers';
-
-
-    document.getElementById(
-      'kpi-4-val'
-    ).textContent =
-      totalAuto;
-
-
-    document.getElementById(
-      'kpi-5-label'
-    ).textContent =
-      'Scanned Runs';
-
-
-    document.getElementById(
-      'kpi-5-val'
-    ).textContent =
-      allRuns.length;
-
-
-    // ==========================================================
-    // RENDER
-    // ==========================================================
-
-    renderPipelineSummaryTableBatch(
-      false
+    const totalAuto = rawStore.pipelineSummaries.reduce(
+      (acc, p) => acc + p.autoTriggers,
+      0
     );
 
+    document.getElementById('kpi-1-label').textContent = 'Active Scope';
+    document.getElementById('kpi-1-val').textContent = `${project} (${pipelineMap.size} Pipelines)`;
+    document.getElementById('kpi-1-val').className = 'text-2xl font-extrabold text-slate-800 mt-1 truncate';
+    document.getElementById('kpi-2-label').textContent = 'Total Pipelines';
+    document.getElementById('kpi-2-val').textContent = pipelineMap.size;
+    document.getElementById('kpi-3-label').textContent = 'Successful Builds';
+    document.getElementById('kpi-3-val').textContent = totalSuccessful;
+    document.getElementById('kpi-4-label').textContent = 'Auto / CI Triggers';
+    document.getElementById('kpi-4-val').textContent = totalAuto;
+    document.getElementById('kpi-5-label').textContent = 'Scanned Runs';
+    document.getElementById('kpi-5-val').textContent = allRuns.length;
 
-    renderPipelineTableBatch(
-      false
-    );
+    renderPipelineSummaryTableBatch(false);
+    renderPipelineTableBatch(false);
 
+    const activeSummaries = rawStore.pipelineSummaries
+      .filter(p => p.total > 0)
+      .slice(0, 20);
 
-    const activeSummaries =
-      rawStore.pipelineSummaries
-        .filter(
-          p =>
-            p.total > 0
-        )
-        .slice(
-          0,
-          20
-        );
+    const chartLabels = activeSummaries.length > 0
+      ? activeSummaries.map(p => p.name)
+      : rawStore.pipelineSummaries.slice(0, 15).map(p => p.name);
 
-
-    const chartLabels =
-      activeSummaries.length > 0
-
-        ? activeSummaries.map(
-            p => p.name
-          )
-
-        : rawStore.pipelineSummaries
-            .slice(
-              0,
-              15
-            )
-            .map(
-              p => p.name
-            );
-
-
-    const chartData =
-      activeSummaries.length > 0
-
-        ? activeSummaries.map(
-            p => p.succeeded
-          )
-
-        : rawStore.pipelineSummaries
-            .slice(
-              0,
-              15
-            )
-            .map(
-              p => p.succeeded
-            );
-
+    const chartData = activeSummaries.length > 0
+      ? activeSummaries.map(p => p.succeeded)
+      : rawStore.pipelineSummaries.slice(0, 15).map(p => p.succeeded);
 
     renderChart(
       chartLabels,
@@ -1009,535 +430,128 @@ async function fetchPipelineData() {
       'Successful Builds (Top Pipelines)'
     );
 
-
     setStatus(
       `Loaded ${pipelineMap.size} pipelines with ${allRuns.length} total runs sorted by newest first.`,
       'success'
     );
-
-
-  } catch (
-    err
-  ) {
-
+  } catch (err) {
     setStatus(
       `Error fetching pipelines: ${err.message}`,
       'error'
     );
-
   }
-
 }
 
+function renderPipelineSummaryTableBatch(append = false) {
+  const tbody = document.getElementById('pipelineSummaryTableBody');
+  const container = document.getElementById('seeMorePipelineSummaryContainer');
+  const remainingEl = document.getElementById('pipelineSummaryRemainingCount');
+  if (!tbody) return;
 
-// ============================================================
-// PIPELINE SUMMARY TABLE
-// ============================================================
+  if (!append) tbody.innerHTML = '';
 
-function renderPipelineSummaryTableBatch(
-  append = false
-) {
-
-  const tbody =
-    document.getElementById(
-      'pipelineSummaryTableBody'
-    );
-
-
-  const container =
-    document.getElementById(
-      'seeMorePipelineSummaryContainer'
-    );
-
-
-  const remainingEl =
-    document.getElementById(
-      'pipelineSummaryRemainingCount'
-    );
-
-
-  if (!tbody) {
+  if (rawStore.pipelineSummaries.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No pipelines found.</td></tr>`;
+    container.classList.add('hidden');
     return;
   }
 
+  const nextBatch = rawStore.pipelineSummaries.slice(rawStore.pipelineSummariesIndex, rawStore.pipelineSummariesIndex + PIPELINE_PAGE_SIZE);
+  rawStore.pipelineSummariesIndex += nextBatch.length;
 
-  if (!append) {
-    tbody.innerHTML = '';
-  }
-
-
-  if (
-    rawStore.pipelineSummaries.length === 0
-  ) {
-
-    tbody.innerHTML =
-      `<tr>
-        <td
-          colspan="7"
-          class="p-4 text-center text-slate-400">
-
-          No pipelines found.
-
+  const html = nextBatch.map(p => {
+    const rate = p.total > 0 ? Math.round((p.succeeded / p.total) * 100) : 0;
+    return `
+      <tr class="hover:bg-slate-50 transition">
+        <td class="p-4 font-semibold text-slate-900">${p.name}</td>
+        <td class="p-4 font-mono font-medium">${p.total}</td>
+        <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">${p.succeeded}</span></td>
+        <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-red-50 text-red-600">${p.failed}</span></td>
+        <td class="p-4 font-mono text-xs text-blue-700">${p.autoTriggers}</td>
+        <td class="p-4 font-mono text-xs text-slate-700">${p.manualTriggers}</td>
+        <td class="p-4">
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${rate >= 80 ? 'bg-emerald-100 text-emerald-700' : rate >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}">${rate}%</span>
         </td>
-      </tr>`;
+      </tr>
+    `;
+  }).join('');
 
+  tbody.insertAdjacentHTML('beforeend', html);
 
-    container.classList.add(
-      'hidden'
-    );
-
-
-    return;
-
-  }
-
-
-  const nextBatch =
-    rawStore.pipelineSummaries.slice(
-      rawStore.pipelineSummariesIndex,
-      rawStore.pipelineSummariesIndex +
-        PIPELINE_PAGE_SIZE
-    );
-
-
-  rawStore.pipelineSummariesIndex +=
-    nextBatch.length;
-
-
-  const html =
-    nextBatch.map(
-      p => {
-
-        const rate =
-          p.total > 0
-            ? Math.round(
-                (
-                  p.succeeded /
-                  p.total
-                ) * 100
-              )
-            : 0;
-
-
-        return `
-          <tr
-            class="hover:bg-slate-50 transition">
-
-            <td
-              class="p-4 font-semibold text-slate-900">
-
-              ${p.name}
-
-            </td>
-
-
-            <td
-              class="p-4 font-mono font-medium">
-
-              ${p.total}
-
-            </td>
-
-
-            <td class="p-4">
-
-              <span
-                class="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
-
-                ${p.succeeded}
-
-              </span>
-
-            </td>
-
-
-            <td class="p-4">
-
-              <span
-                class="px-2 py-0.5 rounded text-xs font-semibold bg-red-50 text-red-600">
-
-                ${p.failed}
-
-              </span>
-
-            </td>
-
-
-            <td
-              class="p-4 font-mono text-xs text-blue-700">
-
-              ${p.autoTriggers}
-
-            </td>
-
-
-            <td
-              class="p-4 font-mono text-xs text-slate-700">
-
-              ${p.manualTriggers}
-
-            </td>
-
-
-            <td class="p-4">
-
-              <span
-                class="px-2 py-0.5 rounded-full text-xs font-semibold ${
-                  rate >= 80
-
-                    ? 'bg-emerald-100 text-emerald-700'
-
-                    : rate >= 50
-
-                      ? 'bg-amber-100 text-amber-700'
-
-                      : 'bg-red-100 text-red-700'
-                }">
-
-                ${rate}%
-
-              </span>
-
-            </td>
-
-          </tr>
-        `;
-
-      }
-    ).join('');
-
-
-  tbody.insertAdjacentHTML(
-    'beforeend',
-    html
-  );
-
-
-  const remaining =
-    rawStore.pipelineSummaries.length -
-    rawStore.pipelineSummariesIndex;
-
-
-  if (
-    remaining > 0
-  ) {
-
-    container.classList.remove(
-      'hidden'
-    );
-
-
-    remainingEl.textContent =
-      remaining;
-
+  const remaining = rawStore.pipelineSummaries.length - rawStore.pipelineSummariesIndex;
+  if (remaining > 0) {
+    container.classList.remove('hidden');
+    remainingEl.textContent = remaining;
   } else {
-
-    container.classList.add(
-      'hidden'
-    );
-
+    container.classList.add('hidden');
   }
-
 }
 
+function renderPipelineTableBatch(append = false) {
+  const tbody = document.getElementById('pipelineTableBody');
+  const container = document.getElementById('seeMorePipelinesContainer');
+  const remainingEl = document.getElementById('pipelinesRemainingCount');
 
-// ============================================================
-// PIPELINE BUILD RUN TABLE
-// ============================================================
+  if (!append) tbody.innerHTML = '';
 
-function renderPipelineTableBatch(
-  append = false
-) {
-
-  const tbody =
-    document.getElementById(
-      'pipelineTableBody'
-    );
-
-
-  const container =
-    document.getElementById(
-      'seeMorePipelinesContainer'
-    );
-
-
-  const remainingEl =
-    document.getElementById(
-      'pipelinesRemainingCount'
-    );
-
-
-  if (!tbody) {
+  if (rawStore.pipelines.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No recent build runs found for scanned pipelines.</td></tr>`;
+    container.classList.add('hidden');
     return;
   }
 
-
-  if (!append) {
-    tbody.innerHTML = '';
-  }
-
-
-  if (
-    rawStore.pipelines.length === 0
-  ) {
-
-    tbody.innerHTML =
-      `<tr>
-        <td
-          colspan="7"
-          class="p-4 text-center text-slate-400">
-
-          No recent build runs found for scanned pipelines.
-
-        </td>
-      </tr>`;
-
-
-    container.classList.add(
-      'hidden'
-    );
-
-
-    return;
-
-  }
-
-
-  const nextBatch =
-    rawStore.pipelines.slice(
-      rawStore.pipelineIndex,
-      rawStore.pipelineIndex +
-        PAGE_SIZE
-    );
-
-
-  rawStore.pipelineIndex +=
-    nextBatch.length;
-
-
-  const html =
-    nextBatch.map(
-      r => `
-
-        <tr
-          class="hover:bg-slate-50 transition">
-
-          <td
-            class="p-4 font-semibold text-slate-900">
-
-            ${r.name}
-
-          </td>
-
-
-          <td
-            class="p-4 font-mono text-xs text-blue-600 font-bold">
-
-            #${r.buildNumber}
-
-          </td>
-
-
-          <td
-            class="p-4 text-xs font-mono text-slate-700 font-semibold">
-
-            ${r.branch}
-
-          </td>
-
-
-          <td class="p-4">
-
-            <span
-              class="px-2 py-0.5 rounded text-xs font-semibold ${
-                r.reason.includes('Auto')
-
-                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-
-                  : 'bg-slate-100 text-slate-700'
-              }">
-
-              ${r.reason}
-
-            </span>
-
-          </td>
-
-
-          <td
-            class="p-4 text-xs font-medium text-slate-800">
-
-            ${r.author}
-
-          </td>
-
-
-          <td class="p-4">
-
-            <span
-              class="px-2 py-0.5 rounded-full text-xs font-semibold ${
-                r.result === 'succeeded'
-
-                  ? 'bg-emerald-100 text-emerald-700'
-
-                  : r.result === 'failed'
-
-                    ? 'bg-red-100 text-red-700'
-
-                    : 'bg-amber-100 text-amber-700'
-              }">
-
-              ${r.result}
-
-            </span>
-
-          </td>
-
-
-          <td
-            class="p-4 text-xs text-slate-500">
-
-            ${r.finishTime}
-
-          </td>
-
-        </tr>
-
-      `
-    ).join('');
-
-
-  tbody.insertAdjacentHTML(
-    'beforeend',
-    html
-  );
-
-
-  const remaining =
-    rawStore.pipelines.length -
-    rawStore.pipelineIndex;
-
-
-  if (
-    remaining > 0
-  ) {
-
-    container.classList.remove(
-      'hidden'
-    );
-
-
-    remainingEl.textContent =
-      remaining;
-
+  const nextBatch = rawStore.pipelines.slice(rawStore.pipelineIndex, rawStore.pipelineIndex + PAGE_SIZE);
+  rawStore.pipelineIndex += nextBatch.length;
+
+  const html = nextBatch.map(r => `
+    <tr class="hover:bg-slate-50 transition">
+      <td class="p-4 font-semibold text-slate-900">${r.name}</td>
+      <td class="p-4 font-mono text-xs text-blue-600 font-bold">#${r.buildNumber}</td>
+      <td class="p-4 text-xs font-mono text-slate-700 font-semibold">${r.branch}</td>
+      <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-semibold ${r.reason.includes('Auto') ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-700'}">${r.reason}</span></td>
+      <td class="p-4 text-xs font-medium text-slate-800">${r.author}</td>
+      <td class="p-4">
+        <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${
+          r.result === 'succeeded' ? 'bg-emerald-100 text-emerald-700' :
+          r.result === 'failed' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+        }">${r.result}</span>
+      </td>
+      <td class="p-4 text-xs text-slate-500">${r.finishTime}</td>
+    </tr>
+  `).join('');
+
+  tbody.insertAdjacentHTML('beforeend', html);
+
+  const remaining = rawStore.pipelines.length - rawStore.pipelineIndex;
+  if (remaining > 0) {
+    container.classList.remove('hidden');
+    remainingEl.textContent = remaining;
   } else {
-
-    container.classList.add(
-      'hidden'
-    );
-
+    container.classList.add('hidden');
   }
-
 }
-
-
-// ============================================================
-// EXCEL EXPORT
-// ============================================================
 
 function exportPipelinesToXLSX() {
+  if (!rawStore.pipelineSummaries || rawStore.pipelineSummaries.length === 0) return;
+  const summaryData = rawStore.pipelineSummaries.map(p => ({
+    "Pipeline Name": p.name,
+    "Total Runs": p.total,
+    "Successful Builds": p.succeeded,
+    "Failed / Other": p.failed,
+    "Auto CI Triggers": p.autoTriggers,
+    "Manual Triggers": p.manualTriggers,
+    "Success Rate": `${p.total > 0 ? Math.round((p.succeeded / p.total) * 100) : 0}%`
+  }));
 
-  if (
-    !rawStore.pipelineSummaries ||
-    rawStore.pipelineSummaries.length === 0
-  ) {
-    return;
-  }
+  const runsData = (rawStore.pipelines || []).map(r => ({
+    "Pipeline Name": r.name,
+    "Build Number": r.buildNumber,
+    "Branch": r.branch,
+    "Trigger Type": r.reason,
+    "Triggered By": r.author,
+    "Result": r.result,
+    "Finish Time": r.finishTime
+  }));
 
-
-  const summaryData =
-    rawStore.pipelineSummaries.map(
-      p => ({
-
-        "Pipeline Name":
-          p.name,
-
-        "Total Runs":
-          p.total,
-
-        "Successful Builds":
-          p.succeeded,
-
-        "Failed / Other":
-          p.failed,
-
-        "Auto CI Triggers":
-          p.autoTriggers,
-
-        "Manual Triggers":
-          p.manualTriggers,
-
-        "Success Rate":
-          `${
-            p.total > 0
-              ? Math.round(
-                  (
-                    p.succeeded /
-                    p.total
-                  ) * 100
-                )
-              : 0
-          }%`
-
-      })
-    );
-
-
-  const runsData =
-    (
-      rawStore.pipelines ||
-      []
-    ).map(
-      r => ({
-
-        "Pipeline Name":
-          r.name,
-
-        "Build Number":
-          r.buildNumber,
-
-        "Branch":
-          r.branch,
-
-        "Trigger Type":
-          r.reason,
-
-        "Triggered By":
-          r.author,
-
-        "Result":
-          r.result,
-
-        "Finish Time":
-          r.finishTime
-
-      })
-    );
-
-
-  exportToExcelFile(
-
-    {
-      "Pipelines Inventory":
-        summaryData,
-
-      "Build Runs History":
-        runsData
-
-    },
-
-    "AzureDevOps_Pipelines_Analytics"
-
-  );
-
+  exportToExcelFile({ "Pipelines Inventory": summaryData, "Build Runs History": runsData }, "AzureDevOps_Pipelines_Analytics");
 }
