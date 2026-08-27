@@ -48,21 +48,52 @@ async function fetchRepositoryData() {
     let projectPolicies = [];
     try {
       const policyUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/policy/configurations?api-version=${API_VERSION}`;
+      console.log('Fetching policies from:', policyUrl);
       const policyData = await fetchAzDo(policyUrl, authHeader);
       projectPolicies = policyData?.value || [];
+      console.log('Policies fetched successfully. Count:', projectPolicies.length);
+      
+      // Log policy details for debugging
+      if (projectPolicies.length > 0) {
+        projectPolicies.forEach((p, idx) => {
+          console.log(`Policy ${idx}:`, {
+            type: p.type?.displayName,
+            enabled: p.isEnabled,
+            scope: p.settings?.scope
+          });
+        });
+      } else {
+        console.warn('No policies found in response');
+      }
     } catch (e) {
-      console.warn("Could not fetch policy configurations:", e);
+      console.error("Error fetching policy configurations:", e.message);
+      setStatus('Warning: Could not fetch branch policies. Proceeding without policy data.', 'warning');
     }
 
     // Helper: Match policies to specific repo ID and branch ref
     function getBranchPolicies(repoId, branchName) {
       const targetRef = `refs/heads/${branchName}`.toLowerCase();
+      
       const matched = projectPolicies.filter(p => {
         if (!p.isEnabled) return false;
+        
         const scopes = p.settings?.scope || [];
+        
+        // If no scopes defined, policy applies to all branches/repos
+        if (scopes.length === 0) return true;
+        
         return scopes.some(s => {
-          const repoMatch = !s.repositoryId || s.repositoryId.toLowerCase() === repoId.toLowerCase();
-          const refMatch = !s.refName || s.refName.toLowerCase() === targetRef || s.refName === 'refs/heads/*';
+          // Handle both string and object repo IDs
+          const repoIdStr = typeof s.repositoryId === 'string' ? s.repositoryId : (s.repositoryId || '');
+          const repoIdObjStr = typeof repoId === 'string' ? repoId : (repoId || '');
+          
+          const repoMatch = !repoIdStr || repoIdStr.toLowerCase() === repoIdObjStr.toLowerCase();
+          
+          // Handle wildcard and specific branch refs
+          const refMatch = !s.refName || 
+                          s.refName === 'refs/heads/*' || 
+                          s.refName.toLowerCase() === targetRef;
+          
           return repoMatch && refMatch;
         });
       });
@@ -75,8 +106,10 @@ async function fetchRepositoryData() {
         const typeId = p.type?.id || '';
 
         // Minimum Approver / Reviewer Policy
-        if (typeId === 'fa4e2476-a875-4e57-99d0-c9f86e73a9a6' || typeName.includes('minimum number of reviewers') || typeName.includes('approver')) {
-          const count = p.settings?.minimumApproverCount || 1;
+        if (typeId === 'fa4e2476-a875-4e57-99d0-c9f86e73a9a6' || 
+            typeName.includes('minimum number of reviewers') || 
+            typeName.includes('approver')) {
+          const count = p.settings?.minimumApproverCount || p.settings?.minimumApproversCount || 1;
           if (count > minReviewers) minReviewers = count;
           policyTags.push(`${count} Required Reviewer${count > 1 ? 's' : ''}`);
         } 
@@ -95,7 +128,12 @@ async function fetchRepositoryData() {
         // Required Reviewers / Teams
         else if (typeId === 'fd2167ab-b0be-447a-8d83-f1ac291de6e0' || typeName.includes('required reviewers')) {
           policyTags.push('Specific Reviewers Enforced');
-        } else {
+        } 
+        // Status Check
+        else if (typeId === '6d0bc69f-8b63-4b58-a9a0-f48ae6e2f6f1' || typeName.includes('status')) {
+          policyTags.push('Required Status Check');
+        }
+        else if (typeName.length > 0) {
           policyTags.push(p.type?.displayName || 'Branch Policy');
         }
       });
@@ -125,8 +163,15 @@ async function fetchRepositoryData() {
 
         branchDetails = await Promise.all(refs.map(async (ref) => {
           const bName = ref.name.replace(/^refs\/heads\//, '');
-          const commitUrl = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/commits?searchCriteria.itemVersion.version=${encodeURIComponent(bName)}&searchCriteria.itemVersion.versionType=branch&$top=1&api-version=${API_VERSION}`;
-          const commitData = await fetchAzDo(commitUrl, authHeader);
+          const commitUrl = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/commits?searchCriteria.itemVersion.version=${encodeURIComponent(bName)}&searchCriteria.itemVersionType=branch&$top=1&api-version=${API_VERSION}`;
+          
+          let commitData = { value: [] };
+          try {
+            commitData = await fetchAzDo(commitUrl, authHeader);
+          } catch (e) {
+            console.warn(`Could not fetch commits for branch ${bName}:`, e.message);
+          }
+          
           const topCommit = (commitData.value && commitData.value[0]) ? commitData.value[0] : null;
 
           const commitDate = topCommit?.author?.date ? new Date(topCommit.author.date) : null;
@@ -200,9 +245,10 @@ async function fetchRepositoryData() {
     renderRepoTableBatch(false);
     renderRepoPrsTableBatch(false);
     renderChart(Object.keys(repoBranchCounts), Object.values(repoBranchCounts), 'Branches per Repository');
-    setStatus(`Loaded ${rawStore.repos.length} branches, branch policies, and ${allPRs.length} PRs successfully.`, 'success');
+    setStatus(`Loaded ${rawStore.repos.length} branches (${projectPolicies.length} policies found) and ${allPRs.length} PRs successfully.`, 'success');
   } catch (err) {
     setStatus(`Error fetching branches & policies: ${err.message}`, 'error');
+    console.error('Full error:', err);
   }
 }
 
