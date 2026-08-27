@@ -127,3 +127,24 @@ table td{font-size:12px!important}
   .app-subtitle{font-size:11px}
   .kpi-grid{grid-template-columns:1fr}
 }
+
+/* ============================================================
+   DEVOPS INTELLIGENCE BRANDING / WATERMARK
+   Visual-only changes. Existing layout and JavaScript are unchanged.
+   ============================================================ */
+.app-sidebar,.app-shell{position:relative}
+.app-sidebar{z-index:50}
+.app-shell{z-index:1}
+body{position:relative;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background-image:url("../devops-watermark.png");background-repeat:repeat;background-size:210px 210px;background-position:35px 35px;opacity:.025}
+.brand-mark{overflow:hidden;position:relative}
+.brand-mark img{width:100%;height:100%;display:block;object-fit:cover;border-radius:inherit}
+.dashboard-content > section > div{position:relative;overflow:hidden}
+.dashboard-content > section > div::before,.dashboard-content > section > div::after{content:"";position:absolute;top:0;bottom:0;width:78px;pointer-events:none;z-index:0;background-image:url("../devops-watermark.png");background-repeat:repeat-y;background-size:78px 78px;opacity:.035}
+.dashboard-content > section > div::before{left:0;background-position:center top}
+.dashboard-content > section > div::after{right:0;background-position:center top}
+.dashboard-content > section > div > *{position:relative;z-index:1}
+.connection-card{position:relative;overflow:hidden}
+.connection-card::after{content:"";position:absolute;right:24px;bottom:14px;width:135px;height:135px;pointer-events:none;z-index:0;background-image:url("../devops-watermark.png");background-repeat:no-repeat;background-size:contain;background-position:center;opacity:.035}
+.connection-card > *{position:relative;z-index:1}
+@media (max-width:760px){body::before{background-size:170px 170px;opacity:.02}.dashboard-content > section > div::before,.dashboard-content > section > div::after{width:48px;background-size:48px 48px;opacity:.025}.connection-card::after{width:90px;height:90px;right:12px;bottom:10px}}
