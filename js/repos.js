@@ -11,385 +11,1542 @@ function populateRepoDropdown() {
     opt.value = r.name;
     datalist.appendChild(opt);
   });
+
   document.getElementById('repoSelect').value = '-- All Repositories --';
 }
 
-async function fetchRepositoryData() {
-  const org = extractOrgName(document.getElementById('targetOrg').value);
-  const project = document.getElementById('projectSelect').value;
-  const rawInput = document.getElementById('repoSelect').value.trim();
-  const pat = document.getElementById('targetPat').value.trim();
 
-  if (!rawInput) return showModal('Please select or type a repository name.', 'repoSelect');
+// ============================================================
+// BRANCH POLICY FETCH
+// ============================================================
+// Azure DevOps resolves repository + branch scope for this endpoint.
+// This is intentionally kept separate from the existing repository,
+// branch, commit and PR logic.
+// ============================================================
 
-  const authHeader = 'Basic ' + btoa(':' + pat);
-  showSection('repositories');
-  setStatus('Scanning branches, branch policies, and PR rules across Azure DevOps...', 'info');
+async function fetchBranchPolicies(org, project, repoId, branchName, authHeader) {
+  const refName = `refs/heads/${branchName}`;
+  const cacheKey = `${repoId}|${refName}`;
 
-  let targetRepos = cachedRepos;
-  if (rawInput !== '-- All Repositories --' && rawInput !== '__ALL__') {
-    const exactMatches = cachedRepos.filter(r => r.name.toLowerCase() === rawInput.toLowerCase());
-    targetRepos = exactMatches.length > 0 
-      ? exactMatches 
-      : cachedRepos.filter(r => r.name.toLowerCase().includes(rawInput.toLowerCase()));
+  if (!window.__azdoBranchPolicyCache) {
+    window.__azdoBranchPolicyCache = new Map();
   }
 
-  if (targetRepos.length === 0) {
-    setStatus(`No repository found matching "${rawInput}".`, 'error');
-    return;
+  if (window.__azdoBranchPolicyCache.has(cacheKey)) {
+    return window.__azdoBranchPolicyCache.get(cacheKey);
   }
 
-  let repoBranchCounts = {};
-  let allPRs = [];
-  const now = new Date();
+  const url =
+    `https://dev.azure.com/${org}/${encodeURIComponent(project)}` +
+    `/_apis/git/policy/configurations` +
+    `?repositoryId=${encodeURIComponent(repoId)}` +
+    `&refName=${encodeURIComponent(refName)}` +
+    `&$top=1000` +
+    `&api-version=7.1`;
 
-  try {
-    // 1. Fetch Policy Configurations across all supported Azure DevOps Policy API endpoints
-    let allPolicies = [];
-    const policyEndpoints = [
-      `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/policy/configurations?api-version=7.1-preview.1&$top=1000`,
-      `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/policy/configurations?api-version=6.0&$top=1000`,
-      `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/git/policy/configurations?api-version=5.0-preview.1`
-    ];
-
-    for (const url of policyEndpoints) {
-      try {
-        const res = await fetchAzDo(url, authHeader);
-        if (res?.value && res.value.length > 0) {
-          allPolicies.push(...res.value);
-        }
-      } catch (e) {
-        console.warn('Policy fetch attempt fallback:', e);
-      }
-    }
-
-    // Deduplicate policy list by ID
-    const uniquePolicies = [];
-    const seenPolicyIds = new Set();
-    allPolicies.forEach(p => {
-      if (p.id && !seenPolicyIds.has(p.id)) {
-        seenPolicyIds.add(p.id);
-        uniquePolicies.push(p);
-      }
-    });
-
-    // Helper: Evaluates if a policy applies to a given repository UUID and branch ref
-    function evaluateBranchPolicies(repoId, defaultBranchName, branchName) {
-      const fullRef = `refs/heads/${branchName}`.toLowerCase();
-      const isDefault = defaultBranchName && (
-        defaultBranchName.toLowerCase() === branchName.toLowerCase() || 
-        defaultBranchName.toLowerCase() === fullRef ||
-        `refs/heads/${defaultBranchName.toLowerCase()}` === fullRef
+  const request = fetchAzDo(url, authHeader)
+    .then(data => data?.value || [])
+    .catch(err => {
+      console.warn(
+        `Unable to fetch policies for ${repoId}/${branchName}:`,
+        err
       );
 
-      const applicable = uniquePolicies.filter(p => {
-        if (!p.isEnabled || p.isDeleted) return false;
-        const scopes = p.settings?.scope || [];
-        if (scopes.length === 0) return true; // Applies project-wide
-
-        return scopes.some(scope => {
-          const sRepo = scope.repositoryId ? scope.repositoryId.toLowerCase() : null;
-          const sRef = scope.refName ? scope.refName.toLowerCase() : null;
-          const matchKind = (scope.matchKind || 'Exact').toLowerCase();
-
-          // Check if repository matches
-          const repoOk = !sRepo || sRepo === repoId.toLowerCase();
-          if (!repoOk) return false;
-
-          // Check if branch ref matches
-          if (matchKind === 'defaultbranch') {
-            return isDefault;
-          }
-          if (!sRef || sRef === 'refs/heads/*') {
-            return true;
-          }
-          if (matchKind === 'prefix') {
-            return fullRef.startsWith(sRef);
-          }
-          return sRef === fullRef;
-        });
-      });
-
-      let minReviewers = 0;
-      let policyList = [];
-
-      applicable.forEach(p => {
-        const typeId = (p.type?.id || '').toLowerCase();
-        const typeName = (p.type?.displayName || '').toLowerCase();
-
-        // 1. Minimum number of reviewers policy
-        if (
-          typeId.includes('fa4e907d') || 
-          typeId.includes('fa4e2476') || 
-          typeName.includes('minimum number of reviewers') || 
-          typeName.includes('approver')
-        ) {
-          const reqCount = p.settings?.minimumApproverCount || p.settings?.minimumApprovers || 1;
-          if (reqCount > minReviewers) minReviewers = reqCount;
-          policyList.push(`${reqCount} Req. Reviewer${reqCount > 1 ? 's' : ''}`);
-        }
-        // 2. Build Validation
-        else if (typeId.includes('0609b951') || typeName.includes('build')) {
-          const buildDefName = p.settings?.displayName || 'CI Build Validation';
-          policyList.push(buildDefName);
-        }
-        // 3. Work Item Linking
-        else if (typeId.includes('40e92828') || typeName.includes('work item')) {
-          policyList.push('Work Item Required');
-        }
-        // 4. Comment Resolution
-        else if (typeId.includes('c6a1889d') || typeName.includes('comment')) {
-          policyList.push('Resolve Comments');
-        }
-        // 5. Required Reviewers / Teams
-        else if (typeId.includes('fd2167ab') || typeName.includes('required reviewers')) {
-          policyList.push('Required Reviewers');
-        } else {
-          policyList.push(p.type?.displayName || 'Branch Protection');
-        }
-      });
-
-      return {
-        hasPolicy: applicable.length > 0,
-        minReviewers: minReviewers,
-        policies: [...new Set(policyList)]
-      };
-    }
-
-    // 2. Fetch Repositories, Branches & PRs
-    const repoPromises = targetRepos.map(async (r) => {
-      const defaultBranchName = (r.defaultBranch || 'main').replace(/^refs\/heads\//, '');
-      const refsUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/git/repositories/${r.id}/refs?filter=heads/&api-version=${API_VERSION}`;
-      const prUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/git/repositories/${r.id}/pullrequests?searchCriteria.status=all&$top=100&api-version=${API_VERSION}`;
-
-      const [refsPromise, prsPromise] = await Promise.allSettled([
-        fetchAzDo(refsUrl, authHeader),
-        fetchAzDo(prUrl, authHeader)
-      ]);
-
-      let branchDetails = [];
-
-      if (refsPromise.status === 'fulfilled' && refsPromise.value) {
-        const refs = refsPromise.value.value || [];
-        repoBranchCounts[r.name] = refs.length;
-
-        branchDetails = await Promise.all(refs.map(async (ref) => {
-          const bName = ref.name.replace(/^refs\/heads\//, '');
-          const commitUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/git/repositories/${r.id}/commits?searchCriteria.itemVersion.version=${encodeURIComponent(bName)}&searchCriteria.itemVersion.versionType=branch&$top=1&api-version=${API_VERSION}`;
-          const commitData = await fetchAzDo(commitUrl, authHeader);
-          const topCommit = (commitData.value && commitData.value[0]) ? commitData.value[0] : null;
-
-          const commitDate = topCommit?.author?.date ? new Date(topCommit.author.date) : null;
-          const isStale = commitDate ? ((now - commitDate) / (1000 * 60 * 60 * 24)) > 90 : false;
-          const policyInfo = evaluateBranchPolicies(r.id, defaultBranchName, bName);
-
-          return {
-            repo: r.name,
-            branch: bName,
-            author: topCommit?.author?.name || 'Unknown',
-            date: commitDate ? commitDate.toLocaleString() : 'N/A',
-            isStale: isStale,
-            msg: topCommit?.comment || '',
-            hasPolicy: policyInfo.hasPolicy,
-            minReviewers: policyInfo.minReviewers,
-            policies: policyInfo.policies
-          };
-        }));
-      }
-
-      if (prsPromise.status === 'fulfilled' && prsPromise.value) {
-        const prList = prsPromise.value.value || [];
-        prList.forEach(pr => {
-          const targetBranch = (pr.targetRefName || '').replace('refs/heads/', '');
-          const policyInfo = evaluateBranchPolicies(r.id, defaultBranchName, targetBranch);
-          const actualReviewers = (pr.reviewers || []).length;
-          
-          allPRs.push({
-            repo: r.name,
-            title: pr.title || 'Untitled PR',
-            source: (pr.sourceRefName || '').replace('refs/heads/', ''),
-            target: targetBranch,
-            creator: pr.createdBy?.displayName || 'Unknown',
-            status: pr.status || 'unknown',
-            createdDate: pr.creationDate ? new Date(pr.creationDate).toLocaleDateString() : 'N/A',
-            reviewersCount: actualReviewers,
-            minRequiredReviewers: policyInfo.minReviewers,
-            targetPolicies: policyInfo.policies
-          });
-        });
-      }
-
-      return branchDetails;
+      return [];
     });
 
-    const results = await Promise.all(repoPromises);
-    rawStore.repos = results.flat();
-    rawStore.repoIndex = 0;
+  window.__azdoBranchPolicyCache.set(cacheKey, request);
 
-    rawStore.repoPrs = allPRs;
-    rawStore.repoPrsIndex = 0;
-
-    const activePRsCount = allPRs.filter(p => p.status === 'active').length;
-    const completedPRsCount = allPRs.filter(p => p.status === 'completed').length;
-
-    document.getElementById('kpi-1-label').textContent = 'Repository';
-    document.getElementById('kpi-1-val').textContent = (targetRepos.length > 1) ? `${targetRepos.length} Repos` : targetRepos[0]?.name;
-    document.getElementById('kpi-1-val').className = 'text-2xl font-extrabold text-slate-800 mt-1 truncate';
-    
-    document.getElementById('kpi-2-label').textContent = 'Branches';
-    document.getElementById('kpi-2-val').textContent = `${rawStore.repos.length} (${rawStore.repos.filter(b => b.isStale).length} Stale)`;
-    
-    document.getElementById('kpi-3-label').textContent = 'Total PRs';
-    document.getElementById('kpi-3-val').textContent = allPRs.length;
-    
-    document.getElementById('kpi-4-label').textContent = 'Active PRs';
-    document.getElementById('kpi-4-val').textContent = activePRsCount;
-    
-    document.getElementById('kpi-5-label').textContent = 'Completed PRs';
-    document.getElementById('kpi-5-val').textContent = completedPRsCount;
-
-    renderRepoTableBatch(false);
-    renderRepoPrsTableBatch(false);
-    renderChart(Object.keys(repoBranchCounts), Object.values(repoBranchCounts), 'Branches per Repository');
-    setStatus(`Loaded ${rawStore.repos.length} branches, branch policies, and ${allPRs.length} PRs successfully.`, 'success');
-  } catch (err) {
-    setStatus(`Error fetching branches & policies: ${err.message}`, 'error');
-  }
+  return request;
 }
 
-function renderRepoTableBatch(append = false) {
-  const tbody = document.getElementById('branchesTableBody');
-  const container = document.getElementById('seeMoreRepoContainer');
-  const remainingEl = document.getElementById('repoRemainingCount');
 
-  if (!append) tbody.innerHTML = '';
+// ============================================================
+// POLICY PARSER
+// ============================================================
 
-  if (rawStore.repos.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No branches found.</td></tr>`;
-    container.classList.add('hidden');
-    return;
-  }
+function parsePolicyInformation(policies) {
 
-  const nextBatch = rawStore.repos.slice(rawStore.repoIndex, rawStore.repoIndex + PAGE_SIZE);
-  rawStore.repoIndex += nextBatch.length;
+  let minReviewers = 0;
+  const policyList = [];
 
-  const html = nextBatch.map(b => {
-    const policiesHtml = b.hasPolicy
-      ? `<div class="flex flex-wrap gap-1 max-w-xs">
-          ${b.minReviewers > 0 ? `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-1.5 py-0.5 rounded">${b.minReviewers} Min Reviewers</span>` : ''}
-          ${b.policies.map(p => `<span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold px-1.5 py-0.5 rounded">${p}</span>`).join('')}
-         </div>`
-      : `<span class="text-xs text-slate-400 italic">No Policies Set</span>`;
+  const POLICY_TYPES = {
 
-    return `
-      <tr class="hover:bg-slate-50 transition">
-        <td class="p-4 font-semibold text-slate-900">${b.repo}</td>
-        <td class="p-4"><span class="font-mono text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-semibold">${b.branch}</span></td>
-        <td class="p-4">${b.isStale 
-          ? '<span class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-semibold">Stale</span>' 
-          : '<span class="bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded-full font-semibold">Active</span>'}
-        </td>
-        <td class="p-4">${policiesHtml}</td>
-        <td class="p-4 text-xs font-medium">${b.author}</td>
-        <td class="p-4 text-xs text-slate-500">${b.date}</td>
-        <td class="p-4 text-xs text-slate-600 max-w-xs truncate" title="${b.msg}">${b.msg}</td>
-      </tr>
-    `;
-  }).join('');
+    // Minimum number of reviewers
+    MIN_REVIEWERS:
+      'fa4e907d-c16b-4a4c-9dfa-4906e5d171dd',
 
-  tbody.insertAdjacentHTML('beforeend', html);
+    // Build validation
+    BUILD:
+      '0609b952-1397-4640-95ec-e00a01b2c241',
 
-  const remaining = rawStore.repos.length - rawStore.repoIndex;
-  if (remaining > 0) {
-    container.classList.remove('hidden');
-    remainingEl.textContent = remaining;
-  } else {
-    container.classList.add('hidden');
-  }
-}
+    // Required reviewers
+    REQUIRED_REVIEWERS:
+      'fd2167ab-b0be-447a-8ec8-39368250530e',
 
-function renderRepoPrsTableBatch(append = false) {
-  const tbody = document.getElementById('repoPrsTableBody');
-  const container = document.getElementById('seeMoreRepoPrsContainer');
-  const remainingEl = document.getElementById('repoPrsRemainingCount');
+    // Work item linking
+    WORK_ITEM_LINKING:
+      '40e92b44-2fe1-4dd6-b3d8-74a9c21d0c6e',
 
-  if (!append) tbody.innerHTML = '';
+    // Comment resolution
+    COMMENT_RESOLUTION:
+      'c6a1889d-b943-4856-b76f-9e46bb6b0df2',
 
-  if (rawStore.repoPrs.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No pull requests found.</td></tr>`;
-    container.classList.add('hidden');
-    return;
-  }
+    // Merge strategy
+    MERGE_STRATEGY:
+      'fa4e907d-c16b-4a4c-9dfa-4916e5d171ab',
 
-  const nextBatch = rawStore.repoPrs.slice(rawStore.repoPrsIndex, rawStore.repoPrsIndex + PAGE_SIZE);
-  rawStore.repoPrsIndex += nextBatch.length;
+    // Status check
+    STATUS_CHECK:
+      'cbdc66da-9728-4af8-aada-9a5a32e4a226'
+  };
 
-  const html = nextBatch.map(pr => {
-    let policyBadge = '';
-    if (pr.minRequiredReviewers > 0) {
-      policyBadge = `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2 py-0.5 rounded">${pr.minRequiredReviewers} Min Required (${pr.reviewersCount} Assigned)</span>`;
-    } else if (pr.targetPolicies && pr.targetPolicies.length > 0) {
-      policyBadge = `<span class="bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold px-2 py-0.5 rounded">${pr.targetPolicies[0]}</span>`;
-    } else {
-      policyBadge = `<span class="text-xs text-slate-400">${pr.reviewersCount > 0 ? pr.reviewersCount + ' Reviewer(s)' : 'Optional'}</span>`;
+
+  (policies || []).forEach(policy => {
+
+    if (
+      !policy ||
+      policy.isDeleted ||
+      policy.isEnabled === false
+    ) {
+      return;
     }
 
-    return `
-      <tr class="hover:bg-slate-50 transition">
-        <td class="p-4 font-semibold text-slate-900">${pr.repo}</td>
-        <td class="p-4 font-medium text-slate-800 max-w-xs truncate" title="${pr.title}">${pr.title}</td>
-        <td class="p-4 font-mono text-xs text-slate-500">${pr.source} &rarr; ${pr.target}</td>
-        <td class="p-4">${policyBadge}</td>
-        <td class="p-4 text-xs font-medium text-slate-700">${pr.creator}</td>
-        <td class="p-4">
-          <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${
-            pr.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-            pr.status === 'active' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
-          }">${pr.status}</span>
-        </td>
-        <td class="p-4 text-xs text-slate-500">${pr.createdDate}</td>
-      </tr>
-    `;
-  }).join('');
 
-  tbody.insertAdjacentHTML('beforeend', html);
+    const typeId =
+      (policy.type?.id || '').toLowerCase();
 
-  const remaining = rawStore.repoPrs.length - rawStore.repoPrsIndex;
-  if (remaining > 0) {
-    container.classList.remove('hidden');
-    remainingEl.textContent = remaining;
-  } else {
-    container.classList.add('hidden');
-  }
+    const typeName =
+      (policy.type?.displayName || '').trim();
+
+    const typeNameLower =
+      typeName.toLowerCase();
+
+    const settings =
+      policy.settings || {};
+
+
+    // ----------------------------------------------------------
+    // Minimum reviewers
+    // ----------------------------------------------------------
+
+    if (typeId === POLICY_TYPES.MIN_REVIEWERS) {
+
+      const count =
+        Number(settings.minimumApproverCount) || 1;
+
+      minReviewers =
+        Math.max(minReviewers, count);
+
+      policyList.push(
+        `${count} Required Reviewer${count > 1 ? 's' : ''}`
+      );
+
+      return;
+    }
+
+
+    // ----------------------------------------------------------
+    // Build validation
+    // ----------------------------------------------------------
+
+    if (
+      typeId === POLICY_TYPES.BUILD ||
+      typeNameLower === 'build' ||
+      typeNameLower.includes('build validation')
+    ) {
+
+      policyList.push(
+        settings.displayName ||
+        'Build Validation'
+      );
+
+      return;
+    }
+
+
+    // ----------------------------------------------------------
+    // Required reviewers
+    // ----------------------------------------------------------
+
+    if (
+      typeId === POLICY_TYPES.REQUIRED_REVIEWERS ||
+      typeNameLower.includes('required reviewer')
+    ) {
+
+      policyList.push('Required Reviewers');
+
+      return;
+    }
+
+
+    // ----------------------------------------------------------
+    // Work item linking
+    // ----------------------------------------------------------
+
+    if (
+      typeId === POLICY_TYPES.WORK_ITEM_LINKING ||
+      typeNameLower.includes('work item')
+    ) {
+
+      policyList.push('Work Item Linking');
+
+      return;
+    }
+
+
+    // ----------------------------------------------------------
+    // Comment resolution
+    // ----------------------------------------------------------
+
+    if (
+      typeId === POLICY_TYPES.COMMENT_RESOLUTION ||
+      typeNameLower.includes('comment')
+    ) {
+
+      policyList.push('Comment Resolution');
+
+      return;
+    }
+
+
+    // ----------------------------------------------------------
+    // Merge strategy
+    // ----------------------------------------------------------
+
+    if (
+      typeId === POLICY_TYPES.MERGE_STRATEGY ||
+      typeNameLower.includes('merge strategy')
+    ) {
+
+      policyList.push('Merge Strategy');
+
+      return;
+    }
+
+
+    // ----------------------------------------------------------
+    // Status check
+    // ----------------------------------------------------------
+
+    if (
+      typeId === POLICY_TYPES.STATUS_CHECK ||
+      typeNameLower.includes('status')
+    ) {
+
+      policyList.push(
+        typeName || 'Status Check'
+      );
+
+      return;
+    }
+
+
+    // ----------------------------------------------------------
+    // Unknown / future policy type
+    // ----------------------------------------------------------
+    // Don't hide policies that Azure DevOps returns.
+    // ----------------------------------------------------------
+
+    policyList.push(
+      typeName || 'Branch Policy'
+    );
+
+  });
+
+
+  return {
+
+    hasPolicy:
+      policyList.length > 0,
+
+    minReviewers:
+      minReviewers,
+
+    policies:
+      [...new Set(policyList)]
+  };
 }
+
+
+// ============================================================
+// CLEAR POLICY CACHE
+// ============================================================
+
+function clearBranchPolicyCache() {
+
+  if (window.__azdoBranchPolicyCache) {
+    window.__azdoBranchPolicyCache.clear();
+  }
+
+}
+
+
+// ============================================================
+// TABLE HEADERS
+// ============================================================
+
+function ensurePolicyTableHeaders() {
+
+  const branchTable =
+    document.getElementById('table-repos');
+
+  const prTable =
+    document.getElementById('table-repo-prs');
+
+
+  if (branchTable) {
+
+    const headerRow =
+      branchTable.querySelector('thead tr');
+
+    if (headerRow) {
+
+      headerRow.innerHTML = `
+        <th class="p-4">Repository</th>
+        <th class="p-4">Branch Name</th>
+        <th class="p-4">Status / Health</th>
+        <th class="p-4">Branch Policies</th>
+        <th class="p-4">Last Author</th>
+        <th class="p-4">Last Commit Date</th>
+        <th class="p-4">Commit Message</th>
+      `;
+    }
+  }
+
+
+  if (prTable) {
+
+    const headerRow =
+      prTable.querySelector('thead tr');
+
+    if (headerRow) {
+
+      headerRow.innerHTML = `
+        <th class="p-4">Repository</th>
+        <th class="p-4">PR Title</th>
+        <th class="p-4">Source &rarr; Target</th>
+        <th class="p-4">Target Branch Policies</th>
+        <th class="p-4">Creator</th>
+        <th class="p-4">Status</th>
+        <th class="p-4">Created Date</th>
+      `;
+    }
+  }
+
+}
+
+
+// ============================================================
+// MAIN REPOSITORY / BRANCH / PR FETCH
+// ============================================================
+
+async function fetchRepositoryData() {
+
+  const org =
+    extractOrgName(
+      document.getElementById('targetOrg').value
+    );
+
+  const project =
+    document.getElementById('projectSelect').value;
+
+  const rawInput =
+    document.getElementById('repoSelect').value.trim();
+
+  const pat =
+    document.getElementById('targetPat').value.trim();
+
+
+  if (!rawInput) {
+
+    return showModal(
+      'Please select or type a repository name.',
+      'repoSelect'
+    );
+
+  }
+
+
+  const authHeader =
+    'Basic ' + btoa(':' + pat);
+
+
+  showSection('repositories');
+
+  setStatus(
+    'Fetching branches, branch policies, and PR telemetry across selected repository...',
+    'info'
+  );
+
+
+  ensurePolicyTableHeaders();
+
+  clearBranchPolicyCache();
+
+
+  let targetRepos = cachedRepos;
+
+
+  if (
+    rawInput !== '-- All Repositories --' &&
+    rawInput !== '__ALL__'
+  ) {
+
+    const exactMatches =
+      cachedRepos.filter(
+        r =>
+          r.name.toLowerCase() ===
+          rawInput.toLowerCase()
+      );
+
+
+    targetRepos =
+      exactMatches.length > 0
+        ? exactMatches
+        : cachedRepos.filter(
+            r =>
+              r.name
+                .toLowerCase()
+                .includes(rawInput.toLowerCase())
+          );
+
+  }
+
+
+  if (targetRepos.length === 0) {
+
+    setStatus(
+      `No repository found matching "${rawInput}".`,
+      'error'
+    );
+
+    return;
+  }
+
+
+  let repoBranchCounts = {};
+
+  let allPRs = [];
+
+  const now = new Date();
+
+
+  try {
+
+    // ========================================================
+    // PROCESS REPOSITORIES
+    // ========================================================
+
+    const repoPromises =
+      targetRepos.map(async r => {
+
+        const refsUrl =
+          `https://dev.azure.com/${org}/${encodeURIComponent(project)}` +
+          `/_apis/git/repositories/${r.id}/refs` +
+          `?filter=heads/&api-version=${API_VERSION}`;
+
+
+        const prUrl =
+          `https://dev.azure.com/${org}/${encodeURIComponent(project)}` +
+          `/_apis/git/repositories/${r.id}/pullrequests` +
+          `?searchCriteria.status=all&$top=100&api-version=${API_VERSION}`;
+
+
+        const [
+          refsPromise,
+          prsPromise
+        ] =
+          await Promise.allSettled([
+            fetchAzDo(
+              refsUrl,
+              authHeader
+            ),
+
+            fetchAzDo(
+              prUrl,
+              authHeader
+            )
+          ]);
+
+
+        let branchDetails = [];
+
+
+        // ====================================================
+        // BRANCHES
+        // ====================================================
+
+        if (
+          refsPromise.status === 'fulfilled' &&
+          refsPromise.value
+        ) {
+
+          const refs =
+            refsPromise.value.value || [];
+
+
+          repoBranchCounts[r.name] =
+            refs.length;
+
+
+          branchDetails =
+            await Promise.all(
+
+              refs.map(async ref => {
+
+                const bName =
+                  ref.name.replace(
+                    /^refs\/heads\//,
+                    ''
+                  );
+
+
+                const commitUrl =
+                  `https://dev.azure.com/${org}/${encodeURIComponent(project)}` +
+                  `/_apis/git/repositories/${r.id}/commits` +
+                  `?searchCriteria.itemVersion.version=${encodeURIComponent(bName)}` +
+                  `&searchCriteria.itemVersion.versionType=branch` +
+                  `&$top=1` +
+                  `&api-version=${API_VERSION}`;
+
+
+                // Fetch commit and branch policy in parallel
+                const [
+                  commitResult,
+                  policyResult
+                ] =
+                  await Promise.allSettled([
+
+                    fetchAzDo(
+                      commitUrl,
+                      authHeader
+                    ),
+
+                    fetchBranchPolicies(
+                      org,
+                      project,
+                      r.id,
+                      bName,
+                      authHeader
+                    )
+
+                  ]);
+
+
+                const commitData =
+                  commitResult.status === 'fulfilled'
+                    ? commitResult.value
+                    : null;
+
+
+                const policies =
+                  policyResult.status === 'fulfilled'
+                    ? policyResult.value
+                    : [];
+
+
+                const policyInfo =
+                  parsePolicyInformation(
+                    policies
+                  );
+
+
+                const topCommit =
+                  (
+                    commitData?.value &&
+                    commitData.value[0]
+                  )
+                    ? commitData.value[0]
+                    : null;
+
+
+                const commitDate =
+                  topCommit?.author?.date
+                    ? new Date(
+                        topCommit.author.date
+                      )
+                    : null;
+
+
+                const isStale =
+                  commitDate
+                    ? (
+                        (now - commitDate) /
+                        (1000 * 60 * 60 * 24)
+                      ) > 90
+                    : false;
+
+
+                return {
+
+                  repo:
+                    r.name,
+
+                  branch:
+                    bName,
+
+                  author:
+                    topCommit?.author?.name ||
+                    'Unknown',
+
+                  date:
+                    commitDate
+                      ? commitDate.toLocaleString()
+                      : 'N/A',
+
+                  isStale:
+                    isStale,
+
+                  msg:
+                    topCommit?.comment ||
+                    '',
+
+                  hasPolicy:
+                    policyInfo.hasPolicy,
+
+                  minReviewers:
+                    policyInfo.minReviewers,
+
+                  policies:
+                    policyInfo.policies
+
+                };
+
+              })
+
+            );
+
+        }
+
+
+        // ====================================================
+        // PULL REQUESTS
+        // ====================================================
+
+        if (
+          prsPromise.status === 'fulfilled' &&
+          prsPromise.value
+        ) {
+
+          const prList =
+            prsPromise.value.value || [];
+
+
+          const prRows =
+            await Promise.all(
+
+              prList.map(async pr => {
+
+                const sourceBranch =
+                  (pr.sourceRefName || '')
+                    .replace(
+                      /^refs\/heads\//,
+                      ''
+                    );
+
+
+                const targetBranch =
+                  (pr.targetRefName || '')
+                    .replace(
+                      /^refs\/heads\//,
+                      ''
+                    );
+
+
+                // IMPORTANT:
+                // Branch policies apply to the TARGET branch
+                // of the pull request.
+
+                const policies =
+                  await fetchBranchPolicies(
+                    org,
+                    project,
+                    r.id,
+                    targetBranch,
+                    authHeader
+                  );
+
+
+                const policyInfo =
+                  parsePolicyInformation(
+                    policies
+                  );
+
+
+                const actualReviewers =
+                  (pr.reviewers || []).length;
+
+
+                return {
+
+                  repo:
+                    r.name,
+
+                  title:
+                    pr.title ||
+                    'Untitled PR',
+
+                  source:
+                    sourceBranch,
+
+                  target:
+                    targetBranch,
+
+                  creator:
+                    pr.createdBy?.displayName ||
+                    'Unknown',
+
+                  status:
+                    pr.status ||
+                    'unknown',
+
+                  createdDate:
+                    pr.creationDate
+                      ? new Date(
+                          pr.creationDate
+                        ).toLocaleDateString()
+                      : 'N/A',
+
+                  reviewersCount:
+                    actualReviewers,
+
+                  minRequiredReviewers:
+                    policyInfo.minReviewers,
+
+                  targetPolicies:
+                    policyInfo.policies
+
+                };
+
+              })
+
+            );
+
+
+          allPRs.push(...prRows);
+
+        }
+
+
+        return branchDetails;
+
+      });
+
+
+    // ========================================================
+    // WAIT FOR ALL REPOSITORIES
+    // ========================================================
+
+    const results =
+      await Promise.all(repoPromises);
+
+
+    rawStore.repos =
+      results.flat();
+
+    rawStore.repoIndex =
+      0;
+
+
+    rawStore.repoPrs =
+      allPRs;
+
+    rawStore.repoPrsIndex =
+      0;
+
+
+    // ========================================================
+    // PR COUNTS
+    // ========================================================
+
+    const activePRsCount =
+      allPRs.filter(
+        p =>
+          p.status === 'active'
+      ).length;
+
+
+    const completedPRsCount =
+      allPRs.filter(
+        p =>
+          p.status === 'completed'
+      ).length;
+
+
+    // ========================================================
+    // KPI 1
+    // ========================================================
+
+    document.getElementById(
+      'kpi-1-label'
+    ).textContent =
+      'Repository';
+
+
+    document.getElementById(
+      'kpi-1-val'
+    ).textContent =
+      targetRepos.length > 1
+        ? `${targetRepos.length} Repos`
+        : targetRepos[0]?.name;
+
+
+    document.getElementById(
+      'kpi-1-val'
+    ).className =
+      'text-2xl font-extrabold text-slate-800 mt-1 truncate';
+
+
+    // ========================================================
+    // KPI 2
+    // ========================================================
+
+    document.getElementById(
+      'kpi-2-label'
+    ).textContent =
+      'Branches';
+
+
+    document.getElementById(
+      'kpi-2-val'
+    ).textContent =
+      `${rawStore.repos.length} ` +
+      `(${rawStore.repos.filter(b => b.isStale).length} Stale)`;
+
+
+    // ========================================================
+    // KPI 3
+    // ========================================================
+
+    document.getElementById(
+      'kpi-3-label'
+    ).textContent =
+      'Total PRs';
+
+
+    document.getElementById(
+      'kpi-3-val'
+    ).textContent =
+      allPRs.length;
+
+
+    // ========================================================
+    // KPI 4
+    // ========================================================
+
+    document.getElementById(
+      'kpi-4-label'
+    ).textContent =
+      'Active PRs';
+
+
+    document.getElementById(
+      'kpi-4-val'
+    ).textContent =
+      activePRsCount;
+
+
+    // ========================================================
+    // KPI 5
+    // ========================================================
+
+    document.getElementById(
+      'kpi-5-label'
+    ).textContent =
+      'Completed PRs';
+
+
+    document.getElementById(
+      'kpi-5-val'
+    ).textContent =
+      completedPRsCount;
+
+
+    // ========================================================
+    // RENDER
+    // ========================================================
+
+    renderRepoTableBatch(false);
+
+    renderRepoPrsTableBatch(false);
+
+
+    renderChart(
+      Object.keys(repoBranchCounts),
+      Object.values(repoBranchCounts),
+      'Branches per Repository'
+    );
+
+
+    // ========================================================
+    // POLICY COUNTS
+    // ========================================================
+
+    const branchPolicyCount =
+      rawStore.repos.filter(
+        b => b.hasPolicy
+      ).length;
+
+
+    const prPolicyCount =
+      allPRs.filter(
+        p =>
+          p.targetPolicies &&
+          p.targetPolicies.length > 0
+      ).length;
+
+
+    setStatus(
+
+      `Loaded ${rawStore.repos.length} branches, ` +
+      `${branchPolicyCount} branches with policies, ` +
+      `${allPRs.length} pull requests, and ` +
+      `${prPolicyCount} PR target branches with policies ` +
+      `across ${targetRepos.length} repositories.`,
+
+      'success'
+    );
+
+
+  } catch (err) {
+
+    setStatus(
+      `Error fetching branches and policies: ${err.message}`,
+      'error'
+    );
+
+  }
+
+}
+
+
+// ============================================================
+// BRANCH TABLE
+// ============================================================
+
+function renderRepoTableBatch(append = false) {
+
+  ensurePolicyTableHeaders();
+
+
+  const tbody =
+    document.getElementById(
+      'branchesTableBody'
+    );
+
+
+  const container =
+    document.getElementById(
+      'seeMoreRepoContainer'
+    );
+
+
+  const remainingEl =
+    document.getElementById(
+      'repoRemainingCount'
+    );
+
+
+  if (!append) {
+    tbody.innerHTML = '';
+  }
+
+
+  if (rawStore.repos.length === 0) {
+
+    tbody.innerHTML =
+      `<tr>
+        <td colspan="7"
+            class="p-4 text-center text-slate-400">
+          No branches found.
+        </td>
+      </tr>`;
+
+
+    container.classList.add(
+      'hidden'
+    );
+
+    return;
+  }
+
+
+  const nextBatch =
+    rawStore.repos.slice(
+      rawStore.repoIndex,
+      rawStore.repoIndex + PAGE_SIZE
+    );
+
+
+  rawStore.repoIndex +=
+    nextBatch.length;
+
+
+  const html =
+    nextBatch.map(b => {
+
+      const policiesHtml =
+        b.hasPolicy
+
+          ? `
+            <div class="flex flex-wrap gap-1 max-w-xs">
+
+              ${
+                b.minReviewers > 0
+                  ? `
+                    <span
+                      class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-1.5 py-0.5 rounded">
+
+                      ${b.minReviewers}
+                      Min Reviewer${b.minReviewers > 1 ? 's' : ''}
+
+                    </span>
+                  `
+                  : ''
+              }
+
+
+              ${
+                b.policies
+                  .map(
+                    p =>
+                      `
+                      <span
+                        class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+
+                        ${p}
+
+                      </span>
+                      `
+                  )
+                  .join('')
+              }
+
+            </div>
+          `
+
+          : `
+            <span
+              class="text-xs text-slate-400 italic">
+
+              No Policies Set
+
+            </span>
+          `;
+
+
+      return `
+        <tr class="hover:bg-slate-50 transition">
+
+          <td class="p-4 font-semibold text-slate-900">
+            ${b.repo}
+          </td>
+
+
+          <td class="p-4">
+
+            <span
+              class="font-mono text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-semibold">
+
+              ${b.branch}
+
+            </span>
+
+          </td>
+
+
+          <td class="p-4">
+
+            ${
+              b.isStale
+
+                ? `
+                  <span
+                    class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-semibold">
+
+                    Stale
+
+                  </span>
+                `
+
+                : `
+                  <span
+                    class="bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded-full font-semibold">
+
+                    Active
+
+                  </span>
+                `
+            }
+
+          </td>
+
+
+          <td class="p-4">
+            ${policiesHtml}
+          </td>
+
+
+          <td class="p-4 text-xs font-medium">
+            ${b.author}
+          </td>
+
+
+          <td class="p-4 text-xs text-slate-500">
+            ${b.date}
+          </td>
+
+
+          <td
+            class="p-4 text-xs text-slate-600 max-w-xs truncate"
+            title="${b.msg}">
+
+            ${b.msg}
+
+          </td>
+
+        </tr>
+      `;
+
+    }).join('');
+
+
+  tbody.insertAdjacentHTML(
+    'beforeend',
+    html
+  );
+
+
+  const remaining =
+    rawStore.repos.length -
+    rawStore.repoIndex;
+
+
+  if (remaining > 0) {
+
+    container.classList.remove(
+      'hidden'
+    );
+
+    remainingEl.textContent =
+      remaining;
+
+  } else {
+
+    container.classList.add(
+      'hidden'
+    );
+
+  }
+
+}
+
+
+// ============================================================
+// PR TABLE
+// ============================================================
+
+function renderRepoPrsTableBatch(append = false) {
+
+  ensurePolicyTableHeaders();
+
+
+  const tbody =
+    document.getElementById(
+      'repoPrsTableBody'
+    );
+
+
+  const container =
+    document.getElementById(
+      'seeMoreRepoPrsContainer'
+    );
+
+
+  const remainingEl =
+    document.getElementById(
+      'repoPrsRemainingCount'
+    );
+
+
+  if (!append) {
+    tbody.innerHTML = '';
+  }
+
+
+  if (rawStore.repoPrs.length === 0) {
+
+    tbody.innerHTML =
+      `<tr>
+        <td colspan="7"
+            class="p-4 text-center text-slate-400">
+
+          No pull requests found.
+
+        </td>
+      </tr>`;
+
+
+    container.classList.add(
+      'hidden'
+    );
+
+    return;
+  }
+
+
+  const nextBatch =
+    rawStore.repoPrs.slice(
+      rawStore.repoPrsIndex,
+      rawStore.repoPrsIndex + PAGE_SIZE
+    );
+
+
+  rawStore.repoPrsIndex +=
+    nextBatch.length;
+
+
+  const html =
+    nextBatch.map(pr => {
+
+      let policyBadge = '';
+
+
+      // ------------------------------------------------------
+      // Minimum reviewer policy
+      // ------------------------------------------------------
+
+      if (
+        pr.minRequiredReviewers > 0
+      ) {
+
+        policyBadge =
+          `
+            <div class="flex flex-wrap gap-1 max-w-xs">
+
+              <span
+                class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2 py-0.5 rounded">
+
+                ${pr.minRequiredReviewers}
+                Min Required
+                (${pr.reviewersCount} Assigned)
+
+              </span>
+
+
+              ${
+                pr.targetPolicies
+                  .filter(
+                    p =>
+                      !p
+                        .toLowerCase()
+                        .includes(
+                          'required reviewer'
+                        )
+                  )
+                  .map(
+                    p =>
+                      `
+                      <span
+                        class="bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold px-2 py-0.5 rounded">
+
+                        ${p}
+
+                      </span>
+                      `
+                  )
+                  .join('')
+              }
+
+            </div>
+          `;
+
+      }
+
+
+      // ------------------------------------------------------
+      // Other policies
+      // ------------------------------------------------------
+
+      else if (
+        pr.targetPolicies &&
+        pr.targetPolicies.length > 0
+      ) {
+
+        policyBadge =
+          `
+            <div class="flex flex-wrap gap-1 max-w-xs">
+
+              ${
+                pr.targetPolicies
+                  .map(
+                    p =>
+                      `
+                      <span
+                        class="bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold px-2 py-0.5 rounded">
+
+                        ${p}
+
+                      </span>
+                      `
+                  )
+                  .join('')
+              }
+
+            </div>
+          `;
+
+      }
+
+
+      // ------------------------------------------------------
+      // No policy
+      // ------------------------------------------------------
+
+      else {
+
+        policyBadge =
+          `
+            <span
+              class="text-xs text-slate-400">
+
+              ${
+                pr.reviewersCount > 0
+                  ? pr.reviewersCount +
+                    ' Reviewer(s)'
+                  : 'No Policies Set'
+              }
+
+            </span>
+          `;
+
+      }
+
+
+      return `
+        <tr class="hover:bg-slate-50 transition">
+
+          <td class="p-4 font-semibold text-slate-900">
+            ${pr.repo}
+          </td>
+
+
+          <td
+            class="p-4 font-medium text-slate-800 max-w-xs truncate"
+            title="${pr.title}">
+
+            ${pr.title}
+
+          </td>
+
+
+          <td
+            class="p-4 font-mono text-xs text-slate-500">
+
+            ${pr.source}
+            &rarr;
+            ${pr.target}
+
+          </td>
+
+
+          <td class="p-4">
+
+            ${policyBadge}
+
+          </td>
+
+
+          <td
+            class="p-4 text-xs font-medium text-slate-700">
+
+            ${pr.creator}
+
+          </td>
+
+
+          <td class="p-4">
+
+            <span
+              class="px-2 py-0.5 rounded-full text-xs font-semibold ${
+                pr.status === 'completed'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  :
+                pr.status === 'active'
+                  ? 'bg-blue-100 text-blue-700'
+                  :
+                  'bg-slate-100 text-slate-600'
+              }">
+
+              ${pr.status}
+
+            </span>
+
+          </td>
+
+
+          <td
+            class="p-4 text-xs text-slate-500">
+
+            ${pr.createdDate}
+
+          </td>
+
+        </tr>
+      `;
+
+    }).join('');
+
+
+  tbody.insertAdjacentHTML(
+    'beforeend',
+    html
+  );
+
+
+  const remaining =
+    rawStore.repoPrs.length -
+    rawStore.repoPrsIndex;
+
+
+  if (remaining > 0) {
+
+    container.classList.remove(
+      'hidden'
+    );
+
+    remainingEl.textContent =
+      remaining;
+
+  } else {
+
+    container.classList.add(
+      'hidden'
+    );
+
+  }
+
+}
+
+
+// ============================================================
+// EXCEL EXPORT - BRANCHES
+// ============================================================
 
 function exportBranchesToXLSX() {
-  if (!rawStore.repos || rawStore.repos.length === 0) return;
-  const data = rawStore.repos.map(b => ({
-    "Repository": b.repo,
-    "Branch Name": b.branch,
-    "Status / Health": b.isStale ? "Stale" : "Active",
-    "Branch & PR Policies": b.policies ? b.policies.join(', ') : 'None',
-    "Required Reviewers": b.minReviewers || 0,
-    "Last Author": b.author,
-    "Last Commit Date": b.date,
-    "Commit Message": b.msg
-  }));
-  exportToExcelFile({ "Branches & Policies": data }, "AzureDevOps_Branches_Policies");
+
+  if (
+    !rawStore.repos ||
+    rawStore.repos.length === 0
+  ) {
+    return;
+  }
+
+
+  const data =
+    rawStore.repos.map(b => ({
+
+      "Repository":
+        b.repo,
+
+      "Branch Name":
+        b.branch,
+
+      "Status / Health":
+        b.isStale
+          ? "Stale"
+          : "Active",
+
+      "Branch Policies":
+        b.policies
+          ? b.policies.join(', ')
+          : 'None',
+
+      "Required Reviewers":
+        b.minReviewers || 0,
+
+      "Last Author":
+        b.author,
+
+      "Last Commit Date":
+        b.date,
+
+      "Commit Message":
+        b.msg
+
+    }));
+
+
+  exportToExcelFile(
+    {
+      "Branches & Policies":
+        data
+    },
+    "AzureDevOps_Branches_Policies"
+  );
+
 }
 
+
+// ============================================================
+// EXCEL EXPORT - PRs
+// ============================================================
+
 function exportRepoPrsToXLSX() {
-  if (!rawStore.repoPrs || rawStore.repoPrs.length === 0) return;
-  const data = rawStore.repoPrs.map(p => ({
-    "Repository": p.repo,
-    "PR Title": p.title,
-    "Source Branch": p.source,
-    "Target Branch": p.target,
-    "Min Required Reviewers": p.minRequiredReviewers || 0,
-    "Target Policies": p.targetPolicies ? p.targetPolicies.join(', ') : 'None',
-    "Creator": p.creator,
-    "Status": p.status,
-    "Created Date": p.createdDate
-  }));
-  exportToExcelFile({ "Pull Requests": data }, "AzureDevOps_PullRequests");
+
+  if (
+    !rawStore.repoPrs ||
+    rawStore.repoPrs.length === 0
+  ) {
+    return;
+  }
+
+
+  const data =
+    rawStore.repoPrs.map(p => ({
+
+      "Repository":
+        p.repo,
+
+      "PR Title":
+        p.title,
+
+      "Source Branch":
+        p.source,
+
+      "Target Branch":
+        p.target,
+
+      "Target Branch Policies":
+        p.targetPolicies
+          ? p.targetPolicies.join(', ')
+          : 'None',
+
+      "Min Required Reviewers":
+        p.minRequiredReviewers || 0,
+
+      "Assigned Reviewers":
+        p.reviewersCount || 0,
+
+      "Creator":
+        p.creator,
+
+      "Status":
+        p.status,
+
+      "Created Date":
+        p.createdDate
+
+    }));
+
+
+  exportToExcelFile(
+    {
+      "Pull Requests":
+        data
+    },
+    "AzureDevOps_PullRequests_Policies"
+  );
+
 }
