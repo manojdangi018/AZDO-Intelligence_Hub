@@ -135,11 +135,17 @@
 
     <main class="dashboard-main">
       <section class="workspace-controls">
-        <div class="workspace-project-row">
-          <div><div class="eyebrow">02 · PROJECT</div><h2>Select project</h2><p>Choose a project from the connected Azure DevOps organization to explore telemetry.</p></div>
-          <div class="workspace-project-field">
-            <label>Project <span>*</span></label>
-            <select id="projectSelect" disabled onchange="handleProjectSelection()"><option value="">-- Load PAT first --</option></select>
+        <div class="project-selection-box">
+          <div class="workspace-project-row">
+            <div class="workspace-project-copy">
+              <div class="eyebrow">02 · PROJECT</div>
+              <h2>Select project</h2>
+              <p>Choose a project from the connected Azure DevOps organization to explore telemetry.</p>
+            </div>
+            <div class="workspace-project-field">
+              <label for="projectSelect">Project <span>*</span></label>
+              <select id="projectSelect" disabled onchange="handleProjectSelection()"><option value="">-- Load PAT first --</option></select>
+            </div>
           </div>
         </div>
         <select id="categorySelect" class="hidden"><option value="">-- Choose Category --</option></select>
