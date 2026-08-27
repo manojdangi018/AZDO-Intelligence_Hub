@@ -42,12 +42,23 @@ function closeModal() {
 }
 
 function setStatus(msg, type = 'info') {
-  const el = document.getElementById('statusBar');
+  const el = document.getElementById('statusBar') || document.getElementById('landingStatusBar');
+  if (!el) return;
   el.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'bg-green-50', 'text-green-700', 'bg-blue-50', 'text-blue-700');
   if (type === 'error') el.classList.add('bg-red-50', 'text-red-700');
   else if (type === 'success') el.classList.add('bg-green-50', 'text-green-700');
   else el.classList.add('bg-blue-50', 'text-blue-700');
   el.textContent = msg;
+}
+
+function showWorkspacePage() {
+  document.getElementById('connectionPage')?.classList.add('hidden');
+  document.getElementById('workspacePage')?.classList.remove('hidden');
+}
+
+function showConnectionPage() {
+  document.getElementById('workspacePage')?.classList.add('hidden');
+  document.getElementById('connectionPage')?.classList.remove('hidden');
 }
 
 function updatePathPreview(org = '', project = '') {
@@ -151,8 +162,9 @@ async function loadProjectsList() {
 
     enableDropdown('projectSelect');
     document.getElementById('step5Container').classList.add('hidden');
-    setStatus(`Loaded ${projects.length} projects successfully! Please choose a project.`, 'success');
     setConnectionBadge(true);
+    showWorkspacePage();
+    setStatus(`Loaded ${projects.length} projects successfully! Please choose a project.`, 'success');
   } catch (err) {
     setStatus(`Error loading projects: ${err.message}`, 'error');
     setConnectionBadge(false);
@@ -305,6 +317,7 @@ function disconnectSession() {
 
   renderChart([], [], 'Overview');
   setConnectionBadge(false);
+  showConnectionPage();
   setStatus('Disconnected from Azure DevOps. Enter credentials to connect again.', 'info');
 }
 

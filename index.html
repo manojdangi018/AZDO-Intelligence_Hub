@@ -30,6 +30,58 @@
     </div>
   </div>
 
+  <!-- Landing / Azure DevOps connection page -->
+  <div id="connectionPage" class="connection-page">
+    <header class="landing-topbar">
+      <div class="landing-brand">
+        <div class="brand-mark"><img src="devops-ad-logo.png" alt="DevOps Intelligence logo"></div>
+        <div><div class="brand-title">DevOps Intelligence</div><div class="brand-subtitle">Azure DevOps analytics</div></div>
+      </div>
+      <div class="landing-step">01 · CONNECTION</div>
+    </header>
+    <main class="connection-main">
+      <section class="connection-card landing-connection-card">
+        <div class="connection-card-head">
+          <div>
+            <div class="eyebrow">01 · CONNECTION</div>
+            <h2>Connect to Azure DevOps</h2>
+            <p>Enter your organization and PAT, then select a project to explore telemetry.</p>
+          </div>
+          <a id="generatedUrlLink" href="javascript:void(0)" class="path-preview">https://dev.azure.com/</a>
+        </div>
+
+        <!-- Project Load / Connection Section -->
+        <div class="connection-fields">
+          <div class="field-group">
+            <label>Organization <span>*</span></label>
+            <input type="text" id="targetOrg" oninput="handleOrgChange()" placeholder="e.g. CornerstoneBuildingBrands">
+            <small>Organization name or https://dev.azure.com/&lt;org&gt;</small>
+          </div>
+
+          <div class="field-group">
+            <label>Personal Access Token <span>*</span></label>
+            <input type="password" id="targetPat" placeholder="Enter PAT token">
+            <small>PAT is used only from this browser session to call Azure DevOps APIs.</small>
+          </div>
+
+          <div class="flex flex-col gap-2.5">
+            <button id="btnLoadProjects" onclick="loadProjectsList()" class="btn-load-projects">Load projects</button>
+            <label class="remember-toggle">
+              <input type="checkbox" id="chkRememberCreds" onchange="toggleRememberCreds()">
+              <span>Remember organization &amp; credentials</span>
+            </label>
+          </div>
+
+
+        </div>
+      </section>
+
+        <div id="landingStatusBar" class="status-bar hidden"></div>
+    </main>
+  </div>
+
+  <!-- Workspace / Azure DevOps intelligence page -->
+  <div id="workspacePage" class="workspace-page hidden">
   <!-- Application Sidebar -->
   <aside class="app-sidebar">
     <div class="sidebar-brand">
@@ -82,50 +134,15 @@
     </header>
 
     <main class="dashboard-main">
-      <section class="connection-card">
-        <div class="connection-card-head">
-          <div>
-            <div class="eyebrow">01 · CONNECTION</div>
-            <h2>Connect to Azure DevOps</h2>
-            <p>Enter your organization and PAT, then select a project to explore telemetry.</p>
-          </div>
-          <a id="generatedUrlLink" href="javascript:void(0)" class="path-preview">https://dev.azure.com/</a>
-        </div>
-
-        <!-- Project Load / Connection Section -->
-        <div class="connection-fields">
-          <div class="field-group">
-            <label>Organization <span>*</span></label>
-            <input type="text" id="targetOrg" oninput="handleOrgChange()" placeholder="e.g. CornerstoneBuildingBrands">
-            <small>Organization name or https://dev.azure.com/&lt;org&gt;</small>
-          </div>
-
-          <div class="field-group">
-            <label>Personal Access Token <span>*</span></label>
-            <input type="password" id="targetPat" placeholder="Enter PAT token">
-            <small>PAT is used only from this browser session to call Azure DevOps APIs.</small>
-          </div>
-
-          <div class="flex flex-col gap-2.5">
-            <button id="btnLoadProjects" onclick="loadProjectsList()" class="btn-load-projects">Load projects</button>
-            <label class="remember-toggle">
-              <input type="checkbox" id="chkRememberCreds" onchange="toggleRememberCreds()">
-              <span>Remember organization &amp; credentials</span>
-            </label>
-          </div>
-
-          <div class="field-group">
+      <section class="workspace-controls">
+        <div class="workspace-project-row">
+          <div><div class="eyebrow">02 · PROJECT</div><h2>Select project</h2><p>Choose a project from the connected Azure DevOps organization to explore telemetry.</p></div>
+          <div class="workspace-project-field">
             <label>Project <span>*</span></label>
-            <select id="projectSelect" disabled onchange="handleProjectSelection()">
-              <option value="">-- Load PAT first --</option>
-            </select>
+            <select id="projectSelect" disabled onchange="handleProjectSelection()"><option value="">-- Load PAT first --</option></select>
           </div>
         </div>
-
-        <select id="categorySelect" class="hidden">
-          <option value="">-- Choose Category --</option>
-        </select>
-
+        <select id="categorySelect" class="hidden"><option value="">-- Choose Category --</option></select>
         <!-- Dynamic Sub-Step Container -->
         <div id="step5Container" class="hidden pt-3 border-t border-slate-200">
           
@@ -593,3 +610,4 @@
   <script src="js/workitems.js"></script>
 </body>
 </html>
+  </div>
