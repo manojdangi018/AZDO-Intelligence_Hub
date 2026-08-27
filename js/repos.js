@@ -24,7 +24,7 @@ async function fetchRepositoryData() {
 
   const authHeader = 'Basic ' + btoa(':' + pat);
   showSection('repositories');
-  setStatus('Scanning repositories, branch policies, reviewers & PR rules...', 'info');
+  setStatus('Scanning branches, branch policies, and PR rules across Azure DevOps...', 'info');
 
   let targetRepos = cachedRepos;
   if (rawInput !== '-- All Repositories --' && rawInput !== '__ALL__') {
@@ -44,55 +44,57 @@ async function fetchRepositoryData() {
   const now = new Date();
 
   try {
-    // 1. Fetch Policy Configurations across all supported Azure DevOps Policy API versions
-    let rawPolicies = [];
-    const policyUrls = [
+    // 1. Fetch Policy Configurations across all supported Azure DevOps Policy API endpoints
+    let allPolicies = [];
+    const policyEndpoints = [
       `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/policy/configurations?api-version=7.1-preview.1&$top=1000`,
-      `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/policy/configurations?api-version=6.0&$top=1000`
+      `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/policy/configurations?api-version=6.0&$top=1000`,
+      `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/git/policy/configurations?api-version=5.0-preview.1`
     ];
 
-    for (const pUrl of policyUrls) {
+    for (const url of policyEndpoints) {
       try {
-        const pRes = await fetchAzDo(pUrl, authHeader);
-        if (pRes?.value && pRes.value.length > 0) {
-          rawPolicies = pRes.value;
-          break;
+        const res = await fetchAzDo(url, authHeader);
+        if (res?.value && res.value.length > 0) {
+          allPolicies.push(...res.value);
         }
       } catch (e) {
         console.warn('Policy fetch attempt fallback:', e);
       }
     }
 
-    // Standardized Azure DevOps Policy Type Identifiers
-    const POLICY_TYPES = {
-      MIN_REVIEWERS: 'fa4e907d-c16b-4a4c-9dfa-4916e5d171ab',
-      MIN_APPROVERS_ALT: 'fa4e2476-a875-4e57-99d0-c9f86e73a9a6',
-      REQ_REVIEWERS: 'fd2167ab-b0be-447a-8d83-f1ac291de6e0',
-      BUILD_VALIDATION: '0609b951-8744-42d1-8b94-58c442e21078',
-      WORK_ITEM: '40e92828-f463-476b-b4bd-3121e03459c8',
-      COMMENTS: 'c6a1889d-b943-4856-b76f-9e46bb6b0df2'
-    };
+    // Deduplicate policy list by ID
+    const uniquePolicies = [];
+    const seenPolicyIds = new Set();
+    allPolicies.forEach(p => {
+      if (p.id && !seenPolicyIds.has(p.id)) {
+        seenPolicyIds.add(p.id);
+        uniquePolicies.push(p);
+      }
+    });
 
-    // Helper: Match active branch policies for a given repository and branch name
-    function matchBranchPolicies(repoId, defaultBranchName, branchName) {
-      const targetRef = `refs/heads/${branchName}`.toLowerCase();
-      const isDefault = defaultBranchName && (defaultBranchName.toLowerCase() === branchName.toLowerCase() || defaultBranchName.toLowerCase() === targetRef);
+    // Helper: Evaluates if a policy applies to a given repository UUID and branch ref
+    function evaluateBranchPolicies(repoId, defaultBranchName, branchName) {
+      const fullRef = `refs/heads/${branchName}`.toLowerCase();
+      const isDefault = defaultBranchName && (
+        defaultBranchName.toLowerCase() === branchName.toLowerCase() || 
+        defaultBranchName.toLowerCase() === fullRef ||
+        `refs/heads/${defaultBranchName.toLowerCase()}` === fullRef
+      );
 
-      const matchedPolicies = rawPolicies.filter(p => {
+      const applicable = uniquePolicies.filter(p => {
         if (!p.isEnabled || p.isDeleted) return false;
         const scopes = p.settings?.scope || [];
-
-        // Project-wide policies with no scopes apply to all branches
-        if (scopes.length === 0) return true;
+        if (scopes.length === 0) return true; // Applies project-wide
 
         return scopes.some(scope => {
           const sRepo = scope.repositoryId ? scope.repositoryId.toLowerCase() : null;
           const sRef = scope.refName ? scope.refName.toLowerCase() : null;
           const matchKind = (scope.matchKind || 'Exact').toLowerCase();
 
-          // Check if repo matches
-          const repoMatch = !sRepo || sRepo === repoId.toLowerCase();
-          if (!repoMatch) return false;
+          // Check if repository matches
+          const repoOk = !sRepo || sRepo === repoId.toLowerCase();
+          if (!repoOk) return false;
 
           // Check if branch ref matches
           if (matchKind === 'defaultbranch') {
@@ -102,56 +104,55 @@ async function fetchRepositoryData() {
             return true;
           }
           if (matchKind === 'prefix') {
-            return targetRef.startsWith(sRef);
+            return fullRef.startsWith(sRef);
           }
-          return sRef === targetRef;
+          return sRef === fullRef;
         });
       });
 
       let minReviewers = 0;
-      let tags = [];
+      let policyList = [];
 
-      matchedPolicies.forEach(p => {
+      applicable.forEach(p => {
         const typeId = (p.type?.id || '').toLowerCase();
         const typeName = (p.type?.displayName || '').toLowerCase();
 
-        // 1. Minimum Reviewers
+        // 1. Minimum number of reviewers policy
         if (
-          typeId.includes(POLICY_TYPES.MIN_REVIEWERS) ||
-          typeId.includes(POLICY_TYPES.MIN_APPROVERS_ALT) ||
-          typeName.includes('minimum number of reviewers') ||
+          typeId.includes('fa4e907d') || 
+          typeId.includes('fa4e2476') || 
+          typeName.includes('minimum number of reviewers') || 
           typeName.includes('approver')
         ) {
-          const count = p.settings?.minimumApproverCount || p.settings?.minimumApprovers || 1;
-          if (count > minReviewers) minReviewers = count;
-          tags.push(`${count} Min Reviewer${count > 1 ? 's' : ''}`);
+          const reqCount = p.settings?.minimumApproverCount || p.settings?.minimumApprovers || 1;
+          if (reqCount > minReviewers) minReviewers = reqCount;
+          policyList.push(`${reqCount} Req. Reviewer${reqCount > 1 ? 's' : ''}`);
         }
         // 2. Build Validation
-        else if (typeId.includes(POLICY_TYPES.BUILD_VALIDATION) || typeName.includes('build')) {
+        else if (typeId.includes('0609b951') || typeName.includes('build')) {
           const buildDefName = p.settings?.displayName || 'CI Build Validation';
-          tags.push(buildDefName);
+          policyList.push(buildDefName);
         }
         // 3. Work Item Linking
-        else if (typeId.includes(POLICY_TYPES.WORK_ITEM) || typeName.includes('work item')) {
-          tags.push('Work Item Required');
+        else if (typeId.includes('40e92828') || typeName.includes('work item')) {
+          policyList.push('Work Item Required');
         }
         // 4. Comment Resolution
-        else if (typeId.includes(POLICY_TYPES.COMMENTS) || typeName.includes('comment')) {
-          tags.push('Resolve Comments');
+        else if (typeId.includes('c6a1889d') || typeName.includes('comment')) {
+          policyList.push('Resolve Comments');
         }
         // 5. Required Reviewers / Teams
-        else if (typeId.includes(POLICY_TYPES.REQ_REVIEWERS) || typeName.includes('required reviewers')) {
-          tags.push('Enforced Reviewers');
-        }
-        else {
-          tags.push(p.type?.displayName || 'Branch Protection');
+        else if (typeId.includes('fd2167ab') || typeName.includes('required reviewers')) {
+          policyList.push('Required Reviewers');
+        } else {
+          policyList.push(p.type?.displayName || 'Branch Protection');
         }
       });
 
       return {
-        hasPolicy: matchedPolicies.length > 0,
+        hasPolicy: applicable.length > 0,
         minReviewers: minReviewers,
-        policies: [...new Set(tags)]
+        policies: [...new Set(policyList)]
       };
     }
 
@@ -180,7 +181,7 @@ async function fetchRepositoryData() {
 
           const commitDate = topCommit?.author?.date ? new Date(topCommit.author.date) : null;
           const isStale = commitDate ? ((now - commitDate) / (1000 * 60 * 60 * 24)) > 90 : false;
-          const policyInfo = matchBranchPolicies(r.id, defaultBranchName, bName);
+          const policyInfo = evaluateBranchPolicies(r.id, defaultBranchName, bName);
 
           return {
             repo: r.name,
@@ -200,7 +201,7 @@ async function fetchRepositoryData() {
         const prList = prsPromise.value.value || [];
         prList.forEach(pr => {
           const targetBranch = (pr.targetRefName || '').replace('refs/heads/', '');
-          const policyInfo = matchBranchPolicies(r.id, defaultBranchName, targetBranch);
+          const policyInfo = evaluateBranchPolicies(r.id, defaultBranchName, targetBranch);
           const actualReviewers = (pr.reviewers || []).length;
           
           allPRs.push({
