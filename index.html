@@ -9,75 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="css/styles.css" />
-
-    <style>
-      /* TWO-PAGE CONNECTION FLOW */
-
-      /* Page 1: Organization + PAT only */
-      body.connection-page .app-sidebar {
-        display: none;
-      }
-
-      body.connection-page .app-shell {
-        margin-left: 0 !important;
-      }
-
-      body.connection-page .connection-card {
-        max-width: 970px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      body.connection-page #projectStepField,
-      body.connection-page #step5Container,
-      body.connection-page #statusBar,
-      body.connection-page .active-path-row,
-      body.connection-page .overview-heading,
-      body.connection-page .dashboard-content {
-        display: none !important;
-      }
-
-      /* Page 2: keep Organization, PAT, Load projects,
-         Remember credentials and Project selector. */
-      body.project-page .app-sidebar {
-        display: flex;
-      }
-
-      body.project-page .app-shell {
-        margin-left: var(--sidebar-width, 330px);
-      }
-
-      body.project-page #projectStepField {
-        display: block !important;
-      }
-
-      /* Immediately after Load projects: show only the
-         existing connection/project selection card. */
-      body.project-page.project-not-selected #step5Container,
-      body.project-page.project-not-selected #statusBar,
-      body.project-page.project-not-selected .active-path-row,
-      body.project-page.project-not-selected .overview-heading,
-      body.project-page.project-not-selected .dashboard-content {
-        display: none !important;
-      }
-
-      /* After selecting a project: restore all existing functions. */
-      body.project-selected #step5Container {
-        display: block !important;
-      }
-
-      body.project-selected .overview-heading,
-      body.project-selected .dashboard-content {
-        display: block;
-      }
-
-      .project-step-field {
-        grid-column: 1 / -1;
-      }
-    </style>
-
 </head>
-<body class="connection-page bg-slate-50 text-slate-800 antialiased min-h-screen">
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
 
   <!-- Step Validation Modal -->
   <div id="validationModal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -160,7 +93,7 @@
         </div>
 
         <!-- Project Load / Connection Section -->
-        <div id="connectionStepFields" class="connection-fields">
+        <div class="connection-fields">
           <div class="field-group">
             <label>Organization <span>*</span></label>
             <input type="text" id="targetOrg" oninput="handleOrgChange()" placeholder="e.g. CornerstoneBuildingBrands">
@@ -181,7 +114,7 @@
             </label>
           </div>
 
-          <div id="projectStepField" class="field-group project-step-field hidden">
+          <div class="field-group">
             <label>Project <span>*</span></label>
             <select id="projectSelect" disabled onchange="handleProjectSelection()">
               <option value="">-- Load PAT first --</option>
@@ -658,153 +591,5 @@
   <script src="js/activity.js"></script>
   <script src="js/pipelines.js"></script>
   <script src="js/workitems.js"></script>
-
-<script>
-(function () {
-  const originalLoadProjectsList = window.loadProjectsList;
-  const originalDisconnectSession = window.disconnectSession;
-
-  function showConnectionPage() {
-    document.body.classList.remove('project-page');
-    document.body.classList.add('connection-page');
-
-    const sidebar = document.querySelector('.app-sidebar');
-    if (sidebar) sidebar.style.display = 'none';
-
-    const projectField = document.getElementById('projectStepField');
-    if (projectField) projectField.classList.add('hidden');
-
-    const projectSelect = document.getElementById('projectSelect');
-    if (projectSelect) projectSelect.value = '';
-
-    const badge = document.getElementById('connectionBadgeText');
-    if (badge) badge.textContent = 'Ready to connect';
-  }
-
-  function showProjectPage() {
-    document.body.classList.remove('connection-page');
-    document.body.classList.add('project-page');
-
-    const sidebar = document.querySelector('.app-sidebar');
-    if (sidebar) sidebar.style.display = '';
-
-    const projectField = document.getElementById('projectStepField');
-    if (projectField) projectField.classList.remove('hidden');
-
-    const badge = document.getElementById('connectionBadgeText');
-    if (badge) badge.textContent = 'Connected';
-  }
-
-  // Page 1: keep the existing Azure DevOps connection/load logic unchanged,
-  // then move to Page 2 only after projects have actually loaded.
-  window.loadProjectsList = async function () {
-    if (typeof originalLoadProjectsList === 'function') {
-      await originalLoadProjectsList();
-    }
-
-    const select = document.getElementById('projectSelect');
-    if (select && !select.disabled && select.options.length > 1) {
-      showProjectPage();
-    }
-  };
-
-  window.returnToConnectionScreen = function () {
-    showConnectionPage();
-  };
-
-  // Disconnect returns the user to Page 1.
-  window.disconnectSession = function () {
-    if (typeof originalDisconnectSession === 'function') {
-      originalDisconnectSession();
-    }
-    showConnectionPage();
-  };
-
-  // Page 1 is the initial screen.
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', showConnectionPage);
-  } else {
-    showConnectionPage();
-  }
-})();
-</script>
-
-
-  <!-- UI-only page split controller.
-       Existing API, inspect, fetch, table and dashboard functions remain unchanged. -->
-  <script>
-    (function () {
-      function showConnectionPage() {
-        document.body.classList.add('connection-page');
-        document.body.classList.remove('project-page', 'project-not-selected', 'project-selected');
-      }
-
-      function showProjectPage() {
-        document.body.classList.remove('connection-page', 'project-selected');
-        document.body.classList.add('project-page', 'project-not-selected');
-      }
-
-      function showSelectedProjectPage() {
-        document.body.classList.remove('connection-page', 'project-not-selected');
-        document.body.classList.add('project-page', 'project-selected');
-      }
-
-      showConnectionPage();
-
-      // Wait until the existing scripts have loaded their functions.
-      function hookExistingFunctions() {
-        if (typeof window.loadProjectsList === 'function' && !window.__splitLoadHooked) {
-          window.__splitLoadHooked = true;
-          const originalLoadProjectsList = window.loadProjectsList;
-
-          window.loadProjectsList = async function () {
-            const result = await originalLoadProjectsList.apply(this, arguments);
-
-            setTimeout(function () {
-              const select = document.getElementById('projectSelect');
-              if (select && select.options.length > 1) {
-                showProjectPage();
-              }
-            }, 100);
-
-            return result;
-          };
-        }
-
-        if (typeof window.handleProjectSelection === 'function' && !window.__splitSelectionHooked) {
-          window.__splitSelectionHooked = true;
-          const originalHandleProjectSelection = window.handleProjectSelection;
-
-          window.handleProjectSelection = function () {
-            const result = originalHandleProjectSelection.apply(this, arguments);
-
-            const select = document.getElementById('projectSelect');
-            if (select && select.value) {
-              showSelectedProjectPage();
-            }
-
-            return result;
-          };
-        }
-      }
-
-      // Functions from app.js are already loaded before this script,
-      // but retrying is harmless if a browser loads them asynchronously.
-      hookExistingFunctions();
-      setTimeout(hookExistingFunctions, 100);
-      setTimeout(hookExistingFunctions, 500);
-
-      const projectSelect = document.getElementById('projectSelect');
-      if (projectSelect) {
-        projectSelect.addEventListener('change', function () {
-          if (this.value) {
-            showSelectedProjectPage();
-          } else {
-            showProjectPage();
-          }
-        });
-      }
-    })();
-  </script>
 </body>
 </html>
