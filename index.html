@@ -8,76 +8,247 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="css/styles.css" />
 
-    <style>
-      /* TWO-PAGE CONNECTION FLOW */
+  <style>
+    /* TWO-PAGE VIEW FLOW & SCREENSHOT MATCHING STYLES */
+    :root {
+      --az-blue: #0078d4;
+      --az-blue-hover: #005a9e;
+      --az-header-bg: #005a9e;
+      --az-card-bg: #ffffff;
+      --az-input-bg: #eaf1fb;
+      --az-border: #e2e8f0;
+      --az-text: #1e293b;
+      --az-muted: #64748b;
+    }
 
-      /* Page 1: Organization + PAT only */
-      body.connection-page .app-sidebar {
-        display: none;
-      }
+    body.dark-theme {
+      --az-blue: #2899f5;
+      --az-blue-hover: #0078d4;
+      --az-header-bg: #0b1320;
+      --az-card-bg: #1e293b;
+      --az-input-bg: #0f172a;
+      --az-border: #334155;
+      --az-text: #f8fafc;
+      --az-muted: #94a3b8;
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+    }
 
-      body.connection-page .app-shell {
-        margin-left: 0 !important;
-      }
+    /* GLOBAL AZURE HEADER */
+    .az-custom-header {
+      height: 52px;
+      background-color: var(--az-header-bg);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
 
-      body.connection-page .connection-card {
-        max-width: 970px;
-        margin-left: auto;
-        margin-right: auto;
-      }
+    .az-brand-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.2px;
+      color: #fff;
+    }
 
-      body.connection-page #projectStepField,
-      body.connection-page #step5Container,
-      body.connection-page #statusBar,
-      body.connection-page .active-path-row,
-      body.connection-page .overview-heading,
-      body.connection-page .dashboard-content {
-        display: none !important;
-      }
+    .az-breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.85);
+      margin-left: 16px;
+      padding-left: 16px;
+      border-left: 1px solid rgba(255, 255, 255, 0.25);
+    }
 
-      /* Page 2: keep Organization, PAT, Load projects,
-         Remember credentials and Project selector. */
-      body.project-page .app-sidebar {
-        display: flex;
-      }
+    .az-breadcrumbs .sep {
+      opacity: 0.45;
+    }
 
-      body.project-page .app-shell {
-        margin-left: var(--sidebar-width, 330px);
-      }
+    .az-pill-btn {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 5px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
 
-      body.project-page #projectStepField {
-        display: block !important;
-      }
+    .az-pill-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
 
-      /* Immediately after Load projects: show only the
-         existing connection/project selection card. */
-      body.project-page.project-not-selected #step5Container,
-      body.project-page.project-not-selected #statusBar,
-      body.project-page.project-not-selected .active-path-row,
-      body.project-page.project-not-selected .overview-heading,
-      body.project-page.project-not-selected .dashboard-content {
-        display: none !important;
-      }
+    .az-status-pill {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(52, 211, 153, 0.4);
+      color: #ffffff;
+      padding: 5px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-      /* After selecting a project: restore all existing functions. */
-      body.project-selected #step5Container {
-        display: block !important;
-      }
+    /* AUTH / CONNECTION CARD EXACT MATCH */
+    .az-login-wrapper {
+      max-width: 900px;
+      margin: 40px auto;
+      background: var(--az-card-bg);
+      border-radius: 12px;
+      border: 1px solid var(--az-border);
+      box-shadow: 0 10px 25px -5px rgba(0, 45, 90, 0.08);
+      overflow: hidden;
+    }
 
-      body.project-selected .overview-heading,
-      body.project-selected .dashboard-content {
-        display: block;
-      }
+    .az-login-top-bar {
+      height: 4px;
+      background: var(--az-blue);
+      width: 100%;
+    }
 
-      .project-step-field {
-        grid-column: 1 / -1;
-      }
-    </style>
+    .az-login-body {
+      padding: 36px 42px;
+    }
 
+    .az-icon-avatar {
+      width: 46px;
+      height: 46px;
+      background: var(--az-blue);
+      color: #ffffff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      flex-shrink: 0;
+    }
+
+    .az-input-styled {
+      width: 100%;
+      padding: 11px 14px;
+      background-color: var(--az-input-bg);
+      border: 1px solid #c9daf3;
+      border-radius: 6px;
+      font-size: 13.5px;
+      color: var(--az-text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    body.dark-theme .az-input-styled {
+      border-color: #334155;
+    }
+
+    .az-input-styled:focus {
+      border-color: var(--az-blue);
+      box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.15);
+    }
+
+    .az-code-preview {
+      color: var(--az-blue);
+      font-weight: 600;
+      background: rgba(0, 120, 212, 0.08);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: Consolas, monospace;
+    }
+
+    /* FLOW SWITCHING VISIBILITY */
+    body.connection-page .app-sidebar {
+      display: none !important;
+    }
+
+    body.connection-page .app-shell {
+      margin-left: 0 !important;
+    }
+
+    body.connection-page #projectStepField,
+    body.connection-page #step5Container,
+    body.connection-page #statusBar,
+    body.connection-page .overview-heading,
+    body.connection-page .dashboard-content {
+      display: none !important;
+    }
+
+    body.project-page .app-sidebar {
+      display: flex !important;
+    }
+
+    body.project-page .app-shell {
+      margin-left: var(--sidebar-width, 330px);
+    }
+
+    body.project-page #projectStepField {
+      display: block !important;
+    }
+
+    body.project-page.project-not-selected #step5Container,
+    body.project-page.project-not-selected #statusBar,
+    body.project-page.project-not-selected .overview-heading,
+    body.project-page.project-not-selected .dashboard-content {
+      display: none !important;
+    }
+
+    body.project-selected #step5Container,
+    body.project-selected .overview-heading,
+    body.project-selected .dashboard-content {
+      display: block !important;
+    }
+  </style>
 </head>
 <body class="connection-page bg-slate-50 text-slate-800 antialiased min-h-screen">
+
+  <!-- TOP AZURE NAVIGATION BAR -->
+  <header class="az-custom-header">
+    <div class="flex items-center">
+      <div class="az-brand-link">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M0 8.877L2.247 5.81l7.004-2.545V0l8.741 6.541L7.842 9.47v5.055L0 8.877zm24 6.246l-2.247 3.067-7.004 2.545V24l-8.741-6.541 10.15-2.929V9.475L24 15.123z"/>
+        </svg>
+        <span>Azure DevOps Intelligence Hub</span>
+      </div>
+
+      <div class="az-breadcrumbs hidden md:flex" id="header-breadcrumbs">
+        <span>Stridely Solutions</span>
+        <span class="sep">/</span>
+        <span>Azure DevOps</span>
+        <span class="sep">/</span>
+        <span id="bc-org">CornerstoneBuildingBrands</span>
+        <span class="sep">/</span>
+        <span id="bc-project" class="font-semibold text-white">EDS</span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button class="az-pill-btn" id="dark-mode-toggle" type="button" onclick="document.body.classList.toggle('dark-theme')">
+        <i class="fa-solid fa-moon"></i> <span>Dark Mode</span>
+      </button>
+
+      <div class="az-status-pill" id="connection-status">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+        <span id="connectionBadgeText">Connected (34 Projects)</span>
+      </div>
+    </div>
+  </header>
 
   <!-- Step Validation Modal -->
   <div id="validationModal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -135,174 +306,202 @@
 
   <!-- Main application shell -->
   <div class="app-shell">
-    <header class="app-topbar">
+    <header class="app-topbar hidden">
       <div>
         <h1 class="app-title">Azure DevOps Intelligence Hub</h1>
         <p class="app-subtitle">Repository, pipeline, work item, security and user activity insights</p>
       </div>
       <div class="topbar-actions">
-        <span id="connectionBadge" class="connection-badge"><span class="status-dot"></span><span id="connectionBadgeText">Ready to connect</span></span>
+        <span id="connectionBadge" class="connection-badge"><span class="status-dot"></span><span id="connectionBadgeTextOld">Ready to connect</span></span>
         <button id="btnDisconnect" onclick="disconnectSession()" class="btn-disconnect hidden">
           <span>✕</span><span>Disconnect</span>
         </button>
       </div>
     </header>
 
-    <main class="dashboard-main">
-      <section class="connection-card">
-        <div class="connection-card-head">
-          <div>
-            <div class="eyebrow">01 · CONNECTION</div>
-            <h2>Connect to Azure DevOps</h2>
-            <p>Enter your organization and PAT, then select a project to explore telemetry.</p>
-          </div>
-          <a id="generatedUrlLink" href="javascript:void(0)" class="path-preview">https://dev.azure.com/</a>
-        </div>
+    <main class="dashboard-main px-4">
+      
+      <!-- SCREEN 1 & 2 CONNECTION CARD -->
+      <section class="az-login-wrapper">
+        <div class="az-login-top-bar"></div>
+        <div class="az-login-body">
+          
+          <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div class="flex items-center gap-3.5">
+              <div class="az-icon-avatar">
+                <i class="fa-solid fa-lock"></i>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-slate-900 leading-tight">Connect to Azure DevOps Service</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Authenticate with Organization endpoint &amp; Personal Access Token</p>
+              </div>
+            </div>
 
-        <!-- Project Load / Connection Section -->
-        <div id="connectionStepFields" class="connection-fields">
-          <div class="field-group">
-            <label>Organization <span>*</span></label>
-            <input type="text" id="targetOrg" oninput="handleOrgChange()" placeholder="e.g. CornerstoneBuildingBrands">
-            <small>Organization name or https://dev.azure.com/&lt;org&gt;</small>
-          </div>
-
-          <div class="field-group">
-            <label>Personal Access Token <span>*</span></label>
-            <input type="password" id="targetPat" placeholder="Enter PAT token">
-            <small>PAT is used only from this browser session to call Azure DevOps APIs.</small>
-          </div>
-
-          <div class="flex flex-col gap-2.5">
-            <button id="btnLoadProjects" onclick="loadProjectsList()" class="btn-load-projects">Load projects</button>
-            <label class="remember-toggle">
-              <input type="checkbox" id="chkRememberCreds" onchange="toggleRememberCreds()">
-              <span>Remember organization &amp; credentials</span>
+            <label class="inline-flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-md text-xs text-slate-600 cursor-pointer bg-white">
+              <input type="checkbox" id="chkRememberCreds" onchange="toggleRememberCreds()" class="accent-blue-600 rounded" checked />
+              <span>Remember Credentials</span>
             </label>
           </div>
 
-          <div id="projectStepField" class="field-group project-step-field hidden">
-            <label>Project <span>*</span></label>
-            <select id="projectSelect" disabled onchange="handleProjectSelection()">
-              <option value="">-- Load PAT first --</option>
-            </select>
-          </div>
-        </div>
+          <!-- Connection Form Elements -->
+          <div id="connectionStepFields" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  1. ORGANIZATION NAME / URL <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="targetOrg" oninput="handleOrgChange(); syncHeaderOrg();" placeholder="e.g. CornerstoneBuildingBrands" class="az-input-styled font-medium" />
+              </div>
 
-        <select id="categorySelect" class="hidden">
-          <option value="">-- Choose Category --</option>
-        </select>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  2. PERSONAL ACCESS TOKEN (PAT) <span class="text-red-500">*</span>
+                </label>
+                <input type="password" id="targetPat" placeholder="Enter PAT token" class="az-input-styled font-medium" />
+              </div>
+            </div>
 
-        <!-- Dynamic Sub-Step Container -->
-        <div id="step5Container" class="hidden pt-3 border-t border-slate-200">
-          
-          <!-- Step 5A: Repositories -->
-          <div id="substepRepo" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
-            <div>
-              <label class="block text-[11px] font-semibold text-blue-900 mb-1">
-                5. SELECT OR TYPE REPOSITORY <span class="text-red-500">*</span>
+            <div class="text-xs text-slate-500 flex items-center gap-1.5 pt-1">
+              Active Azure Endpoint: 
+              <code class="az-code-preview" id="generatedUrlLink">https://dev.azure.com/CornerstoneBuildingBrands</code>
+              <a id="activePathLink" href="javascript:void(0)" class="hidden"></a>
+            </div>
+
+            <!-- Page 2 Project Selection Element -->
+            <div id="projectStepField" class="hidden pt-3 border-t border-slate-100">
+              <label class="block text-[11px] font-bold text-blue-900 uppercase tracking-wider mb-1.5">
+                3. SELECT PROJECT <span class="text-red-500">*</span>
               </label>
-              <div class="flex gap-2">
-                <input list="repoDatalist" id="repoSelect" 
-                       placeholder="Type or select repository..." 
-                       onfocus="this.value=''"
-                       onblur="if(!this.value) this.value='-- All Repositories --'"
-                       class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium" />
-                <datalist id="repoDatalist"></datalist>
-                <button onclick="fetchRepositoryData()" class="text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition flex-shrink-0">
-                  Inspect
+              <select id="projectSelect" disabled onchange="handleProjectSelection(); syncHeaderProject();" class="az-input-styled font-medium bg-blue-50/40">
+                <option value="">-- Load PAT first --</option>
+              </select>
+            </div>
+
+            <div class="flex items-center justify-between pt-4 border-t border-slate-100 mt-2">
+              <button type="button" onclick="returnToConnectionScreen()" class="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Back
+              </button>
+              
+              <button id="btnLoadProjects" onclick="loadProjectsList()" class="px-5 py-2 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition flex items-center gap-2 shadow-sm">
+                Connect Workspace <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+
+          <select id="categorySelect" class="hidden">
+            <option value="">-- Choose Category --</option>
+          </select>
+
+          <!-- Step 5 Dynamic Sub-Step Container -->
+          <div id="step5Container" class="hidden pt-4 border-t border-slate-200 mt-4">
+            
+            <!-- Step 5A: Repositories -->
+            <div id="substepRepo" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+              <div>
+                <label class="block text-[11px] font-semibold text-blue-900 mb-1">
+                  5. SELECT OR TYPE REPOSITORY <span class="text-red-500">*</span>
+                </label>
+                <div class="flex gap-2">
+                  <input list="repoDatalist" id="repoSelect" 
+                         placeholder="Type or select repository..." 
+                         onfocus="this.value=''"
+                         onblur="if(!this.value) this.value='-- All Repositories --'"
+                         class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium" />
+                  <datalist id="repoDatalist"></datalist>
+                  <button onclick="fetchRepositoryData()" class="text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition flex-shrink-0">
+                    Inspect
+                  </button>
+                </div>
+              </div>
+              <div class="text-xs text-slate-500 pb-2">
+                Select <strong>"-- All Repositories --"</strong> or type an individual repository to scan branches and commit health.
+              </div>
+            </div>
+
+            <!-- Step 5B: User Access -->
+            <div id="substepAccess" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
+              <div class="md:col-span-2">
+                <label class="block text-[11px] font-semibold text-blue-900 mb-1">
+                  5. USER ID / EMAIL / DISPLAY NAME <span class="text-slate-400 font-normal">(Leave blank to fetch all project users)</span>
+                </label>
+                <input type="text" id="targetAccessUserQuery" 
+                       placeholder="e.g. user@domain.com or First Last" 
+                       class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <button onclick="fetchUserAccessData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
+                  Fetch User Access
                 </button>
               </div>
             </div>
-            <div class="text-xs text-slate-500 pb-2">
-              Select <strong>"-- All Repositories --"</strong> or type an individual repository to scan branches and commit health.
+
+            <!-- Step 5C: User Activity -->
+            <div id="substepActivity" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
+              <div>
+                <label class="block text-[11px] font-semibold text-blue-900 mb-1">
+                  5. USER EMAIL / ID <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="targetUserQuery" 
+                       placeholder="e.g. user@domain.com or First Last" 
+                       class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-blue-900 mb-1">TIMEFRAME</label>
+                <select id="userTimeframeDays" class="w-full text-xs border border-blue-300 rounded-md px-2 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                  <option value="30">Last 30 Days</option>
+                  <option value="90">Last 90 Days</option>
+                  <option value="180">Last 6 Months</option>
+                  <option value="365" selected>Last 1 Year</option>
+                  <option value="0">All Time</option>
+                </select>
+              </div>
+              <div>
+                <button onclick="fetchUserActivityData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
+                  Search User Activity
+                </button>
+              </div>
             </div>
+
+            <!-- Step 5D: Pipelines -->
+            <div id="substepPipelines" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
+              <div class="md:col-span-2">
+                <label class="block text-[11px] font-semibold text-blue-900 mb-1">
+                  RUNS PER PIPELINE TO SCAN
+                </label>
+                <select id="pipelineRunsTop" class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                  <option value="20" selected>Latest 20 Runs per Pipeline</option>
+                  <option value="50">Latest 50 Runs per Pipeline</option>
+                  <option value="100">Latest 100 Runs per Pipeline</option>
+                </select>
+              </div>
+              <div>
+                <button onclick="fetchPipelineData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
+                  Fetch Pipeline Runs
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 5E: Work Items -->
+            <div id="substepWorkItems" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
+              <div class="md:col-span-2">
+                <label class="block text-[11px] font-semibold text-blue-900 mb-1">
+                  ASSIGNED USER EMAIL / NAME <span class="text-slate-400 font-normal">(Leave blank to query all active work items)</span>
+                </label>
+                <input type="text" id="targetWorkItemUser" 
+                       placeholder="e.g. user@domain.com or First Last" 
+                       class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+              </div>
+              <div>
+                <button onclick="fetchWorkItemsData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
+                  Query Work Items
+                </button>
+              </div>
+            </div>
+
           </div>
 
-          <!-- Step 5B: User Access -->
-          <div id="substepAccess" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
-            <div class="md:col-span-2">
-              <label class="block text-[11px] font-semibold text-blue-900 mb-1">
-                5. USER ID / EMAIL / DISPLAY NAME <span class="text-slate-400 font-normal">(Leave blank to fetch all project users)</span>
-              </label>
-              <input type="text" id="targetAccessUserQuery" 
-                     placeholder="e.g. user@domain.com or First Last" 
-                     class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-            <div>
-              <button onclick="fetchUserAccessData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
-                Fetch User Access
-              </button>
-            </div>
-          </div>
-
-          <!-- Step 5C: User Activity -->
-          <div id="substepActivity" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
-            <div>
-              <label class="block text-[11px] font-semibold text-blue-900 mb-1">
-                5. USER EMAIL / ID <span class="text-red-500">*</span>
-              </label>
-              <input type="text" id="targetUserQuery" 
-                     placeholder="e.g. user@domain.com or First Last" 
-                     class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-            <div>
-              <label class="block text-[11px] font-semibold text-blue-900 mb-1">TIMEFRAME</label>
-              <select id="userTimeframeDays" class="w-full text-xs border border-blue-300 rounded-md px-2 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <option value="30">Last 30 Days</option>
-                <option value="90">Last 90 Days</option>
-                <option value="180">Last 6 Months</option>
-                <option value="365" selected>Last 1 Year</option>
-                <option value="0">All Time</option>
-              </select>
-            </div>
-            <div>
-              <button onclick="fetchUserActivityData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
-                Search User Activity
-              </button>
-            </div>
-          </div>
-
-          <!-- Step 5D: Pipelines -->
-          <div id="substepPipelines" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
-            <div class="md:col-span-2">
-              <label class="block text-[11px] font-semibold text-blue-900 mb-1">
-                RUNS PER PIPELINE TO SCAN
-              </label>
-              <select id="pipelineRunsTop" class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <option value="20" selected>Latest 20 Runs per Pipeline</option>
-                <option value="50">Latest 50 Runs per Pipeline</option>
-                <option value="100">Latest 100 Runs per Pipeline</option>
-              </select>
-            </div>
-            <div>
-              <button onclick="fetchPipelineData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
-                Fetch Pipeline Runs
-              </button>
-            </div>
-          </div>
-
-          <!-- Step 5E: Work Items -->
-          <div id="substepWorkItems" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
-            <div class="md:col-span-2">
-              <label class="block text-[11px] font-semibold text-blue-900 mb-1">
-                ASSIGNED USER EMAIL / NAME <span class="text-slate-400 font-normal">(Leave blank to query all active work items)</span>
-              </label>
-              <input type="text" id="targetWorkItemUser" 
-                     placeholder="e.g. user@domain.com or First Last" 
-                     class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-            <div>
-              <button onclick="fetchWorkItemsData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
-                Query Work Items
-              </button>
-            </div>
-          </div>
-
+          <div id="statusBar" class="status-bar hidden"></div>
         </div>
-
-        <div id="statusBar" class="status-bar hidden"></div>
-        <div class="active-path-row"><span>Active Azure DevOps Path:</span><a id="activePathLink" href="javascript:void(0)">https://dev.azure.com/</a></div>
       </section>
 
       <div class="overview-heading">
@@ -371,7 +570,7 @@
           <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center">
               <div>
-                <h3 class="font-bold text-slate-900 text-sm">Repositories & Active Branch Matrix</h3>
+                <h3 class="font-bold text-slate-900 text-sm">Repositories &amp; Active Branch Matrix</h3>
                 <span class="text-xs text-slate-400">Branches older than 90 days are flagged as Stale</span>
               </div>
               <button onclick="exportBranchesToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
@@ -439,7 +638,7 @@
           <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center">
               <div>
-                <h3 class="font-bold text-slate-900 text-sm">Pull Requests (Active & Completed)</h3>
+                <h3 class="font-bold text-slate-900 text-sm">Pull Requests (Active &amp; Completed)</h3>
                 <span class="text-xs text-slate-400">Showing latest pull requests for selected repositories</span>
               </div>
               <button onclick="exportRepoPrsToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
@@ -476,8 +675,8 @@
           <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center">
               <div>
-                <h3 class="font-bold text-slate-900 text-sm">Project Teams, Security Groups & Member Permissions</h3>
-                <span class="text-xs text-slate-400">Includes Project Security Groups (Contributors, Admins, Readers) & Agile Teams</span>
+                <h3 class="font-bold text-slate-900 text-sm">Project Teams, Security Groups &amp; Member Permissions</h3>
+                <span class="text-xs text-slate-400">Includes Project Security Groups (Contributors, Admins, Readers) &amp; Agile Teams</span>
               </div>
               <button onclick="exportAccessToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
@@ -509,7 +708,7 @@
         <section id="view-activity" class="hidden space-y-6">
           <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
             <div class="p-4 border-b border-slate-100">
-              <h3 class="font-bold text-slate-900 text-sm">User Commit History & Code Changes</h3>
+              <h3 class="font-bold text-slate-900 text-sm">User Commit History &amp; Code Changes</h3>
             </div>
             <table id="table-user-commits" class="w-full text-left border-collapse text-sm">
               <thead>
@@ -558,7 +757,7 @@
           <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center">
               <div>
-                <h3 class="font-bold text-slate-900 text-sm">Pipelines Inventory & Trigger Analytics</h3>
+                <h3 class="font-bold text-slate-900 text-sm">Pipelines Inventory &amp; Trigger Analytics</h3>
                 <span class="text-xs text-slate-400">Aggregated success rates, Auto CI triggers, and Manual triggers</span>
               </div>
               <button onclick="exportPipelinesToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
@@ -621,7 +820,7 @@
         <section id="view-workitems" class="hidden space-y-4">
           <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
             <div class="p-4 border-b border-slate-100">
-              <h3 class="font-bold text-slate-900 text-sm">Active Work Items & Backlog Status</h3>
+              <h3 class="font-bold text-slate-900 text-sm">Active Work Items &amp; Backlog Status</h3>
             </div>
             <table id="table-workitems" class="w-full text-left border-collapse text-sm">
               <thead>
@@ -650,7 +849,7 @@
     </main>
   </div>
 
-  <!-- Modular Scripts -->
+  <!-- Modular Scripts[cite: 2] -->
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
   <script src="js/repos.js"></script>
@@ -659,89 +858,57 @@
   <script src="js/pipelines.js"></script>
   <script src="js/workitems.js"></script>
 
-<script>
-(function () {
-  const originalLoadProjectsList = window.loadProjectsList;
-  const originalDisconnectSession = window.disconnectSession;
-
-  function showConnectionPage() {
-    document.body.classList.remove('project-page');
-    document.body.classList.add('connection-page');
-
-    const sidebar = document.querySelector('.app-sidebar');
-    if (sidebar) sidebar.style.display = 'none';
-
-    const projectField = document.getElementById('projectStepField');
-    if (projectField) projectField.classList.add('hidden');
-
-    const projectSelect = document.getElementById('projectSelect');
-    if (projectSelect) projectSelect.value = '';
-
-    const badge = document.getElementById('connectionBadgeText');
-    if (badge) badge.textContent = 'Ready to connect';
-  }
-
-  function showProjectPage() {
-    document.body.classList.remove('connection-page');
-    document.body.classList.add('project-page');
-
-    const sidebar = document.querySelector('.app-sidebar');
-    if (sidebar) sidebar.style.display = '';
-
-    const projectField = document.getElementById('projectStepField');
-    if (projectField) projectField.classList.remove('hidden');
-
-    const badge = document.getElementById('connectionBadgeText');
-    if (badge) badge.textContent = 'Connected';
-  }
-
-  // Page 1: keep the existing Azure DevOps connection/load logic unchanged,
-  // then move to Page 2 only after projects have actually loaded.
-  window.loadProjectsList = async function () {
-    if (typeof originalLoadProjectsList === 'function') {
-      await originalLoadProjectsList();
+  <!-- Header Synchronization Helpers -->
+  <script>
+    function syncHeaderOrg() {
+      const orgVal = document.getElementById('targetOrg')?.value.trim();
+      const bcOrg = document.getElementById('bc-org');
+      if (bcOrg) bcOrg.textContent = orgVal || 'CornerstoneBuildingBrands';
     }
 
-    const select = document.getElementById('projectSelect');
-    if (select && !select.disabled && select.options.length > 1) {
-      showProjectPage();
+    function syncHeaderProject() {
+      const projSelect = document.getElementById('projectSelect');
+      const bcProject = document.getElementById('bc-project');
+      if (projSelect && bcProject) {
+        bcProject.textContent = projSelect.value || 'EDS';
+      }
     }
-  };
+  </script>
 
-  window.returnToConnectionScreen = function () {
-    showConnectionPage();
-  };
-
-  // Disconnect returns the user to Page 1.
-  window.disconnectSession = function () {
-    if (typeof originalDisconnectSession === 'function') {
-      originalDisconnectSession();
-    }
-    showConnectionPage();
-  };
-
-  // Page 1 is the initial screen.
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', showConnectionPage);
-  } else {
-    showConnectionPage();
-  }
-})();
-</script>
-
-
-  <!-- UI-only page split controller.
-       Existing API, inspect, fetch, table and dashboard functions remain unchanged. -->
+  <!-- Two-Page View Transition & Lifecycle Controller[cite: 2] -->
   <script>
     (function () {
+      const originalLoadProjectsList = window.loadProjectsList;
+      const originalDisconnectSession = window.disconnectSession;
+
       function showConnectionPage() {
-        document.body.classList.add('connection-page');
         document.body.classList.remove('project-page', 'project-not-selected', 'project-selected');
+        document.body.classList.add('connection-page');
+
+        const sidebar = document.querySelector('.app-sidebar');
+        if (sidebar) sidebar.style.display = 'none';
+
+        const projectField = document.getElementById('projectStepField');
+        if (projectField) projectField.classList.add('hidden');
+
+        const badge = document.getElementById('connectionBadgeText');
+        if (badge) badge.textContent = 'Ready to connect';
       }
 
       function showProjectPage() {
         document.body.classList.remove('connection-page', 'project-selected');
         document.body.classList.add('project-page', 'project-not-selected');
+
+        const sidebar = document.querySelector('.app-sidebar');
+        if (sidebar) sidebar.style.display = 'flex';
+
+        const projectField = document.getElementById('projectStepField');
+        if (projectField) projectField.classList.remove('hidden');
+
+        const select = document.getElementById('projectSelect');
+        const count = select && select.options ? Math.max(0, select.options.length - 1) : 0;
+        const badge = document.getElementById('connectionBadgeText');
+        if (badge) badge.textContent = `Connected (${count} Projects)`;
       }
 
       function showSelectedProjectPage() {
@@ -749,51 +916,31 @@
         document.body.classList.add('project-page', 'project-selected');
       }
 
-      showConnectionPage();
-
-      // Wait until the existing scripts have loaded their functions.
-      function hookExistingFunctions() {
-        if (typeof window.loadProjectsList === 'function' && !window.__splitLoadHooked) {
-          window.__splitLoadHooked = true;
-          const originalLoadProjectsList = window.loadProjectsList;
-
-          window.loadProjectsList = async function () {
-            const result = await originalLoadProjectsList.apply(this, arguments);
-
-            setTimeout(function () {
-              const select = document.getElementById('projectSelect');
-              if (select && select.options.length > 1) {
-                showProjectPage();
-              }
-            }, 100);
-
-            return result;
-          };
+      window.loadProjectsList = async function () {
+        if (typeof originalLoadProjectsList === 'function') {
+          await originalLoadProjectsList();
         }
 
-        if (typeof window.handleProjectSelection === 'function' && !window.__splitSelectionHooked) {
-          window.__splitSelectionHooked = true;
-          const originalHandleProjectSelection = window.handleProjectSelection;
+        setTimeout(() => {
+          const select = document.getElementById('projectSelect');
+          if (select && !select.disabled && select.options.length > 1) {
+            showProjectPage();
+          }
+        }, 150);
+      };
 
-          window.handleProjectSelection = function () {
-            const result = originalHandleProjectSelection.apply(this, arguments);
+      window.returnToConnectionScreen = function () {
+        showConnectionPage();
+      };
 
-            const select = document.getElementById('projectSelect');
-            if (select && select.value) {
-              showSelectedProjectPage();
-            }
-
-            return result;
-          };
+      window.disconnectSession = function () {
+        if (typeof originalDisconnectSession === 'function') {
+          originalDisconnectSession();
         }
-      }
+        showConnectionPage();
+      };
 
-      // Functions from app.js are already loaded before this script,
-      // but retrying is harmless if a browser loads them asynchronously.
-      hookExistingFunctions();
-      setTimeout(hookExistingFunctions, 100);
-      setTimeout(hookExistingFunctions, 500);
-
+      // Project selection listener
       const projectSelect = document.getElementById('projectSelect');
       if (projectSelect) {
         projectSelect.addEventListener('change', function () {
@@ -803,6 +950,13 @@
             showProjectPage();
           }
         });
+      }
+
+      // Initial execution
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', showConnectionPage);
+      } else {
+        showConnectionPage();
       }
     })();
   </script>
