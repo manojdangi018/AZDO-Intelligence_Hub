@@ -11,13 +11,21 @@
   <link rel="stylesheet" href="css/styles.css" />
 
     <style>
-      /* Connection wizard: Page 1 shows only Organization + PAT. */
+      /* TWO-PAGE CONNECTION FLOW */
+
+      /* Page 1: Organization + PAT only */
       body.connection-page .app-sidebar {
         display: none;
       }
 
       body.connection-page .app-shell {
         margin-left: 0 !important;
+      }
+
+      body.connection-page .connection-card {
+        max-width: 970px;
+        margin-left: auto;
+        margin-right: auto;
       }
 
       body.connection-page #projectStepField,
@@ -29,28 +37,38 @@
         display: none !important;
       }
 
-      body.connection-page .connection-card {
-        max-width: 970px;
-        margin-left: auto;
-        margin-right: auto;
+      /* Page 2: keep Organization, PAT, Load projects,
+         Remember credentials and Project selector. */
+      body.project-page .app-sidebar {
+        display: flex;
       }
 
-      /* Page 2 keeps the existing application layout and project selector. */
-      body.project-page .connection-step-only {
-        display: none !important;
+      body.project-page .app-shell {
+        margin-left: var(--sidebar-width, 330px);
       }
 
       body.project-page #projectStepField {
         display: block !important;
       }
 
-      body.project-page #step5Container {
+      /* Immediately after Load projects: show only the
+         existing connection/project selection card. */
+      body.project-page.project-not-selected #step5Container,
+      body.project-page.project-not-selected #statusBar,
+      body.project-page.project-not-selected .active-path-row,
+      body.project-page.project-not-selected .overview-heading,
+      body.project-page.project-not-selected .dashboard-content {
         display: none !important;
       }
 
-      body.project-page .overview-heading,
-      body.project-page .dashboard-content {
-        display: none;
+      /* After selecting a project: restore all existing functions. */
+      body.project-selected #step5Container {
+        display: block !important;
+      }
+
+      body.project-selected .overview-heading,
+      body.project-selected .dashboard-content {
+        display: block;
       }
 
       .project-step-field {
@@ -59,7 +77,7 @@
     </style>
 
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+<body class="connection-page bg-slate-50 text-slate-800 antialiased min-h-screen">
 
   <!-- Step Validation Modal -->
   <div id="validationModal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -711,5 +729,82 @@
 })();
 </script>
 
+
+  <!-- UI-only page split controller.
+       Existing API, inspect, fetch, table and dashboard functions remain unchanged. -->
+  <script>
+    (function () {
+      function showConnectionPage() {
+        document.body.classList.add('connection-page');
+        document.body.classList.remove('project-page', 'project-not-selected', 'project-selected');
+      }
+
+      function showProjectPage() {
+        document.body.classList.remove('connection-page', 'project-selected');
+        document.body.classList.add('project-page', 'project-not-selected');
+      }
+
+      function showSelectedProjectPage() {
+        document.body.classList.remove('connection-page', 'project-not-selected');
+        document.body.classList.add('project-page', 'project-selected');
+      }
+
+      showConnectionPage();
+
+      // Wait until the existing scripts have loaded their functions.
+      function hookExistingFunctions() {
+        if (typeof window.loadProjectsList === 'function' && !window.__splitLoadHooked) {
+          window.__splitLoadHooked = true;
+          const originalLoadProjectsList = window.loadProjectsList;
+
+          window.loadProjectsList = async function () {
+            const result = await originalLoadProjectsList.apply(this, arguments);
+
+            setTimeout(function () {
+              const select = document.getElementById('projectSelect');
+              if (select && select.options.length > 1) {
+                showProjectPage();
+              }
+            }, 100);
+
+            return result;
+          };
+        }
+
+        if (typeof window.handleProjectSelection === 'function' && !window.__splitSelectionHooked) {
+          window.__splitSelectionHooked = true;
+          const originalHandleProjectSelection = window.handleProjectSelection;
+
+          window.handleProjectSelection = function () {
+            const result = originalHandleProjectSelection.apply(this, arguments);
+
+            const select = document.getElementById('projectSelect');
+            if (select && select.value) {
+              showSelectedProjectPage();
+            }
+
+            return result;
+          };
+        }
+      }
+
+      // Functions from app.js are already loaded before this script,
+      // but retrying is harmless if a browser loads them asynchronously.
+      hookExistingFunctions();
+      setTimeout(hookExistingFunctions, 100);
+      setTimeout(hookExistingFunctions, 500);
+
+      const projectSelect = document.getElementById('projectSelect');
+      if (projectSelect) {
+        projectSelect.addEventListener('change', function () {
+          if (this.value) {
+            showSelectedProjectPage();
+          } else {
+            showProjectPage();
+          }
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
