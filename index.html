@@ -335,6 +335,40 @@
             </div>
           </div>
           
+          <!-- Branches With Policies -->
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h3 class="font-bold text-slate-900 text-sm">Branches With Policies</h3>
+                <span class="text-xs text-slate-400">Showing only branches that have branch policies configured</span>
+              </div>
+              <button onclick="exportPolicyBranchesToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Export Policy Branches (.xlsx)
+              </button>
+            </div>
+            <table id="table-policy-branches" class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
+                  <th class="p-4">Repository</th>
+                  <th class="p-4">Branch Name</th>
+                  <th class="p-4">Required Reviewers</th>
+                  <th class="p-4">Branch Policies</th>
+                  <th class="p-4">Last Author</th>
+                  <th class="p-4">Last Commit Date</th>
+                </tr>
+              </thead>
+              <tbody id="policyBranchesTableBody" class="divide-y divide-slate-100">
+                <tr><td colspan="6" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>
+              </tbody>
+            </table>
+            <div id="seeMorePolicyBranchesContainer" class="hidden p-4 border-t border-slate-100 text-center">
+              <button onclick="renderPolicyBranchesTableBatch(true)" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2 rounded-lg transition">
+                See More (<span id="policyBranchesRemainingCount">0</span> remaining)
+              </button>
+            </div>
+          </div>
+
           <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center">
               <div>
