@@ -96,7 +96,7 @@
         <div class="connection-fields">
           <div class="field-group">
             <label>Organization <span>*</span></label>
-            <input type="text" id="targetOrg" oninput="handleOrgChange()" placeholder="e.g. https://dev.azure.com/XYZ">
+            <input type="text" id="targetOrg" oninput="handleOrgChange()" placeholder="e.g. CornerstoneBuildingBrands">
             <small>Organization name or https://dev.azure.com/&lt;org&gt;</small>
           </div>
 
@@ -318,13 +318,14 @@
                   <th class="p-4">Repository</th>
                   <th class="p-4">Branch Name</th>
                   <th class="p-4">Status / Health</th>
+                  <th class="p-4">Branch &amp; PR Policies</th>
                   <th class="p-4">Last Author</th>
                   <th class="p-4">Last Commit Date</th>
                   <th class="p-4">Commit Message</th>
                 </tr>
               </thead>
               <tbody id="branchesTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="6" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>
+                <tr><td colspan="7" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>
               </tbody>
             </table>
             <div id="seeMoreRepoContainer" class="hidden p-4 border-t border-slate-100 text-center">
@@ -351,13 +352,14 @@
                   <th class="p-4">Repository</th>
                   <th class="p-4">PR Title</th>
                   <th class="p-4">Source &rarr; Target</th>
+                  <th class="p-4">PR Policy / Reviewers</th>
                   <th class="p-4">Creator</th>
                   <th class="p-4">Status</th>
                   <th class="p-4">Created Date</th>
                 </tr>
               </thead>
               <tbody id="repoPrsTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="6" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>
+                <tr><td colspan="7" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>
               </tbody>
             </table>
             <div id="seeMoreRepoPrsContainer" class="hidden p-4 border-t border-slate-100 text-center">
