@@ -1,0 +1,26 @@
+DEVOPS INTELLIGENCE THEME SETUP
+
+1. Keep index.html and styles.css in your normal project structure.
+2. Put your supplied DevOps Intelligence theme/banner image in the same folder as index.html.
+3. Rename that image to:
+       devops-watermark.png
+
+Expected structure:
+
+project/
+  index.html
+  devops-watermark.png
+  css/
+    styles.css
+  js/
+    api.js
+    app.js
+    repos.js
+    access.js
+    activity.js
+    pipelines.js
+    workitems.js
+
+If your CSS is loaded as css/styles.css, the CSS path ../devops-watermark.png is correct.
+
+No JavaScript/API logic was changed. The index change only adds the devops-themed-content class to the existing dashboard-content container.

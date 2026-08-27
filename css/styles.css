@@ -129,27 +129,31 @@ table td{font-size:12px!important}
 }
 
 /* ============================================================
-   DEVOPS INTELLIGENCE BRANDING / WATERMARK
-   Visual-only changes. Existing layout and JavaScript are unchanged.
+   DEVOPS INTELLIGENCE BRANDING / WATERMARK THEME
+   ------------------------------------------------------------
+   Put your supplied theme image at:
+       /devops-watermark.png
+   (same level as index.html)
+
+   This theme:
+   - keeps the existing UI readable
+   - uses the image as a subtle page watermark
+   - adds a larger watermark to each functional section/card
+   - avoids repeating the wide banner as tiled blocks
+   - keeps all existing JavaScript/layout behavior unchanged
    ============================================================ */
 
-/* Keep the existing fixed sidebar behavior. */
-.app-sidebar{
-  z-index:50;
-}
-
-/* Keep decorative watermark behind the application. */
-.app-shell{
-  position:relative;
-  z-index:1;
-}
-
-/* Full-page, very subtle DevOps watermark. */
+/* Main page background */
 body{
   position:relative;
   overflow-x:hidden;
+  background:
+    linear-gradient(rgba(245,247,251,.94),rgba(245,247,251,.94)),
+    url("../devops-watermark.png") center top / cover no-repeat fixed;
 }
 
+/* A very subtle full-page watermark layer.
+   This is intentionally faint so tables remain readable. */
 body::before{
   content:"";
   position:fixed;
@@ -157,16 +161,31 @@ body::before{
   z-index:0;
   pointer-events:none;
   background-image:url("../devops-watermark.png");
-  background-repeat:repeat;
-  background-size:260px 260px;
-  background-position:35px 35px;
-  opacity:.012;
+  background-repeat:no-repeat;
+  background-position:center 115px;
+  background-size:min(1180px,78vw) auto;
+  opacity:.035;
 }
 
-/* Use the supplied AD logo correctly. */
+/* Keep application above the page watermark */
+.app-sidebar,
+.app-shell{
+  position:relative;
+}
+
+.app-sidebar{
+  z-index:50;
+}
+
+.app-shell{
+  z-index:1;
+}
+
+/* Correct logo rendering in the sidebar */
 .brand-mark{
   overflow:hidden;
   position:relative;
+  flex:0 0 46px;
 }
 
 .brand-mark img{
@@ -177,63 +196,177 @@ body::before{
   border-radius:inherit;
 }
 
-/* Subtle watermark on the left/right edges of each table card. */
-.dashboard-content > section > div{
+/* ------------------------------------------------------------
+   FUNCTION SECTIONS
+   Each functional area receives the same branded image.
+   The image is NOT tiled.
+   ------------------------------------------------------------ */
+.devops-themed-content > section{
   position:relative;
   overflow:hidden;
 }
 
-.dashboard-content > section > div::before,
-.dashboard-content > section > div::after{
+/* Large centered watermark inside every function */
+.devops-themed-content > section::before{
   content:"";
   position:absolute;
-  top:0;
-  bottom:0;
-  width:58px;
+  inset:0;
   pointer-events:none;
   z-index:0;
+
+  background-image:
+    linear-gradient(
+      rgba(255,255,255,.965),
+      rgba(255,255,255,.965)
+    ),
+    url("../devops-watermark.png");
+
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:cover;
+  opacity:1;
+}
+
+/* A subtle branded edge treatment on every function */
+.devops-themed-content > section::after{
+  content:"";
+  position:absolute;
+  right:18px;
+  bottom:18px;
+  width:240px;
+  height:130px;
+  pointer-events:none;
+  z-index:0;
+
   background-image:url("../devops-watermark.png");
-  background-repeat:repeat-y;
-  background-size:58px 58px;
-  opacity:.018;
+  background-repeat:no-repeat;
+  background-position:right bottom;
+  background-size:contain;
+  opacity:.055;
 }
 
-.dashboard-content > section > div::before{
-  left:0;
-  background-position:center top;
-}
-
-.dashboard-content > section > div::after{
-  right:0;
-  background-position:center top;
-}
-
-/* Keep table/card content above decorative watermarks. */
-.dashboard-content > section > div > *{
+/* Existing cards/tables must stay above the section watermark */
+.devops-themed-content > section > *{
   position:relative;
   z-index:1;
 }
 
-/* Small watermark inside the connection card. */
+/* ------------------------------------------------------------
+   TABLE CARDS
+   Add a small watermark at both sides of each table card.
+   ------------------------------------------------------------ */
+.devops-themed-content > section > div.bg-white{
+  position:relative;
+  overflow:hidden;
+}
+
+/* Do not let the table/card become transparent */
+.devops-themed-content > section > div.bg-white{
+  background-color:rgba(255,255,255,.975) !important;
+}
+
+/* Left/right decorative watermark strips */
+.devops-themed-content > section > div.bg-white::before,
+.devops-themed-content > section > div.bg-white::after{
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  width:105px;
+  pointer-events:none;
+  z-index:0;
+
+  background-image:url("../devops-watermark.png");
+  background-repeat:no-repeat;
+  background-size:auto 100%;
+  opacity:.045;
+}
+
+.devops-themed-content > section > div.bg-white::before{
+  left:0;
+  background-position:left center;
+}
+
+.devops-themed-content > section > div.bg-white::after{
+  right:0;
+  background-position:right center;
+}
+
+/* Keep table/card content above the decorative strips */
+.devops-themed-content > section > div.bg-white > *{
+  position:relative;
+  z-index:1;
+}
+
+/* Make table headers slightly translucent so the theme is visible
+   while retaining the existing table styling. */
+.devops-themed-content table thead tr{
+  background-color:rgba(248,250,252,.97) !important;
+}
+
+/* ------------------------------------------------------------
+   KPI + CHART + FILTER AREA
+   These are also part of the dashboard function theme.
+   ------------------------------------------------------------ */
+.devops-themed-content > .kpi-grid,
+.devops-themed-content > #chartSection,
+.devops-themed-content > .bg-white.p-4{
+  position:relative;
+  overflow:hidden;
+}
+
+.devops-themed-content > .kpi-grid::before,
+.devops-themed-content > #chartSection::before,
+.devops-themed-content > .bg-white.p-4::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  background-image:url("../devops-watermark.png");
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:cover;
+  opacity:.025;
+}
+
+.devops-themed-content > .kpi-grid > *,
+.devops-themed-content > #chartSection > *,
+.devops-themed-content > .bg-white.p-4 > *{
+  position:relative;
+  z-index:1;
+}
+
+/* KPI cards remain clean/readable */
+.devops-themed-content .kpi-grid > div{
+  background:rgba(255,255,255,.965) !important;
+}
+
+/* ------------------------------------------------------------
+   CONNECTION CARD
+   Uses the same branding but keeps the form highly readable.
+   ------------------------------------------------------------ */
 .connection-card{
   position:relative;
   overflow:hidden;
+  background-color:rgba(255,255,255,.975);
 }
 
 .connection-card::after{
   content:"";
   position:absolute;
-  right:20px;
-  bottom:12px;
-  width:110px;
-  height:110px;
+  right:24px;
+  bottom:16px;
+  width:300px;
+  height:160px;
   pointer-events:none;
   z-index:0;
+
   background-image:url("../devops-watermark.png");
   background-repeat:no-repeat;
+  background-position:right bottom;
   background-size:contain;
-  background-position:center;
-  opacity:.018;
+  opacity:.045;
 }
 
 .connection-card > *{
@@ -241,24 +374,39 @@ body::before{
   z-index:1;
 }
 
+/* ------------------------------------------------------------
+   MOBILE
+   ------------------------------------------------------------ */
 @media (max-width:760px){
-  body::before{
-    background-size:190px 190px;
-    opacity:.01;
+  body{
+    background-attachment:scroll;
   }
 
-  .dashboard-content > section > div::before,
-  .dashboard-content > section > div::after{
-    width:42px;
-    background-size:42px 42px;
-    opacity:.014;
+  body::before{
+    background-position:center 80px;
+    background-size:900px auto;
+    opacity:.025;
+  }
+
+  .devops-themed-content > section::after{
+    width:150px;
+    height:90px;
+    right:10px;
+    bottom:10px;
+    opacity:.035;
+  }
+
+  .devops-themed-content > section > div.bg-white::before,
+  .devops-themed-content > section > div.bg-white::after{
+    width:55px;
+    opacity:.03;
   }
 
   .connection-card::after{
-    width:80px;
-    height:80px;
+    width:180px;
+    height:100px;
     right:10px;
     bottom:8px;
+    opacity:.03;
   }
 }
-
