@@ -171,20 +171,41 @@ async function fetchPipelineData() {
     // all identity/repository fields needed by the UI.
     async function getBuildDetails(buildId) {
       if (!buildId) return null;
-
+    
       const url =
         `https://dev.azure.com/${org}/${project}` +
         `/_apis/build/builds/${encodeURIComponent(buildId)}` +
         `?api-version=7.1`;
-
+    
       try {
-        return await fetchAzDo(url, authHeader);
+    
+        const result = await fetchAzDo(
+          url,
+          authHeader
+        );
+    
+        console.log("========================================");
+        console.log("AZURE DEVOPS BUILD DETAIL");
+        console.log("Build ID:", buildId);
+        console.log("Full Response:", result);
+        console.log("sourceBranch:", result?.sourceBranch);
+        console.log("requestedBy:", result?.requestedBy);
+        console.log("requestedFor:", result?.requestedFor);
+        console.log("repository:", result?.repository);
+        console.log("reason:", result?.reason);
+        console.log("========================================");
+    
+        return result;
+    
       } catch (err) {
-        console.warn(
+    
+        console.error(
           `[Azure DevOps Pipeline] Unable to get build details for ${buildId}:`,
           err
         );
+    
         return null;
+    
       }
     }
 
