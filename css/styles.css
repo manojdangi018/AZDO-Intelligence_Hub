@@ -519,3 +519,42 @@ body::before{
     opacity:.11;
   }
 }
+
+/* ============================================================
+   LANDING CONNECTION PANEL — MOVE FURTHER RIGHT
+   Keeps the central DevOps watermark visible between the hero
+   content and the connection panel.
+   ============================================================ */
+@media (min-width:901px){
+  .connection-main{
+    width:min(1540px,100%);
+    grid-template-columns:minmax(0,1fr) minmax(560px,600px);
+    gap:48px;
+    padding-left:24px;
+    padding-right:24px;
+  }
+
+  .landing-connection-card{
+    width:100%;
+    max-width:600px;
+    justify-self:end;
+    transform:translateX(18px);
+  }
+
+  .connection-page::before{
+    width:min(76vw,1120px);
+    left:40%;
+    opacity:.21;
+  }
+}
+
+@media (min-width:901px) and (max-width:1100px){
+  .connection-main{
+    width:100%;
+    grid-template-columns:minmax(320px,1fr) minmax(500px,560px);
+    gap:28px;
+    padding-left:24px;
+    padding-right:24px;
+  }
+  .landing-connection-card{transform:none;max-width:560px}
+}
