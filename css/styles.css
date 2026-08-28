@@ -567,6 +567,10 @@ button, input, select {
   width: 100%;
 }
 
+.project-requirement-text {
+  color: #ffffff !important;
+}
+
 .active-path-row {
   background: #071530;
   border: 1px solid #142a54;
@@ -667,7 +671,7 @@ button, input, select {
   width: min(72vw, 1100px);
   height: auto;
   aspect-ratio: 1660 / 933;
-  left: 50%;
+  left: 60%;
   top: 50%;
   transform: translate(-50%, -50%);
   background: url("../devops-new-watermark.png") center/contain no-repeat;
