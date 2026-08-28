@@ -705,3 +705,110 @@ html[data-theme="dark"] .chart-panel,html[data-theme="dark"] .overview-chart{bac
 
 /* Shared theme button placement on mobile. */
 @media (max-width:760px){.landing-header-actions{gap:8px}.theme-toggle{min-width:84px}.landing-step{display:none!important}}
+
+/* ============================================================
+   FINAL LIGHT THEME POLISH - MATCH LANDING + WORKSPACE
+   Visual-only changes; all existing handlers/IDs remain intact.
+   ============================================================ */
+
+/* Light landing: use a light-blue header divider and give the
+   transparent infinity symbol enough room/contrast to read clearly. */
+html[data-theme="light"] .connection-page .landing-topbar{
+  border-bottom:2px solid #cfe2ff !important;
+  box-shadow:0 1px 0 rgba(47,109,246,.05);
+}
+html[data-theme="light"] .connection-page .landing-step{
+  color:#2f5f9f !important;
+}
+html[data-theme="light"] .connection-page .landing-header-actions{
+  margin-left:auto;
+  padding-right:2px;
+}
+html[data-theme="light"] .connection-page .connection-main{
+  grid-template-columns:minmax(420px,.98fr) minmax(560px,1.02fr) !important;
+  gap:62px !important;
+  padding-left:6vw !important;
+  padding-right:5vw !important;
+}
+html[data-theme="light"] .connection-page .connection-main::before{
+  background-image:url("../devops-infinity-clean.png") !important;
+  background-repeat:no-repeat !important;
+  background-position:7% 50% !important;
+  background-size:min(56vw,900px) auto !important;
+  opacity:.18 !important;
+  filter:saturate(1.08) contrast(1.02) !important;
+}
+html[data-theme="light"] .connection-page .connection-main::after{
+  background:
+    linear-gradient(90deg,rgba(244,248,255,.00) 0%,rgba(244,248,255,.04) 34%,rgba(244,248,255,.30) 58%,rgba(244,248,255,.82) 78%,#f4f8ff 100%),
+    linear-gradient(180deg,rgba(244,248,255,.02),rgba(244,248,255,.02)) !important;
+}
+html[data-theme="light"] .connection-page .landing-hero-copy{
+  position:relative;
+  z-index:2;
+  padding-left:12px;
+}
+html[data-theme="light"] .connection-page .landing-hero-logo{
+  width:430px !important;
+  height:220px !important;
+  margin:-8px 0 -2px -28px !important;
+  background-size:contain !important;
+  opacity:1 !important;
+  mix-blend-mode:multiply !important;
+  -webkit-mask-image:none !important;
+  mask-image:none !important;
+  filter:saturate(1.12) contrast(1.04) !important;
+}
+html[data-theme="light"] .connection-page .landing-hero-title{
+  position:relative;
+  z-index:3;
+  margin-top:-4px !important;
+}
+
+/* Light workspace: carry the same blue/green DevOps language into
+   the sidebar and the main header. */
+html[data-theme="light"] .app-sidebar{
+  background:
+    radial-gradient(circle at 18% 8%,rgba(47,109,246,.22),transparent 27%),
+    radial-gradient(circle at 88% 92%,rgba(16,185,129,.16),transparent 30%),
+    linear-gradient(180deg,#102b59 0%,#0b2348 52%,#08243c 100%) !important;
+  border-right:1px solid rgba(47,109,246,.28) !important;
+}
+html[data-theme="light"] .sidebar-brand{
+  border-bottom-color:rgba(111,171,255,.20) !important;
+}
+html[data-theme="light"] .sidebar-item.active{
+  background:linear-gradient(90deg,#1f5ed8 0%,#286fe9 56%,#159f72 100%) !important;
+  box-shadow:inset 3px 0 0 #6eb5ff,0 7px 20px rgba(30,104,225,.16) !important;
+}
+html[data-theme="light"] .sidebar-item:hover{
+  background:rgba(47,109,246,.24) !important;
+}
+html[data-theme="light"] .app-topbar{
+  background:#fafdff !important;
+  border-bottom:2px solid #cfe2ff !important;
+  box-shadow:0 1px 0 rgba(47,109,246,.04);
+}
+html[data-theme="light"] .app-title{
+  color:#2367d8 !important;
+}
+html[data-theme="light"] .app-subtitle{
+  color:#6682a8 !important;
+}
+html[data-theme="light"] .theme-toggle{
+  border-color:#b9d3f7 !important;
+}
+
+/* Keep the light workspace cards clean while adding restrained
+   blue/green DevOps accents. */
+html[data-theme="light"] .workspace-controls .project-selection-box{
+  border-color:#cfe0f8 !important;
+  box-shadow:0 12px 32px rgba(47,109,246,.06) !important;
+}
+html[data-theme="light"] .overview-heading .eyebrow,
+html[data-theme="light"] .overview-heading h2{
+  color:#1f4f94 !important;
+}
+html[data-theme="light"] .kpi-grid>div{
+  border-color:#d3e2f5 !important;
+}
