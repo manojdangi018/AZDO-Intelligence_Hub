@@ -10,23 +10,6 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>document.documentElement.dataset.theme = localStorage.getItem("azdo-theme") || "dark";</script>
   <link rel="stylesheet" href="css/styles.css?v=20260828-theme2" />
-<style id="critical-dark-landing-theme">
-/* Critical landing theme: intentionally inline so the connection page cannot fall back to the light theme due to CSS caching/order. */
-html[data-theme="dark"] body:has(#connectionPage){background:#050d1f !important;color:#fff !important;}
-html[data-theme="dark"] #connectionPage.connection-page:not(.hidden){display:block !important;min-height:100vh !important;background:#050d1f !important;color:#fff !important;overflow:hidden !important;}
-html[data-theme="dark"] #connectionPage .landing-topbar{background:rgba(3,10,25,.96) !important;border-bottom:1px solid rgba(116,151,215,.2) !important;color:#fff !important;}
-html[data-theme="dark"] #connectionPage .connection-main{background:#050d1f !important;background-image:radial-gradient(circle at 72% 45%,rgba(28,93,226,.18),transparent 34%),radial-gradient(circle at 18% 75%,rgba(0,214,95,.1),transparent 25%) !important;}
-html[data-theme="dark"] #connectionPage .connection-main::before{background-image:url("../devops-background.webp") !important;background-repeat:no-repeat !important;background-position:left 48% !important;background-size:min(61vw,980px) auto !important;opacity:.42 !important;}
-html[data-theme="dark"] #connectionPage .connection-main::after{background:linear-gradient(90deg,rgba(5,13,31,.12) 0%,rgba(5,13,31,.2) 34%,rgba(5,13,31,.9) 62%,#050d1f 100%),linear-gradient(180deg,rgba(5,13,31,.18),rgba(5,13,31,.05)) !important;}
-html[data-theme="dark"] #connectionPage .landing-connection-card{background:linear-gradient(145deg,rgba(8,24,49,.97),rgba(4,16,34,.97)) !important;border-color:transparent !important;box-shadow:0 28px 70px rgba(0,0,0,.42),0 0 55px rgba(26,91,214,.12) !important;}
-html[data-theme="dark"] #connectionPage .landing-connection-card .connection-card-head h2,html[data-theme="dark"] #connectionPage .landing-connection-card .field-group label{color:#f4f8ff !important;}
-html[data-theme="dark"] #connectionPage .landing-connection-card .connection-card-head p,html[data-theme="dark"] #connectionPage .landing-connection-card .field-group small,#connectionPage .remember-toggle{color:#aebed5 !important;}
-html[data-theme="dark"] html[data-theme="dark"] #connectionPage .landing-connection-card .field-group input{background:rgba(2,11,27,.7) !important;color:#eef5ff !important;border-color:rgba(117,148,198,.34) !important;}
-html[data-theme="dark"] html[data-theme="dark"] #connectionPage .landing-connection-card .connection-fields > .flex .btn-load-projects{background:linear-gradient(90deg,#2868ff 0%,#246cf5 42%,#37d954 100%) !important;color:#fff !important;}
-html[data-theme="dark"] #connectionPage .landing-hero-title{color:#f7fbff !important;}
-html[data-theme="dark"] #connectionPage .landing-hero-description{color:#c2cee0 !important;}
-html[data-theme="dark"] #connectionPage .landing-feature-list{color:#dce6f6 !important;}
-</style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
 
