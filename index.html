@@ -55,14 +55,37 @@
         </ul>
       </section>
 
-      <section class="connection-card landing-connection-card">
+        <!-- Inside .landing-connection-card -->
         <div class="connection-card-head">
-          <div>
-            <div class="eyebrow">01 · CONNECTION</div>
-            <h2>Connect to Azure DevOps</h2>
-            <p>Enter your organization and PAT, then select a project to explore telemetry.</p>
+          <span class="eyebrow">01 · CONNECTION</span>
+          <h2>Connect to Azure DevOps</h2>
+          <p>Enter your organization and PAT, then select a project to explore telemetry.</p>
+        </div>
+        
+        <div class="connection-fields">
+          <div class="field-group">
+            <label>Organization <span>*</span></label>
+            <input type="text" id="orgInput" placeholder="e.g. CornerstoneBuildingBrands" />
+            <small>Organization name or https://dev.azure.com/&lt;org&gt;</small>
           </div>
-          <a id="generatedUrlLink" href="javascript:void(0)" class="path-preview">https://dev.azure.com/</a>
+        
+          <div class="field-group">
+            <label>Personal Access Token (PAT) <span>*</span></label>
+            <input type="password" id="patInput" placeholder="Enter PAT token" />
+            <small>PAT is used only from this browser session to call Azure DevOps APIs.</small>
+          </div>
+        
+          <!-- Place the dynamic URL preview badge here -->
+          <a id="generatedUrlLink" class="path-preview" target="_blank" rel="noopener noreferrer"></a>
+        
+          <button type="button" class="btn-load-projects" id="btnLoadProjects">
+            Load projects
+          </button>
+        
+          <label class="remember-toggle">
+            <input type="checkbox" id="rememberCredentials" />
+            <span>Remember organization & credentials</span>
+          </label>
         </div>
 
         <!-- Project Load / Connection Section -->
