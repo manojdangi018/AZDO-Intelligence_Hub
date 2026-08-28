@@ -303,22 +303,27 @@ body::before{
 }
 .landing-hero-copy h1,
 .landing-hero-copy h2{
-  margin:0;
-  font-weight:900;
-  letter-spacing:-.045em;
-  line-height:1.15; /* Increased from .98 to give room for descenders like 'g', 'p', 'y' */
+  margin: 0;
+  font-weight: 900;
+  letter-spacing: -0.045em;
+  line-height: 1.25 !important;
 }
+
 .landing-hero-copy h1{
-  font-size:clamp(42px,4.5vw,62px);
-  color:#f8fbff;
+  font-size: clamp(42px, 4.5vw, 62px);
+  color: #f8fbff;
 }
+
 .landing-hero-copy h2{
-  font-size:clamp(42px,4.5vw,62px);
-  background:linear-gradient(90deg,#2877ef 0%,#27b6a4 62%,#22c55e 100%);
-  -webkit-background-clip:text;
-  background-clip:text;
-  color:transparent;
-  padding-bottom:8px; /* Prevents background-clip from cutting the bottom edge */
+  display: inline-block;
+  font-size: clamp(42px, 4.5vw, 62px);
+  background: linear-gradient(90deg, #2877ef 0%, #27b6a4 62%, #22c55e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  padding-bottom: 0.18em;
+  margin-bottom: -0.18em;
 }
 .landing-hero-description{
   margin:28px 0 0;
