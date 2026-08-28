@@ -372,3 +372,54 @@ body::before{
 @media (max-width:760px){
   .service-agents-project-row{grid-template-columns:1fr}
 }
+
+/* ============================================================
+   LANDING PAGE — MODERN DEVOPS CONNECTION THEME
+   Visual enhancements only; existing connection handlers remain intact.
+   ============================================================ */
+.connection-page{background:linear-gradient(135deg,#f8fbff 0%,#eef5ff 52%,#f7faff 100%);overflow:hidden}
+.landing-topbar{height:94px;padding:0 46px;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);box-shadow:0 1px 0 rgba(29,62,110,.05);position:relative;z-index:4}
+.landing-brand .brand-mark{width:52px;height:52px;border-radius:15px;box-shadow:0 10px 24px rgba(37,99,235,.22)}
+.landing-brand .brand-title{font-size:18px;color:#162b50}
+.landing-brand .brand-subtitle{font-size:12px;color:#7087a7}
+.landing-step{color:#56729b}
+.connection-main{min-height:calc(100vh - 94px);position:relative;display:grid;grid-template-columns:minmax(360px,1fr) minmax(560px,1.08fr);align-items:center;gap:58px;max-width:1420px;margin:0 auto;padding:56px 72px 72px}
+.landing-watermark{position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.045}
+.landing-watermark img{position:absolute;width:780px;height:780px;object-fit:contain;left:-180px;top:50%;transform:translateY(-48%);filter:saturate(1.1)}
+.landing-hero-copy{position:relative;z-index:1;padding:20px 10px 20px 34px;max-width:520px}
+.landing-logo-watermark{width:310px;height:310px;position:absolute;left:0;top:-80px;opacity:.09;pointer-events:none;filter:drop-shadow(0 20px 30px rgba(47,109,246,.12))}
+.landing-logo-watermark img{width:100%;height:100%;object-fit:contain}
+.landing-hero-copy .eyebrow{position:relative;margin-bottom:14px;color:#5576a7}
+.landing-hero-copy h1{position:relative;margin:0;font-size:42px;line-height:1.06;letter-spacing:-.045em;font-weight:900;color:#132b55}
+.landing-hero-copy h1 span{color:#2167ed}
+.landing-accent{position:relative;width:42px;height:4px;background:#2f6df6;border-radius:99px;margin:22px 0 22px}
+.landing-lead{position:relative;font-size:17px;line-height:1.65;color:#496589;max-width:390px;margin:0 0 22px}
+.landing-feature-list{position:relative;list-style:none;margin:0;padding:0;display:grid;gap:11px;color:#1e3b68;font-size:13px;font-weight:650}
+.landing-feature-list li{display:flex;align-items:center;gap:11px}
+.landing-feature-list li span{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;color:#2167ed;background:#e5efff;font-size:12px;font-weight:900}
+.landing-connection-card{position:relative;z-index:2;width:100%;padding:34px 38px 27px;border-radius:18px;box-shadow:0 24px 70px rgba(35,68,116,.13);border-color:#d8e4f2}
+.landing-connect-heading{display:flex;align-items:flex-start;gap:16px}
+.landing-lock-icon{width:50px;height:50px;flex:0 0 50px;border-radius:50%;background:#eaf2ff;color:#2167ed;display:grid;place-items:center;font-size:27px;font-weight:900}
+.landing-connection-card .connection-card-head{padding-bottom:24px}
+.landing-connection-card .connection-card-head h2{font-size:23px;color:#18345e;margin-top:5px}
+.landing-connection-card .connection-card-head p{font-size:13.5px;line-height:1.55;max-width:610px;color:#637a9b}
+.landing-connection-card .connection-fields{display:grid;grid-template-columns:1fr;gap:22px;padding:25px 0 15px}
+.landing-connection-card .field-group label{font-size:13px;color:#182f54;margin-bottom:9px}
+.landing-connection-card .field-group input{height:48px;border-radius:10px;border-color:#bfcfe4;padding-left:43px}
+.landing-connection-card .field-group input:focus{border-color:#2f6df6;box-shadow:0 0 0 4px rgba(47,109,246,.11)}
+.landing-input-wrap{position:relative}
+.landing-input-icon{position:absolute;z-index:1;left:15px;top:50%;transform:translateY(-50%);color:#52729f;font-weight:800}
+.pat-visibility{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:0;background:transparent;color:#526b8f;cursor:pointer;border-radius:7px}
+.pat-visibility:hover{background:#edf4ff;color:#2167ed}
+.landing-connection-card .field-group small{font-size:11.5px;color:#8295af;margin-top:7px}
+.landing-connection-card .connection-fields > .flex{grid-column:auto;display:flex;flex-direction:column;align-items:stretch;gap:15px}
+.landing-remember{order:0;align-self:flex-start}
+.remember-info{width:16px;height:16px;border:1px solid #a8b8ce;border-radius:50%;display:inline-grid;place-items:center;font-size:10px;font-weight:800;color:#6e84a5}
+.landing-connection-card .connection-fields > .flex .btn-load-projects{order:1;max-width:none;width:100%;height:52px;border-radius:10px;font-size:15px;background:linear-gradient(135deg,#2f6df6,#1f5be0);box-shadow:0 8px 20px rgba(47,109,246,.25)}
+.landing-connection-card .connection-fields > .flex .btn-load-projects:hover{background:linear-gradient(135deg,#2563eb,#1d4ed8);transform:translateY(-1px)}
+.landing-secure-note{border-top:1px solid #e7edf5;margin-top:4px;padding-top:18px;text-align:center;color:#7389a7;font-size:12px}
+.landing-secure-note span{display:inline-grid;place-items:center;width:22px;height:22px;margin-right:7px;color:#2f6df6;background:#edf4ff;border-radius:50%}
+#landingStatusBar{grid-column:1/-1;width:100%;margin-top:-18px;z-index:3}
+@media (max-width:1050px){.connection-main{grid-template-columns:1fr;gap:25px;padding:38px 35px 55px}.landing-hero-copy{max-width:700px;padding-left:10px}.landing-logo-watermark{opacity:.055}.landing-connection-card{max-width:760px;justify-self:center}}
+@media (max-width:760px){.landing-topbar{height:78px;padding:0 20px}.landing-brand .brand-mark{width:44px;height:44px}.landing-brand .brand-title{font-size:15px}.landing-step{display:none}.connection-main{min-height:calc(100vh - 78px);padding:28px 18px 40px;gap:18px}.landing-hero-copy{padding:15px 4px}.landing-hero-copy h1{font-size:34px}.landing-lead{font-size:15px}.landing-logo-watermark{width:230px;height:230px;left:-20px;top:-35px}.landing-connection-card{padding:25px 20px 22px}.landing-connect-heading{gap:11px}.landing-lock-icon{width:42px;height:42px;flex-basis:42px}.landing-connection-card .connection-card-head h2{font-size:20px}.landing-connection-card .connection-card-head p{font-size:12.5px}.landing-watermark img{width:480px;height:480px;left:-150px}}
+@media (max-width:480px){.landing-hero-copy h1{font-size:29px}.landing-feature-list{font-size:12px}.landing-connection-card .connection-fields{gap:18px}.landing-connection-card .connection-fields > .flex{gap:13px}}
