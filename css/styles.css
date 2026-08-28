@@ -306,7 +306,7 @@ body::before{
   margin:0;
   font-weight:900;
   letter-spacing:-.045em;
-  line-height:.98;
+  line-height:1.15; /* Increased from .98 to give room for descenders like 'g', 'p', 'y' */
 }
 .landing-hero-copy h1{
   font-size:clamp(42px,4.5vw,62px);
@@ -318,6 +318,7 @@ body::before{
   -webkit-background-clip:text;
   background-clip:text;
   color:transparent;
+  padding-bottom:8px; /* Prevents background-clip from cutting the bottom edge */
 }
 .landing-hero-description{
   margin:28px 0 0;
