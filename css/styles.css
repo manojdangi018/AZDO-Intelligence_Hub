@@ -658,7 +658,7 @@ button, input, select {
   pointer-events: none;
   width: min(55vw, 680px);
   aspect-ratio: 1660 / 933;
-  left: 48%;
+  left: 28%;
   top: 52%;
   transform: translate(-50%, -50%);
   background: url("../devops-new-watermark.png") center/contain no-repeat;
