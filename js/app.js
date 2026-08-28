@@ -546,7 +546,7 @@ function renderChart(labels, data, datasetLabel) {
         },
         datalabels: {
           display: true,
-          color: isPie ? '#ffffff' : '#1e293b',
+          color: isPie ? '#ffffff' : '#dceaff',
           font: {
             weight: 'bold',
             size: 11

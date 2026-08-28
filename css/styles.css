@@ -856,3 +856,216 @@ html body:has(#connectionPage:not(.hidden)){background:#050d1f !important;color:
   #workspacePage.workspace-page::after{left:0;top:82px}
   #workspacePage .app-topbar{background:rgba(4,13,29,.98) !important}
 }
+
+/* ============================================================
+   MATCH LANDING PAGE — DARK NAVY / BLUE / GREEN DEVOPS THEME
+   Visual-only workspace theme. No behavior or layout logic changed.
+   ============================================================ */
+#workspacePage.workspace-page{
+  --ws-bg:#030b1b;
+  --ws-panel:#07162f;
+  --ws-panel-2:#091c3b;
+  --ws-border:rgba(67,126,220,.28);
+  --ws-blue:#2f6df6;
+  --ws-green:#32d657;
+  background:
+    radial-gradient(circle at 82% 18%,rgba(36,105,246,.13),transparent 27%),
+    radial-gradient(circle at 74% 78%,rgba(35,214,87,.08),transparent 23%),
+    linear-gradient(180deg,#030b1b 0%,#050f23 48%,#020918 100%) !important;
+  color:#eaf2ff !important;
+  position:relative;
+  isolation:isolate;
+}
+#workspacePage.workspace-page::before{
+  content:"";
+  position:fixed;
+  inset:0 0 0 282px;
+  z-index:-1;
+  pointer-events:none;
+  background-image:
+    linear-gradient(rgba(45,112,229,.055) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(45,112,229,.055) 1px,transparent 1px),
+    url("../devops-watermark.png");
+  background-size:56px 56px,56px 56px,720px 720px;
+  background-position:center,center,75% 45%;
+  opacity:.32;
+  mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.7) 18%,#000 45%,#000 100%);
+}
+#workspacePage.workspace-page::after{
+  content:"";
+  position:fixed;
+  width:520px;height:520px;
+  right:-180px;bottom:-180px;
+  z-index:-1;pointer-events:none;
+  background:radial-gradient(circle,rgba(43,214,89,.13),transparent 66%);
+}
+
+/* Header */
+#workspacePage .app-topbar{
+  background:rgba(3,11,27,.92) !important;
+  border-bottom:1px solid rgba(83,132,211,.25) !important;
+  box-shadow:0 8px 35px rgba(0,0,0,.22) !important;
+  backdrop-filter:blur(16px);
+}
+#workspacePage .app-title{color:#f7fbff !important;text-shadow:0 0 24px rgba(77,133,255,.16)}
+#workspacePage .app-subtitle{color:#8ea7ca !important}
+#workspacePage .connection-badge.connected{
+  background:rgba(11,157,102,.13) !important;
+  border-color:rgba(49,224,151,.48) !important;
+  color:#72f0b8 !important;
+  box-shadow:0 0 22px rgba(33,211,145,.10);
+}
+#workspacePage .btn-disconnect{
+  background:rgba(220,38,38,.09) !important;
+  border-color:rgba(248,113,113,.48) !important;
+  color:#ff9a9a !important;
+}
+#workspacePage .btn-disconnect:hover{background:rgba(220,38,38,.18) !important;color:#fff !important}
+
+/* Sidebar glow */
+#workspacePage .app-sidebar{
+  background:linear-gradient(180deg,#0a1830 0%,#061329 100%) !important;
+  border-right:1px solid rgba(67,126,220,.25) !important;
+  box-shadow:10px 0 40px rgba(0,0,0,.24);
+}
+#workspacePage .sidebar-brand{border-bottom-color:rgba(90,132,201,.17) !important}
+#workspacePage .sidebar-section-label{color:#6887b5 !important}
+#workspacePage .sidebar-item{color:#b9cbe4 !important}
+#workspacePage .sidebar-item:hover{background:rgba(38,103,221,.16) !important;color:#fff !important}
+#workspacePage .sidebar-item.active{
+  background:linear-gradient(90deg,rgba(40,100,225,.42),rgba(28,65,133,.34)) !important;
+  box-shadow:inset 3px 0 0 #2f7bff,0 0 24px rgba(38,105,242,.09) !important;
+  color:#fff !important;
+}
+#workspacePage .nav-icon{color:#5e9bff !important}
+#workspacePage .sidebar-connection-note{
+  background:linear-gradient(145deg,rgba(13,31,61,.9),rgba(7,19,39,.9)) !important;
+  border-color:rgba(90,133,202,.23) !important;
+  box-shadow:0 14px 30px rgba(0,0,0,.18);
+}
+#workspacePage .connection-note-title{color:#b6cae7 !important}
+#workspacePage .connection-note-text{color:#7792b9 !important}
+
+/* Project control panel */
+#workspacePage .workspace-controls,
+#workspacePage .project-selection-box{
+  background:linear-gradient(145deg,rgba(7,22,46,.97),rgba(4,14,31,.97)) !important;
+  border-color:rgba(72,128,218,.30) !important;
+  box-shadow:0 22px 55px rgba(0,0,0,.26),0 0 45px rgba(35,103,230,.06) !important;
+}
+#workspacePage .workspace-project-field label{color:#edf5ff !important}
+#workspacePage .workspace-project-field select,
+#workspacePage #step5Container input,
+#workspacePage #step5Container select,
+#workspacePage .dashboard-content input,
+#workspacePage .dashboard-content select{
+  background:#06152e !important;
+  color:#e9f2ff !important;
+  border-color:rgba(88,135,206,.40) !important;
+}
+#workspacePage .workspace-project-field select:focus,
+#workspacePage #step5Container input:focus,
+#workspacePage #step5Container select:focus,
+#workspacePage .dashboard-content input:focus,
+#workspacePage .dashboard-content select:focus{
+  border-color:#2f7cff !important;
+  box-shadow:0 0 0 3px rgba(47,124,255,.14),0 0 22px rgba(47,124,255,.08) !important;
+}
+#workspacePage .project-requirement-text{color:#7f98bb !important}
+#workspacePage .btn-switch-org{
+  background:rgba(12,31,62,.9) !important;
+  color:#78a9ff !important;
+  border-color:#2f7cff !important;
+  box-shadow:0 0 18px rgba(47,124,255,.08);
+}
+#workspacePage .btn-switch-org:hover{background:rgba(38,92,184,.22) !important;color:#fff !important}
+#workspacePage #step5Container{border-top-color:rgba(91,136,204,.22) !important}
+#workspacePage #step5Container > div{
+  background:linear-gradient(145deg,rgba(8,26,53,.94),rgba(5,18,38,.94)) !important;
+  border-color:rgba(76,132,222,.25) !important;
+}
+#workspacePage #step5Container label{color:#9db6d8 !important}
+#workspacePage #step5Container .text-blue-900{color:#9fc2ff !important}
+#workspacePage #step5Container .text-slate-500,
+#workspacePage #step5Container .text-slate-600{color:#829bbb !important}
+
+/* Status/path strips */
+#workspacePage .status-bar{background:rgba(8,27,55,.92) !important;color:#a9c1e2 !important;border:1px solid rgba(77,130,215,.20)}
+#workspacePage .status-bar.success{background:rgba(5,64,42,.62) !important;color:#79edb3 !important;border-color:rgba(52,211,153,.30) !important}
+#workspacePage .status-bar.error{background:rgba(72,17,25,.66) !important;color:#ffaaaa !important;border-color:rgba(248,113,113,.30) !important}
+#workspacePage .active-path-row,#workspacePage .active-path-row span{color:#9db4d4 !important}
+#workspacePage .active-path-row a{color:#62a2ff !important}
+
+/* Overview / KPI / chart */
+#workspacePage .overview-heading .eyebrow{color:#6e90bf !important}
+#workspacePage .overview-heading h2{color:#f5f9ff !important}
+#workspacePage .project-badge{background:#071a37 !important;color:#91b2dd !important;border-color:rgba(82,133,211,.34) !important;box-shadow:0 0 18px rgba(44,112,239,.08)}
+#workspacePage .kpi-grid>div{
+  background:linear-gradient(145deg,rgba(9,28,57,.98),rgba(4,17,37,.98)) !important;
+  border-color:rgba(78,132,216,.30) !important;
+  box-shadow:0 15px 38px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.025) !important;
+  position:relative;overflow:hidden;
+}
+#workspacePage .kpi-grid>div::after{
+  content:"";position:absolute;right:-35px;top:-55px;width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle,rgba(47,124,255,.12),transparent 68%);pointer-events:none;
+}
+#workspacePage .kpi-grid>div:nth-child(5n+3)::after,
+#workspacePage .kpi-grid>div:nth-child(5n)::after{background:radial-gradient(circle,rgba(49,214,87,.12),transparent 68%)}
+#workspacePage .kpi-grid p:first-child{color:#7692b9 !important}
+#workspacePage .kpi-grid p:last-child{color:#f2f7ff !important}
+#workspacePage #chartSection{
+  background:linear-gradient(145deg,rgba(8,26,53,.98),rgba(4,16,35,.98)) !important;
+  border-color:rgba(80,134,218,.28) !important;
+  box-shadow:0 20px 48px rgba(0,0,0,.28),0 0 45px rgba(37,103,231,.06) !important;
+}
+#workspacePage #chartSection h3{color:#f1f7ff !important}
+#workspacePage #chartSection .text-slate-500{color:#8ca5c5 !important}
+#workspacePage #chartSection button{background:#091d3a !important;color:#9db4d4 !important;border-color:rgba(92,137,201,.34) !important}
+#workspacePage #chartSection button:hover,#workspacePage #chartSection button.active{background:#173b78 !important;color:#fff !important;border-color:#3982ff !important}
+
+/* Data cards / tables */
+#workspacePage .dashboard-content > section > div,
+#workspacePage .dashboard-content > section > .bg-white{
+  background:linear-gradient(145deg,rgba(8,25,51,.98),rgba(4,16,35,.98)) !important;
+  border-color:rgba(78,132,216,.27) !important;
+  box-shadow:0 18px 44px rgba(0,0,0,.26) !important;
+}
+#workspacePage .dashboard-content h3,
+#workspacePage .dashboard-content .text-slate-900{color:#f0f6ff !important}
+#workspacePage .dashboard-content .text-slate-400{color:#718bb0 !important}
+#workspacePage .dashboard-content .text-slate-500{color:#839bbb !important}
+#workspacePage .dashboard-content .text-slate-600{color:#9eb3cf !important}
+#workspacePage .dashboard-content .text-slate-700{color:#b4c6df !important}
+#workspacePage .dashboard-content .text-blue-900{color:#a5c4ff !important}
+#workspacePage table{color:#dce8f8 !important}
+#workspacePage table thead tr,
+#workspacePage table tr.bg-slate-50{background:#0a1e3b !important;border-color:rgba(89,137,202,.22) !important}
+#workspacePage table th{color:#89a7cc !important}
+#workspacePage table td{color:#d7e4f5 !important;border-color:rgba(83,130,198,.15) !important}
+#workspacePage table tbody tr:hover{background:rgba(31,85,164,.17) !important}
+#workspacePage .dashboard-content .border-b,
+#workspacePage .dashboard-content .border-t{border-color:rgba(88,134,199,.17) !important}
+#workspacePage .dashboard-content .bg-slate-100,
+#workspacePage .dashboard-content button.bg-slate-100{background:#0b2344 !important;color:#b7c9e1 !important;border-color:rgba(89,136,204,.22) !important}
+#workspacePage .dashboard-content .bg-slate-100:hover,
+#workspacePage .dashboard-content button.bg-slate-100:hover{background:#173b72 !important;color:#fff !important}
+#workspacePage .dashboard-content .bg-blue-600,
+#workspacePage .dashboard-content button.bg-blue-600{background:linear-gradient(90deg,#2868ff,#2376f5) !important;box-shadow:0 7px 22px rgba(38,105,242,.18)}
+#workspacePage .dashboard-content .bg-emerald-600{background:linear-gradient(90deg,#07986b,#32d657) !important;box-shadow:0 7px 22px rgba(23,191,108,.16)}
+
+/* Green/blue semantic badges */
+#workspacePage .service-status-active,#workspacePage .agent-status-online{background:rgba(20,157,94,.18) !important;color:#69efaa !important;border-color:rgba(52,211,153,.32) !important}
+#workspacePage .service-status-inactive,#workspacePage .agent-status-offline{background:rgba(220,38,38,.18) !important;color:#ff8f8f !important;border-color:rgba(248,113,113,.32) !important}
+
+/* General buttons */
+#workspacePage button{transition:background .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease}
+#workspacePage button:hover{transform:translateY(-1px)}
+#workspacePage .dashboard-content .bg-white{background:linear-gradient(145deg,rgba(8,25,51,.98),rgba(4,16,35,.98)) !important}
+
+/* Keep chart text readable on dark canvas. */
+#workspacePage #analyticsChart{filter:drop-shadow(0 4px 12px rgba(0,0,0,.12))}
+
+@media (max-width:760px){
+  #workspacePage.workspace-page::before{inset:0;opacity:.22;background-size:42px 42px,42px 42px,520px 520px}
+}
