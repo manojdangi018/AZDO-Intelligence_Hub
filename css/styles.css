@@ -580,8 +580,10 @@ body::before{
 }
 
 /* FINAL DARK LANDING OVERRIDE */
-html body:has(#connectionPage){background:#050d1f !important;color:#fff !important;}
+html body:has(#connectionPage:not(.hidden)){background:#050d1f !important;color:#fff !important;}
 #connectionPage.connection-page{background:#050d1f !important;color:#fff !important;}
+#connectionPage.connection-page.hidden{display:none !important;}
+#workspacePage.workspace-page.hidden{display:none !important;}
 #connectionPage .landing-topbar{background:rgba(3,10,25,.96) !important;color:#fff !important;}
 #connectionPage .connection-main{background:#050d1f !important;background-image:radial-gradient(circle at 72% 45%,rgba(28,93,226,.18),transparent 34%),radial-gradient(circle at 18% 75%,rgba(0,214,95,.10),transparent 25%) !important;}
 #connectionPage .connection-main::before{background-image:url("../devops-background.webp") !important;opacity:.42 !important;}

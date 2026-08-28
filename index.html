@@ -12,7 +12,7 @@
 <style id="critical-dark-landing-theme">
 /* Critical landing theme: intentionally inline so the connection page cannot fall back to the light theme due to CSS caching/order. */
 html body:has(#connectionPage){background:#050d1f !important;color:#fff !important;}
-#connectionPage.connection-page{display:block !important;min-height:100vh !important;background:#050d1f !important;color:#fff !important;overflow:hidden !important;}
+#connectionPage.connection-page:not(.hidden){display:block !important;min-height:100vh !important;background:#050d1f !important;color:#fff !important;overflow:hidden !important;}
 #connectionPage .landing-topbar{background:rgba(3,10,25,.96) !important;border-bottom:1px solid rgba(116,151,215,.2) !important;color:#fff !important;}
 #connectionPage .connection-main{background:#050d1f !important;background-image:radial-gradient(circle at 72% 45%,rgba(28,93,226,.18),transparent 34%),radial-gradient(circle at 18% 75%,rgba(0,214,95,.1),transparent 25%) !important;}
 #connectionPage .connection-main::before{background-image:url("../devops-background.webp") !important;background-repeat:no-repeat !important;background-position:left 48% !important;background-size:min(61vw,980px) auto !important;opacity:.42 !important;}
