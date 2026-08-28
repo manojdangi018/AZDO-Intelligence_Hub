@@ -506,6 +506,15 @@ button, input, select {
   padding: 24px 32px 50px;
 }
 
+/* Project section text colors */
+.workspace-project-field > label {
+  color: #8ea8cf !important;
+}
+
+#projectRequirementText {
+  color: #8ea8cf !important;
+}
+
 /* Workspace Control / Project Selector Card */
 .workspace-controls {
   background: var(--bg-card-dark);
@@ -721,4 +730,13 @@ button, input, select {
   .landing-hero-features {
     grid-template-columns: 1fr;
   }
+}
+
+/* Project section text colors */
+.workspace-project-field > label {
+  color: #8ea8cf !important;
+}
+
+#projectRequirementText {
+  color: #8ea8cf !important;
 }
