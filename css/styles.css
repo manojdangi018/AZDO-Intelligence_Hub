@@ -561,7 +561,7 @@ button, input, select {
   background: #06132d;
   border: 1px solid #1b386e;
   border-radius: 8px;
-  color: #fff;
+  color: #9ca3af;
   padding: 0 12px;
   font-size: 13px;
   width: 100%;
@@ -671,7 +671,7 @@ button, input, select {
   width: min(72vw, 1100px);
   height: auto;
   aspect-ratio: 1660 / 933;
-  left: 60%;
+  left: 55%;
   top: 50%;
   transform: translate(-50%, -50%);
   background: url("../devops-new-watermark.png") center/contain no-repeat;
