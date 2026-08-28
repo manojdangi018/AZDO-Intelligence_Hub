@@ -8,8 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script>document.documentElement.dataset.theme = localStorage.getItem("azdo-theme") || "dark";</script>
-  <link rel="stylesheet" href="css/styles.css?v=20260828-theme2" />
+  <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
 
@@ -38,29 +37,15 @@
         <div class="brand-mark"><img src="devops-ad-logo.png" alt="DevOps Intelligence logo"></div>
         <div><div class="brand-title">DevOps Intelligence</div><div class="brand-subtitle">Azure DevOps analytics</div></div>
       </div>
-      <div class="landing-header-actions"><div class="landing-step">01 · CONNECTION</div><button type="button" class="theme-toggle" data-theme-toggle onclick="toggleTheme()" aria-label="Switch theme" title="Switch theme"><span class="theme-icon">☀</span><span class="theme-track"><span class="theme-thumb"></span></span><span class="theme-icon">☾</span></button></div>
+      <div class="landing-step">01 · CONNECTION</div>
     </header>
     <main class="connection-main">
-      <section class="landing-hero-copy" aria-hidden="true">
-        <div class="landing-hero-logo"></div>
-        <div class="landing-hero-title">Azure DevOps<br><span>Intelligence Hub</span></div>
-        <div class="landing-hero-accent"></div>
-        <p class="landing-hero-description">Unified visibility across your Azure DevOps organization</p>
-        <ul class="landing-feature-list">
-          <li><span>⌁</span> Repository Insights</li>
-          <li><span>◆</span> Pipeline &amp; Build Analytics</li>
-          <li><span>◈</span> Security &amp; Compliance</li>
-          <li><span>♙</span> Access &amp; Team Management</li>
-          <li><span>▣</span> Work Item Intelligence</li>
-          <li><span>▤</span> Agent &amp; Service Connections</li>
-        </ul>
-      </section>
       <section class="connection-card landing-connection-card">
         <div class="connection-card-head">
           <div>
             <div class="eyebrow">01 · CONNECTION</div>
-            <h2><span class="connection-lock">⌑</span> Connect to Azure DevOps</h2>
-            <p>Enter your organization and Personal Access Token (PAT) to connect and load projects.</p>
+            <h2>Connect to Azure DevOps</h2>
+            <p>Enter your organization and PAT, then select a project to explore telemetry.</p>
           </div>
           <a id="generatedUrlLink" href="javascript:void(0)" class="path-preview">https://dev.azure.com/</a>
         </div>
@@ -80,7 +65,7 @@
           </div>
 
           <div class="flex flex-col gap-2.5">
-            <button id="btnLoadProjects" onclick="loadProjectsList()" class="btn-load-projects">Connect &amp; Load Projects</button>
+            <button id="btnLoadProjects" onclick="loadProjectsList()" class="btn-load-projects">Load projects</button>
             <label class="remember-toggle">
               <input type="checkbox" id="chkRememberCreds" onchange="toggleRememberCreds()">
               <span>Remember organization &amp; credentials</span>
@@ -144,7 +129,6 @@
         <p class="app-subtitle">Repository, pipeline, work item, security and user activity insights</p>
       </div>
       <div class="topbar-actions">
-        <button type="button" class="theme-toggle" data-theme-toggle onclick="toggleTheme()" aria-label="Switch theme" title="Switch theme"><span class="theme-icon">☀</span><span class="theme-track"><span class="theme-thumb"></span></span><span class="theme-icon">☾</span></button>
         <span id="connectionBadge" class="connection-badge"><span class="status-dot"></span><span id="connectionBadgeText">Ready to connect</span></span>
         <button id="btnDisconnect" onclick="disconnectSession()" class="btn-disconnect hidden">
           <span>✕</span><span>Disconnect</span>

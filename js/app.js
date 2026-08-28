@@ -507,7 +507,6 @@ function renderChart(labels, data, datasetLabel) {
   const ctx = document.getElementById('analyticsChart').getContext('2d');
   if (chartInstance) chartInstance.destroy();
 
-  const isDarkTheme = document.documentElement.dataset.theme !== 'light';
   const palette = ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16', '#f43f5e', '#a855f7'];
   const isPie = currentChartType === 'pie' || currentChartType === 'doughnut';
   const isLine = currentChartType === 'line';
@@ -547,7 +546,7 @@ function renderChart(labels, data, datasetLabel) {
         },
         datalabels: {
           display: true,
-          color: isPie ? '#ffffff' : (isDarkTheme ? '#dce8fa' : '#1e293b'),
+          color: isPie ? '#ffffff' : '#1e293b',
           font: {
             weight: 'bold',
             size: 11
@@ -563,13 +562,12 @@ function renderChart(labels, data, datasetLabel) {
       scales: isPie ? {} : {
         y: { 
           beginAtZero: true, 
-          grid: { color: isDarkTheme ? 'rgba(104,137,184,.18)' : '#f1f5f9' },
-          ticks: { precision: 0, color: isDarkTheme ? '#9fb5d5' : '#64748b' }
+          grid: { color: '#f1f5f9' },
+          ticks: { precision: 0 }
         },
         x: { 
           grid: { display: false },
           ticks: {
-            color: isDarkTheme ? '#9fb5d5' : '#64748b',
             autoSkip: false,
             maxRotation: 45,
             minRotation: 20
@@ -578,23 +576,6 @@ function renderChart(labels, data, datasetLabel) {
       }
     }
   });
-}
-
-function applyTheme(theme) {
-  const next = theme === 'light' ? 'light' : 'dark';
-  document.documentElement.dataset.theme = next;
-  localStorage.setItem('azdo-theme', next);
-  document.querySelectorAll('[data-theme-toggle]').forEach(btn => {
-    btn.setAttribute('aria-label', next === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
-    btn.setAttribute('title', next === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
-  });
-  if (typeof chartInstance !== 'undefined' && chartInstance) {
-    try { chartInstance.update(); } catch (_) {}
-  }
-}
-
-function toggleTheme() {
-  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
 }
 
 document.addEventListener('DOMContentLoaded', function(){ 
