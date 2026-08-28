@@ -93,6 +93,7 @@ button,input,select{font:inherit}
 
 .dashboard-content{display:block}
 .kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px}
+.kpi-grid.serviceagents-kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .kpi-grid>div{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 19px;box-shadow:0 7px 20px rgba(34,58,96,.045);min-height:105px}
 .kpi-grid p:first-child{font-size:10px!important;color:#8394ad!important;letter-spacing:.08em}
 .kpi-grid p:last-child{margin-top:6px!important}

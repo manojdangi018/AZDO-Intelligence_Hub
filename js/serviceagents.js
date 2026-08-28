@@ -20,6 +20,52 @@ function displayRequestOwner(request) {
   return displayIdentity(request.owner);
 }
 
+function configureServiceAgentsOverview(isActive) {
+  const chartSection = document.getElementById('chartSection');
+  const kpiGrid = document.querySelector('.kpi-grid');
+  const cards = [1, 2, 3, 4, 5].map(i => document.getElementById(`kpi-card-${i}`));
+
+  if (chartSection) chartSection.classList.toggle('hidden', isActive);
+  if (kpiGrid) kpiGrid.classList.toggle('serviceagents-kpi-grid', isActive);
+
+  if (isActive) {
+    cards.forEach((card, index) => {
+      if (card) card.classList.toggle('hidden', index >= 3);
+    });
+    updateServiceAgentsOverview();
+  } else {
+    cards.forEach(card => {
+      if (card) card.classList.remove('hidden');
+    });
+    if (kpiGrid) kpiGrid.classList.remove('serviceagents-kpi-grid');
+  }
+}
+
+function updateServiceAgentsOverview() {
+  const validAgents = (rawStore.agents || []).filter(a => a.name && a.name !== 'Unable to read agents');
+  const serviceConnectionCount = (rawStore.serviceConnections || []).length;
+  const microsoftHostedCount = validAgents.filter(a => a.isHosted === 'Yes').length;
+  const selfHostedCount = validAgents.filter(a => a.isHosted === 'No').length;
+
+  const values = [serviceConnectionCount, microsoftHostedCount, selfHostedCount];
+  const labels = ['Total Service Connections', 'Microsoft-hosted Agents', 'Self-hosted Agents'];
+  const classes = [
+    'text-2xl font-extrabold text-slate-800 mt-1 truncate',
+    'text-2xl font-extrabold text-blue-600 mt-1',
+    'text-2xl font-extrabold text-emerald-600 mt-1'
+  ];
+
+  for (let i = 0; i < 3; i++) {
+    const label = document.getElementById(`kpi-${i + 1}-label`);
+    const value = document.getElementById(`kpi-${i + 1}-val`);
+    if (label) label.textContent = labels[i];
+    if (value) {
+      value.textContent = values[i];
+      value.className = classes[i];
+    }
+  }
+}
+
 async function fetchServiceConnectionAgentData() {
   const org = extractOrgName(document.getElementById('targetOrg').value);
   const project = document.getElementById('projectSelect').value;
@@ -63,8 +109,13 @@ async function fetchServiceConnectionAgentData() {
         const agentsUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools/${pool.id}/agents?includeAssignedRequest=true&includeLastCompletedRequest=true&api-version=${AZDO_STABLE_API_VERSION}`;
         const agentData = await fetchAzDo(agentsUrl, authHeader);
         return (agentData.value || []).map(agent => ({
-          poolName: pool.name || `Pool ${pool.id}`,
-          isHosted: pool.isHosted ? 'Yes' : 'No',
+          // The agent endpoint is scoped to the pool ID. Prefer any pool name
+          // exposed by the agent payload, then fall back to the canonical pool
+          // object returned by /distributedtask/pools. This keeps the pool name
+          // tied to the actual pool ID instead of the agent display name.
+          poolId: pool.id,
+          poolName: agent.pool?.name || agent.poolName || agent.properties?.poolName || pool.name || `Pool ${pool.id}`,
+          isHosted: pool.isHosted === true ? 'Yes' : 'No',
           poolType: pool.poolType || '—',
           name: agent.name || '—',
           status: agent.status || '—',
@@ -77,8 +128,9 @@ async function fetchServiceConnectionAgentData() {
       } catch (error) {
         console.warn(`Could not fetch agents for pool ${pool.name || pool.id}:`, error);
         return [{
+          poolId: pool.id,
           poolName: pool.name || `Pool ${pool.id}`,
-          isHosted: pool.isHosted ? 'Yes' : 'No',
+          isHosted: pool.isHosted === true ? 'Yes' : 'No',
           poolType: pool.poolType || '—',
           name: 'Unable to read agents',
           status: error.message || 'Access denied',
@@ -91,6 +143,7 @@ async function fetchServiceConnectionAgentData() {
     rawStore.agentsIndex = 0;
     renderServiceConnectionsTableBatch(false);
     renderAgentsTableBatch(false);
+    updateServiceAgentsOverview();
 
     setStatus(`Loaded ${rawStore.serviceConnections.length} service connections, ${pools.length} agent pools and ${rawStore.agents.filter(a => a.name !== 'Unable to read agents').length} agents.`, 'success');
   } catch (error) {

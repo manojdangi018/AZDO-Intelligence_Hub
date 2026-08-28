@@ -262,6 +262,9 @@ function selectExplore(category) {
   });
 
   if (typeof showSection === 'function') showSection(viewId);
+  if (typeof configureServiceAgentsOverview === 'function') {
+    configureServiceAgentsOverview(viewId === 'serviceagents');
+  }
   renderActiveSubstep();
 }
 
