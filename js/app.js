@@ -182,17 +182,17 @@ async function handleProjectSelection() {
   const pat = document.getElementById('targetPat').value.trim();
 
   if (!project) {
-    document.getElementById('step5Container').classList.add('hidden');
     updatePathPreview(org);
+    if (typeof updateServiceAgentsScopeText === 'function') updateServiceAgentsScopeText('');
+    if (activeCategory === 'service_agents') renderActiveSubstep();
+    else document.getElementById('step5Container').classList.add('hidden');
     return;
   }
 
   updatePathPreview(org, project);
-  // Keep the Service Connections & Agent Pools scope aligned with the
-  // selected project. The user can still clear that field to explicitly
-  // switch back to organization-wide mode.
-  if (typeof syncServiceAgentsScopeToProject === 'function') {
-    syncServiceAgentsScopeToProject(project);
+  // Service Connections & Agent Pools now use the main Project selector as their scope.
+  if (typeof updateServiceAgentsScopeText === 'function') {
+    updateServiceAgentsScopeText(project);
   }
   const projectBadge = document.getElementById('overviewProjectBadge');
   if (projectBadge) projectBadge.textContent = project || '—';
@@ -219,12 +219,13 @@ function renderActiveSubstep() {
   const subWorkItems = document.getElementById('substepWorkItems');
   const subServiceAgents = document.getElementById('substepServiceAgents');
 
-  if (!project) {
+  if (!project && activeCategory !== 'service_agents') {
     step5.classList.add('hidden');
     return;
   }
 
   step5.classList.remove('hidden');
+  if (typeof updateServiceAgentsScopeText === 'function') updateServiceAgentsScopeText(project);
   [subRepo, subAccess, subActivity, subPipelines, subWorkItems, subServiceAgents].forEach(el => el.classList.add('hidden'));
 
   if (activeCategory === 'repositories') {

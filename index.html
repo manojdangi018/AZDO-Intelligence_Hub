@@ -141,7 +141,7 @@
         <div class="project-selection-box">
           <div class="workspace-project-field">
             <div class="eyebrow">02 · PROJECT</div>
-            <label for="projectSelect">Project <span>*</span></label>
+            <label for="projectSelect">Project <span class="text-slate-400">(Optional)</span></label>
             <select id="projectSelect" disabled onchange="handleProjectSelection()"><option value="">-- Load PAT first --</option></select>
           </div>
         </div>
@@ -237,20 +237,15 @@
 
           <!-- Step 5E: Service Connections & Agents -->
           <div id="substepServiceAgents" class="hidden service-agents-filter bg-blue-50/50 p-3 rounded-md">
-            <div class="service-agents-filter-row">
-              <div class="service-agents-scope-field">
-                <label for="serviceAgentsScope" class="block text-[11px] font-semibold text-blue-900 mb-1">
-                  SERVICE CONNECTIONS &amp; AGENT POOLS
-                </label>
-                <select id="serviceAgentsScope" class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                  <option value="">-- Organization Level (All Projects / All Agent Pools) --</option>
-                </select>
+            <div class="service-agents-fetch-row">
+              <div class="service-agents-scope-text">
+                <span class="block text-[11px] font-semibold text-blue-900">SERVICE CONNECTIONS &amp; AGENT POOLS</span>
+                <span id="serviceAgentsScopeText" class="block text-[11px] text-slate-500 mt-1">Scope follows the selected Project. Leave Project blank for organization-wide information.</span>
               </div>
               <button onclick="fetchServiceConnectionAgentData()" class="service-agents-fetch-btn text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition">
                 Fetch Connections &amp; Agents
               </button>
             </div>
-            <div class="text-[11px] text-slate-500 mt-1">Project selected above automatically sets this scope to that project. Clear this field to explicitly load organization-wide service connections and agent pools.</div>
           </div>
 
           <!-- Step 5F: Work Items -->
@@ -606,7 +601,7 @@
                   <th class="p-4">Service Connection</th>
                   <th class="p-4">Type</th>
                   <th class="p-4">URL</th>
-                  <th class="p-4">Ready</th>
+                  <th class="p-4">Status</th>
                   <th class="p-4">Shared</th>
                   <th class="p-4">Created By</th>
                 </tr>

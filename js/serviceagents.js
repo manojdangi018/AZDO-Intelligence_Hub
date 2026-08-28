@@ -16,48 +16,35 @@ function displayIdentity(identity) {
 }
 
 function populateServiceAgentsScope(projects = []) {
-  const select = document.getElementById('serviceAgentsScope');
-  if (!select) return;
-  const current = select.value;
-  select.innerHTML = '<option value="">-- Organization Level (All Projects / All Agent Pools) --</option>';
-  (projects || []).forEach(project => {
-    const name = project.name || project;
-    if (!name) return;
-    const option = document.createElement('option');
-    option.value = name;
-    option.textContent = name;
-    select.appendChild(option);
-  });
-  if (current && [...select.options].some(o => o.value === current)) select.value = current;
+  // Scope is now driven directly by the main Project selector.
+  updateServiceAgentsScopeText();
 }
 
 function resetServiceAgentsScope() {
-  const select = document.getElementById('serviceAgentsScope');
-  if (select) select.innerHTML = '<option value="">-- Organization Level (All Projects / All Agent Pools) --</option>';
+  updateServiceAgentsScopeText();
 }
 
 function getServiceAgentsScope() {
-  const select = document.getElementById('serviceAgentsScope');
-  return select ? select.value.trim() : '';
+  const projectSelect = document.getElementById('projectSelect');
+  return projectSelect ? projectSelect.value.trim() : '';
 }
 
 function syncServiceAgentsScopeToProject(projectName) {
-  const select = document.getElementById('serviceAgentsScope');
-  if (!select) return;
-
-  const value = String(projectName || '').trim();
-  if (!value) {
-    select.value = '';
-    return;
-  }
-
-  const optionExists = [...select.options].some(option => option.value === value);
-  if (optionExists) select.value = value;
+  // Kept for compatibility with existing app.js calls. The main Project selector is the source of truth.
+  updateServiceAgentsScopeText(projectName);
 }
 
 function clearServiceAgentsScopeToOrganization() {
-  const select = document.getElementById('serviceAgentsScope');
-  if (select) select.value = '';
+  updateServiceAgentsScopeText('');
+}
+
+function updateServiceAgentsScopeText(projectName) {
+  const text = document.getElementById('serviceAgentsScopeText');
+  if (!text) return;
+  const project = String(projectName ?? getServiceAgentsScope() ?? '').trim();
+  text.textContent = project
+    ? `Project scope: ${project}. Service connections and agent pools are limited to this project.`
+    : 'Organization scope: all loaded projects and all organization agent pools.';
 }
 
 function configureServiceAgentsOverview(isActive) {
@@ -110,7 +97,7 @@ function mapServiceConnection(endpoint, projectName = '') {
     name: endpoint.name || '—',
     type: endpoint.type || '—',
     url: endpoint.url || '—',
-    isReady: endpoint.isReady === true ? 'Yes' : endpoint.isReady === false ? 'No' : '—',
+    isReady: endpoint.isReady === true ? 'Active' : endpoint.isReady === false ? 'Inactive' : '—',
     isShared: endpoint.isShared ? 'Yes' : 'No',
     createdBy: displayIdentity(endpoint.createdBy),
     projectName: projectName || endpoint.serviceEndpointProjectReferences?.[0]?.projectReference?.name || '—'
@@ -303,7 +290,7 @@ function renderServiceConnectionsTableBatch(loadMore = false) {
       <td class="p-4 font-medium text-slate-800">${escapeHtml(s.name)}</td>
       <td class="p-4">${escapeHtml(s.type)}</td>
       <td class="p-4 max-w-[320px] truncate" title="${escapeHtml(s.url)}">${escapeHtml(s.url)}</td>
-      <td class="p-4">${escapeHtml(s.isReady)}</td>
+      <td class="p-4"><span class="status-pill ${s.isReady === 'Active' ? 'status-pill-success' : s.isReady === 'Inactive' ? 'status-pill-danger' : 'status-pill-neutral'}">${escapeHtml(s.isReady)}</span></td>
       <td class="p-4">${escapeHtml(s.isShared)}</td>
       <td class="p-4">${escapeHtml(s.createdBy)}</td>`;
     body.appendChild(row);
@@ -334,7 +321,7 @@ function renderAgentsTableBatch(loadMore = false) {
       <td class="p-4">${escapeHtml(a.isHosted)}</td>
       <td class="p-4">${escapeHtml(a.poolType)}</td>
       <td class="p-4 font-medium">${escapeHtml(a.name)}</td>
-      <td class="p-4">${escapeHtml(a.status)}</td>
+      <td class="p-4"><span class="status-pill ${String(a.status).toLowerCase() === 'online' ? 'status-pill-success' : String(a.status).toLowerCase() === 'offline' ? 'status-pill-danger' : 'status-pill-neutral'}">${escapeHtml(a.status)}</span></td>
       <td class="p-4">${escapeHtml(a.enabled)}</td>
       <td class="p-4">${escapeHtml(a.os)}</td>
       <td class="p-4">${escapeHtml(a.version)}</td>
