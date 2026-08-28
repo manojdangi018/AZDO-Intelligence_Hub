@@ -661,7 +661,7 @@ button, input, select {
   left: 48%;
   top: 52%;
   transform: translate(-50%, -50%);
-  background: url("../devops-watermark.png") center/contain no-repeat;
+  background: url("../devops-new-watermark.png") center/contain no-repeat;
   opacity: 0.28;
   filter: drop-shadow(0 0 35px rgba(47, 109, 246, 0.25));
 }
@@ -676,7 +676,7 @@ button, input, select {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  background: url("../devops-watermark.png") center/contain no-repeat;
+  background: url("../devops-new-watermark.png") center/contain no-repeat;
   opacity: 0.12;
 }
 
