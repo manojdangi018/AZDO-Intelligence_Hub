@@ -1,1071 +1,492 @@
-:root{
-  --navy:#0b1730;
-  --navy-2:#111f3b;
-  --blue:#2f6df6;
-  --blue-soft:#eaf2ff;
-  --bg:#f5f7fb;
-  --border:#dbe4f0;
-  --muted:#6d7f9a;
-  --text:#14213d;
-  --green:#0b9f72;
-  --orange:#f59e0b;
-  --purple:#4f46e5;
-}
-
-*{box-sizing:border-box}
-body{margin:0!important;background:var(--bg)!important;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-button,input,select{font:inherit}
-
-.app-sidebar{
-  position:fixed;inset:0 auto 0 0;width:282px;background:linear-gradient(180deg,#101d36 0%,#09152b 100%);
-  color:#dbe7ff;z-index:50;display:flex;flex-direction:column;border-right:1px solid #172747;
-}
-.sidebar-brand{height:96px;padding:24px 23px;display:flex;align-items:center;gap:13px;border-bottom:1px solid rgba(255,255,255,.08)}
-.brand-mark{width:46px;height:46px;border-radius:13px;background:linear-gradient(145deg,#3c76ff,#4f46e5);display:grid;place-items:center;color:#fff;font-weight:900;font-size:14px;box-shadow:0 8px 20px rgba(47,109,246,.28)}
-.brand-title{font-weight:800;font-size:15px;color:#fff;line-height:1.2}
-.brand-subtitle{font-size:12px;color:#8ea2c2;margin-top:5px}
-.sidebar-section-label{font-size:12px;font-weight:800;letter-spacing:.09em;color:#7083a4;margin:28px 21px 10px}
-.sidebar-nav{padding:0 12px;display:flex;flex-direction:column;gap:5px}
-.sidebar-item{border:0;background:transparent;color:#c8d4e8;height:46px;border-radius:11px;padding:0 15px;display:flex;align-items:center;gap:15px;font-size:14px;font-weight:650;cursor:pointer;text-align:left}
-.sidebar-item:hover{background:rgba(43,92,184,.28);color:#fff}
-.sidebar-item.active{background:#18356c;color:#fff;box-shadow:inset 3px 0 0 #3b82f6}
-.nav-icon{width:18px;text-align:center;color:#8fb2ff;font-size:15px}
-.sidebar-connection-note{margin:auto 17px 18px;padding:16px 15px;border:1px solid rgba(148,163,184,.18);background:rgba(255,255,255,.035);border-radius:12px}
-.connection-note-title{font-size:13px;font-weight:700;color:#9db2d3;display:flex;align-items:center;gap:8px}
-.connection-note-text{font-size:11px;color:#7890b5;line-height:1.55;margin-top:10px}
-.status-dot{display:inline-block;width:8px;height:8px;border-radius:999px;background:#ef4444}
-
-.app-shell{margin-left:282px;min-height:100vh}
-.app-topbar{height:86px;background:#fff;border-bottom:1px solid #dce4ef;padding:0 39px;display:flex;align-items:center;justify-content:space-between;gap:20px}
-.app-title{font-size:24px;font-weight:850;letter-spacing:-.025em;margin:0;color:#14213d}
-.app-subtitle{font-size:13px;color:#6d7f9a;margin:5px 0 0}
-.topbar-actions{display:flex;align-items:center;gap:14px}
-
-.connection-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid #fca5a5;background:#fef2f2;color:#b91c1c;border-radius:999px;padding:8px 14px;font-size:12px;font-weight:800;transition:all 0.2s ease}
-.connection-badge .status-dot{background:#ef4444}
-.connection-badge.connected{border-color:#a7ecd6;background:#effcf7;color:#087d5b}
-.connection-badge.connected .status-dot{background:#10b981}
-
-.btn-disconnect{display:inline-flex;align-items:center;gap:6px;border:1px solid #fca5a5;background:#fef2f2;color:#b91c1c;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;transition:all 0.15s ease}
-.btn-disconnect:hover{background:#fee2e2;border-color:#f87171;color:#991b1b}
-
-.remember-toggle{display:inline-flex;align-items:center;gap:8px;color:#64748b;font-size:12px;cursor:pointer;user-select:none;margin-top:2px}
-.remember-toggle input{width:15px;height:15px;accent-color:#2f6df6;cursor:pointer}
-
-.dashboard-main{padding:31px 40px 55px}
-.connection-card{background:#fff;border:1px solid var(--border);border-radius:17px;box-shadow:0 15px 35px rgba(34,58,96,.07);padding:26px 26px 23px}
-.connection-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding-bottom:20px;border-bottom:1px solid #e7edf5}
-.eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:850;color:#6e84a5}
-.connection-card h2,.overview-heading h2{margin:8px 0 4px;font-size:19px;letter-spacing:-.02em;font-weight:850;color:#14213d}
-.connection-card-head p{font-size:13px;color:#6d7f9a;margin:0}
-.path-preview{display:block;max-width:390px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid #d7e2ef;background:#f9fbfe;border-radius:10px;padding:9px 12px;color:#45658e;font:11px ui-monospace,SFMono-Regular,Menlo,monospace;text-decoration:none}
-
-.connection-fields{display:flex;flex-direction:column;gap:18px;padding:20px 0 18px}
-.field-group{display:flex;flex-direction:column}
-.field-group label{display:block;font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px}
-.field-group label span{color:#ef4444;margin-left:2px}
-.field-group input,.field-group select{width:100%;height:44px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:0 14px;font-size:13.5px;color:#334155;outline:none;transition:border-color .15s ease,box-shadow .15s ease}
-.field-group input::placeholder{color:#94a3b8}
-.field-group input:focus,.field-group select:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
-.field-group small{display:block;font-size:12px;color:#8fa0b5;margin-top:6px;line-height:1.4}
-
-.btn-load-projects{width:100%;height:44px;border:0;border-radius:8px;background:#2563eb;color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(37,99,235,.25);transition:background-color .15s ease}
-.btn-load-projects:hover{background:#1d4ed8}
-
-#categorySelect{display:none!important}
-
-#step5Container{padding-top:16px!important;border-top:1px solid #e7edf5!important}
-#step5Container > div{background:#f7faff!important;border:1px solid #d9e8ff!important;border-radius:12px!important;padding:14px!important}
-#step5Container label{font-size:11px!important}
-#step5Container input,#step5Container select{height:42px!important;border-radius:9px!important}
-#step5Container button{height:42px!important;border-radius:9px!important}
-#step5Container .text-xs{font-size:11px!important}
-#generatedUrlLink{display:none}
-.status-bar{margin-top:12px;border-radius:9px;padding:9px 12px;font-size:11px}
-.active-path-row{display:flex;align-items:center;gap:7px;margin-top:14px;font-size:11px;color:#607694}
-.active-path-row span{font-weight:750;color:#334b6e}
-.active-path-row a{color:#3c73d9;text-decoration:underline;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hidden{display:none!important}
-
-.overview-heading{display:flex;justify-content:space-between;align-items:end;margin:29px 0 10px}
-.overview-heading h2{font-size:20px;margin-top:6px}
-.project-badge{border:1px solid #dbe4ef;background:#fff;color:#667b99;padding:7px 12px;border-radius:999px;font-size:11px;font-weight:800}
-
-.dashboard-content{display:block}
-.kpi-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px}
-.kpi-grid.serviceagents-kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-.kpi-grid>div{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 19px;box-shadow:0 7px 20px rgba(34,58,96,.045);min-height:105px}
-.kpi-grid p:first-child{font-size:10px!important;color:#8394ad!important;letter-spacing:.08em}
-.kpi-grid p:last-child{margin-top:6px!important}
-#chartSection{margin-top:15px;border-radius:14px!important}
-
-.dashboard-content section{scroll-margin-top:20px}
-table th{font-size:10px!important;letter-spacing:.04em}
-table td{font-size:12px!important}
-
-@media (max-width: 1050px){
-  .app-sidebar{width:230px}
-  .app-shell{margin-left:230px}
-  .dashboard-main{padding:24px}
-  .kpi-grid{grid-template-columns:repeat(3,1fr)}
-}
-@media (max-width: 760px){
-  .app-sidebar{position:relative;width:100%;height:auto;min-height:0}
-  .sidebar-brand{height:76px}
-  .sidebar-section-label,.sidebar-connection-note{display:none}
-  .sidebar-nav{flex-direction:row;overflow:auto;padding:9px}
-  .sidebar-item{min-width:max-content}
-  .app-shell{margin-left:0}
-  .app-topbar{height:auto;padding:18px 20px;align-items:flex-start}
-  .topbar-actions{flex-direction:column;align-items:flex-end;gap:8px}
-  .dashboard-main{padding:18px}
-  .connection-card-head{flex-direction:column}
-  .path-preview{max-width:100%}
-  .kpi-grid{grid-template-columns:1fr 1fr}
+/* ==========================================================================
+   DevOps Intelligence Hub - Enterprise Modern Dark Theme
+   ========================================================================== */
+
+:root {
+  /* Surfaces & Canvas */
+  --bg-main: #0B0F19;
+  --bg-surface: #111827;
+  --bg-card: #1E293B;
+  --bg-card-hover: #24344D;
+  --bg-input: #0F172A;
+
+  /* Borders & Dividers */
+  --border-subtle: #1E293B;
+  --border-card: #334155;
+  --border-card-hover: #475569;
+  --border-focus: #0078D4;
+
+  /* Typography */
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+
+  /* Azure & Accent Colors */
+  --azure-blue: #0078D4;
+  --azure-hover: #106EBE;
+  --azure-glow: rgba(0, 120, 212, 0.25);
+  --azure-active-bg: rgba(0, 120, 212, 0.12);
+
+  /* Status Tokens */
+  --success-bg: rgba(16, 185, 129, 0.12);
+  --success-border: rgba(16, 185, 129, 0.35);
+  --success-text: #34D399;
+
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --danger-border: rgba(239, 68, 68, 0.35);
+  --danger-text: #F87171;
+}
+
+/* Base resets & typography */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ==========================================================================
+   Header & Navigation
+   ========================================================================== */
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 28px;
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+.brand-text h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.brand-text p {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ==========================================================================
+   Page 1: Connection View
+   ========================================================================== */
+
+.connection-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 80px);
+  padding: 24px;
+}
+
+.connection-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  max-width: 1100px;
+  width: 100%;
+  align-items: center;
+}
+
+.hero-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.hero-logo {
+  max-width: 280px;
+  width: 100%;
+  height: auto;
+}
+
+.hero-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.hero-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 14px;
 }
-@media (max-width: 480px){
-  .app-title{font-size:19px}
-  .app-subtitle{font-size:11px}
-  .kpi-grid{grid-template-columns:1fr}
-}
-
-/* ============================================================
-   DEVOPS INTELLIGENCE BRANDING / WATERMARK
-   Visual-only changes. Existing layout and JavaScript are unchanged.
-   ============================================================ */
-
-/* Keep the existing fixed sidebar behavior. */
-.app-sidebar{
-  z-index:50;
-}
-
-/* Keep decorative watermark behind the application. */
-.app-shell{
-  position:relative;
-  z-index:1;
-}
-
-/* Full-page, very subtle DevOps watermark. */
-body{
-  position:relative;
-  overflow-x:hidden;
-}
-
-body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  z-index:0;
-  pointer-events:none;
-  background-image:url("../devops-watermark.png");
-  background-repeat:repeat;
-  background-size:260px 260px;
-  background-position:35px 35px;
-  opacity:.012;
-}
-
-/* Use the supplied AD logo correctly. */
-.brand-mark{
-  overflow:hidden;
-  position:relative;
-}
-
-.brand-mark img{
-  width:100%;
-  height:100%;
-  display:block;
-  object-fit:cover;
-  border-radius:inherit;
-}
-
-/* Subtle watermark on the left/right edges of each table card. */
-.dashboard-content > section > div{
-  position:relative;
-  overflow:hidden;
-}
-
-.dashboard-content > section > div::before,
-.dashboard-content > section > div::after{
-  content:"";
-  position:absolute;
-  top:0;
-  bottom:0;
-  width:58px;
-  pointer-events:none;
-  z-index:0;
-  background-image:url("../devops-watermark.png");
-  background-repeat:repeat-y;
-  background-size:58px 58px;
-  opacity:.018;
-}
-
-.dashboard-content > section > div::before{
-  left:0;
-  background-position:center top;
-}
-
-.dashboard-content > section > div::after{
-  right:0;
-  background-position:center top;
-}
-
-/* Keep table/card content above decorative watermarks. */
-.dashboard-content > section > div > *{
-  position:relative;
-  z-index:1;
-}
-
-/* Small watermark inside the connection card. */
-.connection-card{
-  position:relative;
-  overflow:hidden;
-}
-
-.connection-card::after{
-  content:"";
-  position:absolute;
-  right:20px;
-  bottom:12px;
-  width:110px;
-  height:110px;
-  pointer-events:none;
-  z-index:0;
-  background-image:url("../devops-watermark.png");
-  background-repeat:no-repeat;
-  background-size:contain;
-  background-position:center;
-  opacity:.018;
-}
-
-.connection-card > *{
-  position:relative;
-  z-index:1;
-}
-
-@media (max-width:760px){
-  body::before{
-    background-size:190px 190px;
-    opacity:.01;
-  }
-
-  .dashboard-content > section > div::before,
-  .dashboard-content > section > div::after{
-    width:42px;
-    background-size:42px 42px;
-    opacity:.014;
-  }
-
-  .connection-card::after{
-    width:80px;
-    height:80px;
-    right:10px;
-    bottom:8px;
-  }
-}
-
-
-/* ============================================================
-   TWO-PAGE EXPERIENCE
-   UI-only shell separation; existing controls, IDs and handlers
-   remain unchanged so application functionality is preserved.
-   ============================================================ */
-.connection-page{
-  min-height:100vh;
-  background:var(--bg);
-  position:relative;
-  z-index:1;
-}
-.landing-topbar{
-  height:86px;
-  background:#fff;
-  border-bottom:1px solid #dce4ef;
-  padding:0 48px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-}
-.landing-brand{display:flex;align-items:center;gap:13px}
-.landing-step{
-  font-size:11px;
-  font-weight:850;
-  letter-spacing:.13em;
-  color:#6e84a5;
-}
-.connection-main{
-  min-height:calc(100vh - 86px);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:42px 24px 60px;
-}
-.landing-connection-card{
-  width:min(860px,100%);
-  padding:32px 34px 28px;
-  box-shadow:0 22px 55px rgba(34,58,96,.10);
-}
-.landing-connection-card .connection-card-head{padding-bottom:25px}
-.landing-connection-card .connection-card-head h2{font-size:25px}
-.landing-connection-card .connection-card-head p{font-size:14px;margin-top:6px}
-.landing-connection-card .connection-fields{display:grid;grid-template-columns:1fr 1fr;gap:20px 18px;padding:25px 0 10px}
-.landing-connection-card .connection-fields > .flex{grid-column:1 / -1;display:flex;flex-direction:row;align-items:center;gap:18px}
-.landing-connection-card .connection-fields > .flex .btn-load-projects{max-width:240px}
-.landing-connection-card .remember-toggle{margin-top:0}
-.workspace-page{min-height:100vh;position:relative;z-index:1}
-.workspace-controls{
-  background:#fff;
-  border:1px solid var(--border);
-  border-radius:17px;
-  box-shadow:0 12px 30px rgba(34,58,96,.06);
-  padding:23px 25px 20px;
-  margin-bottom:27px;
-}
-.project-selection-box{
-  width:100%;
-  box-sizing:border-box;
-  padding:0;
-  margin:0;
-  overflow:visible;
-}
-.workspace-project-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:9px}
-.workspace-project-header .eyebrow{margin:0}
-.btn-switch-org{border:1px solid #2563eb;background:#fff;color:#1d4ed8;border-radius:8px;height:34px;padding:0 14px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;transition:.15s ease}
-.btn-switch-org:hover{background:#eff6ff}
-.workspace-project-field{
-  min-width:0;
-  width:100%;
-  max-width:760px;
-  box-sizing:border-box;
-}
-.workspace-project-field label{display:block;font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px}
-.workspace-project-field label span{color:#ef4444;margin-left:2px}
-.workspace-project-field select{display:block;width:100%;height:46px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:0 14px;font-size:13.5px;color:#334155;outline:none}
-.workspace-project-field select:disabled{background:#f1f5f9;color:#94a3b8;cursor:not-allowed}
-.project-requirement-text{margin-top:6px;font-size:11px;color:#94a3b8}
-@media (max-width:760px){
-  .workspace-project-header{align-items:flex-start}
-  .btn-switch-org{height:32px;padding:0 10px;font-size:11px}
-  .workspace-project-field{max-width:none}
-}
-@media (max-width:760px){
-  .landing-topbar{padding:0 20px}
-  .landing-step{display:none}
-  .connection-main{padding:24px 18px 40px;align-items:flex-start}
-  .landing-connection-card{padding:24px 20px}
-  .landing-connection-card .connection-fields{grid-template-columns:1fr}
-  .landing-connection-card .connection-fields > .flex{grid-column:auto;flex-direction:column;align-items:stretch}
-  .landing-connection-card .connection-fields > .flex .btn-load-projects{max-width:none}
-}
-
-/* Service Connections & Agent Pools filter row */
-.service-agents-filter{width:100%;box-sizing:border-box}
-.service-agents-filter-row{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:12px;align-items:end}
-.service-agents-scope-field{min-width:0}
-.service-agents-scope-field select{height:34px;box-sizing:border-box}
-.service-agents-fetch-btn{width:100%;height:34px;white-space:nowrap}
-@media (max-width:760px){
-  .service-agents-filter-row{grid-template-columns:1fr}
-}
-
-/* Service Connections & Agent Pools - project-driven scope */
-.service-agents-project-row{grid-template-columns:minmax(0,1fr) 310px;align-items:center}
-.service-agents-project-row > div:first-child{min-width:0}
-@media (max-width:760px){
-  .service-agents-project-row{grid-template-columns:1fr}
-}
-
-/* ============================================================
-   MODERN DARK DEVOPS LANDING THEME
-   Visual-only landing-page treatment. Existing IDs/handlers stay intact.
-   ============================================================ */
-.connection-page{
-  --landing-bg:#050d1f;
-  --landing-panel:#07152c;
-  --landing-line:rgba(90,139,255,.30);
-  --landing-muted:#9fb0ca;
-  min-height:100vh;
-  color:#fff;
-  background:#050d1f;
-  overflow:hidden;
-}
-.connection-page .landing-topbar{
-  height:110px;
-  padding:0 42px;
-  background:rgba(3,10,25,.92);
-  border-bottom:1px solid rgba(116,151,215,.20);
-  position:relative;
-  z-index:5;
-}
-.connection-page .landing-brand{gap:16px}
-.connection-page .landing-brand .brand-mark{
-  width:54px;height:54px;border-radius:14px;
-  background:linear-gradient(145deg,#143fcb,#071d68);
-  box-shadow:0 0 30px rgba(38,111,255,.32), inset 0 0 0 1px rgba(95,147,255,.35);
-}
-.connection-page .landing-brand .brand-title{font-size:20px;letter-spacing:-.02em}
-.connection-page .landing-brand .brand-subtitle{color:#b6c4dc;font-size:13px}
-.connection-page .landing-step{color:#dbe7ff;font-size:12px}
-.connection-page .landing-step::first-letter{color:#34d85a}
-.connection-page .connection-main{
-  min-height:calc(100vh - 110px);
-  display:grid;
-  grid-template-columns:minmax(360px,.88fr) minmax(560px,1.12fr);
-  align-items:center;
-  gap:54px;
-  padding:54px 7vw 68px;
-  position:relative;
-  isolation:isolate;
-  background:
-    radial-gradient(circle at 72% 45%,rgba(28,93,226,.18),transparent 34%),
-    radial-gradient(circle at 18% 75%,rgba(0,214,95,.10),transparent 25%),
-    #050d1f;
-}
-.connection-page .connection-main::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  z-index:-2;
-  background-image:url("../devops-hero.webp");
-  background-repeat:no-repeat;
-  background-position:left 48%;
-  background-size:min(61vw,980px) auto;
-  opacity:.42;
-  filter:saturate(1.15) contrast(1.04);
-}
-.connection-page .connection-main::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  z-index:-1;
-  background:
-    linear-gradient(90deg,rgba(5,13,31,.12) 0%,rgba(5,13,31,.20) 34%,rgba(5,13,31,.90) 62%,#050d1f 100%),
-    linear-gradient(180deg,rgba(5,13,31,.18),rgba(5,13,31,.05));
-  pointer-events:none;
-}
-.connection-page .landing-hero-copy{
-  max-width:520px;
-  padding:30px 0 30px 20px;
-  align-self:center;
-}
-.connection-page .landing-hero-logo{
-  width:390px;height:205px;
-  margin:-5px 0 10px -34px;
-  background-image:url("../devops-hero.webp");
-  background-repeat:no-repeat;
-  background-size:cover;
-  background-position:center;
-  mix-blend-mode:screen;
-  opacity:.95;
-  filter:saturate(1.15) contrast(1.05);
-  -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 12%,#000 88%,transparent 100%);
-  mask-image:linear-gradient(to bottom,transparent 0%,#000 12%,#000 88%,transparent 100%);
-}
-.connection-page .landing-hero-title{
-  margin-top:-22px;
-  font-size:42px;
-  line-height:1.05;
-  letter-spacing:-.045em;
-  font-weight:850;
-  color:#f7fbff;
-  text-shadow:0 8px 32px rgba(0,0,0,.30);
-}
-.connection-page .landing-hero-title span{
-  background:linear-gradient(90deg,#2e7cff 10%,#38df55 90%);
-  -webkit-background-clip:text;
-  background-clip:text;
-  color:transparent;
-}
-.connection-page .landing-hero-accent{
-  width:48px;height:4px;border-radius:999px;margin:24px 0 18px;
-  background:linear-gradient(90deg,#2876ff,#37d955);
-  box-shadow:0 0 18px rgba(41,119,255,.42);
-}
-.connection-page .landing-hero-description{
-  max-width:390px;
-  margin:0 0 20px;
-  color:#c2cee0;
-  font-size:16px;
-  line-height:1.55;
-}
-.connection-page .landing-feature-list{
-  list-style:none;padding:0;margin:0;display:grid;gap:11px;
-  color:#dce6f6;font-size:13px;font-weight:600;
-}
-.connection-page .landing-feature-list li{display:flex;align-items:center;gap:12px}
-.connection-page .landing-feature-list li span{
-  width:20px;text-align:center;color:#38a7ff;font-weight:900;font-size:16px;
-  text-shadow:0 0 12px rgba(46,124,255,.55);
-}
-.connection-page .landing-connection-card{
-  width:100%;max-width:760px;justify-self:end;
-  padding:34px 38px 28px;
-  background:linear-gradient(145deg,rgba(8,24,49,.96),rgba(4,16,34,.96));
-  border:1px solid transparent;
-  border-radius:19px;
-  position:relative;
-  box-shadow:0 28px 70px rgba(0,0,0,.42),0 0 55px rgba(26,91,214,.12);
-  overflow:hidden;
-}
-.connection-page .landing-connection-card::before{
-  content:"";position:absolute;inset:0;border-radius:19px;padding:1px;
-  background:linear-gradient(135deg,#2e74ff 0%,rgba(46,116,255,.32) 45%,#39dc58 100%);
-  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
-  -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;
-}
-.connection-page .landing-connection-card::after{
-  content:"";position:absolute;right:-100px;bottom:-140px;width:300px;height:300px;border-radius:50%;
-  background:radial-gradient(circle,rgba(42,104,255,.16),transparent 66%);pointer-events:none;
-}
-.connection-page .landing-connection-card .connection-card-head{padding-bottom:25px;border-bottom-color:rgba(145,168,207,.16);position:relative;z-index:1}
-.connection-page .landing-connection-card .connection-card-head h2{color:#f4f8ff;font-size:23px;margin:0 0 8px;display:flex;align-items:center;gap:11px}
-.connection-page .landing-connection-card .connection-card-head p{color:#aebed5;font-size:14px;line-height:1.55}
-.connection-page .connection-lock{
-  display:grid;place-items:center;width:42px;height:42px;border-radius:50%;font-size:20px;
-  color:#fff;background:linear-gradient(145deg,#236bff,#0a9e62);box-shadow:0 0 24px rgba(42,119,255,.25);
-}
-.connection-page .landing-connection-card .connection-fields{position:relative;z-index:1;display:grid;grid-template-columns:1fr;gap:19px;padding:25px 0 10px}
-.connection-page .landing-connection-card .field-group label{color:#f2f6ff;font-size:13px;margin-bottom:8px}
-.connection-page .landing-connection-card .field-group small{color:#8195b3;font-size:11.5px}
-.connection-page .landing-connection-card .field-group input{
-  height:56px;border-radius:10px;border:1px solid rgba(117,148,198,.34);
-  background:rgba(2,11,27,.70);color:#eef5ff;padding:0 16px;font-size:14px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
-}
-.connection-page .landing-connection-card .field-group input:focus{
-  border-color:#2e7dff;box-shadow:0 0 0 3px rgba(46,125,255,.14),0 0 24px rgba(46,125,255,.08)
-}
-.connection-page .landing-connection-card .field-group input::placeholder{color:#6f83a3}
-.connection-page .landing-connection-card .connection-fields > .flex{
-  grid-column:auto;display:flex;flex-direction:column;align-items:stretch;gap:16px
-}
-.connection-page .landing-connection-card .connection-fields > .flex .btn-load-projects{
-  max-width:none;height:54px;border-radius:10px;
-  background:linear-gradient(90deg,#2868ff 0%,#246cf5 42%,#37d954 100%);
-  box-shadow:0 8px 28px rgba(39,108,255,.27),0 0 25px rgba(55,217,84,.10);
-  font-size:15px;font-weight:800;
-}
-.connection-page .landing-connection-card .connection-fields > .flex .btn-load-projects:hover{filter:brightness(1.08);background:linear-gradient(90deg,#3474ff 0%,#2c75fa 42%,#45e360 100%)}
-.connection-page .landing-connection-card .remember-toggle{color:#aebed5;align-self:flex-start}
-.connection-page .landing-connection-card .remember-toggle input{accent-color:#38d75a}
-.connection-page .landing-status-bar{position:relative;z-index:4;grid-column:1 / -1;width:min(760px,100%);justify-self:end;margin-top:-22px}
-.connection-page .status-bar{border:1px solid rgba(93,133,193,.24);background:rgba(6,21,43,.92);color:#b9c8dc;box-shadow:0 10px 30px rgba(0,0,0,.20)}
-.connection-page .status-bar.success{background:rgba(4,46,31,.92);border-color:rgba(52,211,153,.35);color:#8ff0c7}
-.connection-page .status-bar.error{background:rgba(67,17,25,.92);border-color:rgba(248,113,113,.35);color:#ffb3b3}
-.connection-page .path-preview{display:none!important}
-
-@media (max-width:1100px){
-  .connection-page .connection-main{grid-template-columns:1fr;gap:24px;padding:38px 5vw 55px}
-  .connection-page .landing-hero-copy{max-width:760px;padding:10px 0 0}
-  .connection-page .landing-hero-logo{width:320px;height:165px;margin-left:-24px}
-  .connection-page .landing-hero-title{font-size:35px}
-  .connection-page .landing-connection-card{justify-self:stretch;max-width:none}
-  .connection-page .landing-status-bar{justify-self:stretch;width:100%;margin-top:-8px}
-  .connection-page .connection-main::before{background-position:center 18%;background-size:720px auto;opacity:.22}
-  .connection-page .connection-main::after{background:linear-gradient(180deg,rgba(5,13,31,.72),rgba(5,13,31,.94))}
-}
-@media (max-width:760px){
-  .connection-page .landing-topbar{height:82px;padding:0 18px}
-  .connection-page .landing-brand .brand-mark{width:44px;height:44px}
-  .connection-page .landing-brand .brand-title{font-size:15px}
-  .connection-page .landing-brand .brand-subtitle{font-size:10px}
-  .connection-page .landing-step{display:none}
-  .connection-page .connection-main{min-height:calc(100vh - 82px);padding:25px 16px 42px}
-  .connection-page .landing-hero-copy{padding:0 2px}
-  .connection-page .landing-hero-logo{width:245px;height:126px;margin:-5px 0 -4px -16px}
-  .connection-page .landing-hero-title{font-size:30px}
-  .connection-page .landing-hero-description{font-size:14px}
-  .connection-page .landing-feature-list{font-size:12px;grid-template-columns:1fr 1fr;gap:10px}
-  .connection-page .landing-connection-card{padding:24px 20px 22px;border-radius:15px}
-  .connection-page .landing-connection-card .connection-card-head h2{font-size:19px}
-  .connection-page .connection-lock{width:36px;height:36px;font-size:17px}
-}
-
-/* FINAL DARK LANDING OVERRIDE */
-html body:has(#connectionPage:not(.hidden)){background:#050d1f !important;color:#fff !important;}
-#connectionPage.connection-page{background:#050d1f !important;color:#fff !important;}
-#connectionPage.connection-page.hidden{display:none !important;}
-#workspacePage.workspace-page.hidden{display:none !important;}
-#connectionPage .landing-topbar{background:rgba(3,10,25,.96) !important;color:#fff !important;}
-#connectionPage .connection-main{background:#050d1f !important;background-image:radial-gradient(circle at 72% 45%,rgba(28,93,226,.18),transparent 34%),radial-gradient(circle at 18% 75%,rgba(0,214,95,.10),transparent 25%) !important;}
-#connectionPage .connection-main::before{background-image:url("../devops-background.webp") !important;opacity:.42 !important;}
-#connectionPage .landing-connection-card{background:linear-gradient(145deg,rgba(8,24,49,.97),rgba(4,16,34,.97)) !important;border-color:transparent !important;box-shadow:0 28px 70px rgba(0,0,0,.42),0 0 55px rgba(26,91,214,.12) !important;}
-#connectionPage .landing-connection-card .connection-card-head h2,#connectionPage .landing-connection-card .field-group label{color:#f4f8ff !important;}
-#connectionPage .landing-connection-card .connection-card-head p,#connectionPage .landing-connection-card .field-group small,#connectionPage .remember-toggle{color:#aebed5 !important;}
-#connectionPage .landing-connection-card .field-group input{background:rgba(2,11,27,.70) !important;color:#eef5ff !important;border-color:rgba(117,148,198,.34) !important;}
-#connectionPage .landing-connection-card .connection-fields > .flex .btn-load-projects{background:linear-gradient(90deg,#2868ff 0%,#246cf5 42%,#37d954 100%) !important;color:#fff !important;}
-
-/* ============================================================
-   WORKSPACE - DARK NAVY + BLUE/GREEN DEVOPS THEME
-   Visual-only workspace treatment. IDs, handlers and data flow
-   are intentionally unchanged.
-   ============================================================ */
-#workspacePage.workspace-page{
-  --ws-bg:#050d1f;
-  --ws-bg-2:#07142b;
-  --ws-panel:#0a1830;
-  --ws-panel-2:#0d1e3a;
-  --ws-line:rgba(103,145,210,.22);
-  --ws-line-strong:rgba(46,125,255,.48);
-  --ws-text:#eef5ff;
-  --ws-muted:#9fb1cc;
-  --ws-blue:#2d72ff;
-  --ws-green:#35d65a;
-  background:
-    radial-gradient(circle at 78% 18%,rgba(36,105,255,.10),transparent 30%),
-    radial-gradient(circle at 28% 78%,rgba(30,210,89,.055),transparent 28%),
-    var(--ws-bg) !important;
-  color:var(--ws-text);
-}
-#workspacePage.workspace-page::before{
-  content:"";
-  position:fixed;
-  inset:86px 0 0 282px;
-  pointer-events:none;
-  z-index:0;
-  background-image:url("../devops-background.webp");
-  background-repeat:no-repeat;
-  background-position:left 35%;
-  background-size:min(70vw,1100px) auto;
-  opacity:.055;
-  filter:saturate(1.2) contrast(1.05);
-}
-#workspacePage.workspace-page::after{
-  content:"";
-  position:fixed;
-  inset:86px 0 0 282px;
-  pointer-events:none;
-  z-index:0;
-  background:
-    linear-gradient(90deg,rgba(5,13,31,.72) 0%,rgba(5,13,31,.86) 38%,rgba(5,13,31,.97) 72%,#050d1f 100%),
-    linear-gradient(180deg,rgba(5,13,31,.10),rgba(5,13,31,.34));
-}
-#workspacePage .app-shell,
-#workspacePage .dashboard-main{position:relative;z-index:1}
-
-/* Header */
-#workspacePage .app-topbar{
-  background:rgba(4,13,29,.96) !important;
-  border-bottom:1px solid rgba(112,147,205,.20) !important;
-  color:var(--ws-text);
-  box-shadow:0 8px 30px rgba(0,0,0,.16);
-}
-#workspacePage .app-title{color:#f4f8ff !important}
-#workspacePage .app-subtitle{color:#91a6c5 !important}
-#workspacePage .connection-badge.connected{
-  background:rgba(10,65,48,.48) !important;
-  border-color:rgba(52,211,153,.48) !important;
-  color:#73edbd !important;
-}
-#workspacePage .btn-disconnect{
-  background:rgba(88,20,29,.42) !important;
-  border-color:rgba(248,113,113,.48) !important;
-  color:#ff9f9f !important;
-}
-#workspacePage .btn-disconnect:hover{background:rgba(127,29,29,.55) !important}
-
-/* Main workspace background */
-#workspacePage .dashboard-main{background:transparent !important}
-
-/* Project control panel */
-#workspacePage .workspace-controls{
-  background:linear-gradient(145deg,rgba(10,25,51,.97),rgba(5,17,36,.97)) !important;
-  border:1px solid rgba(96,137,202,.28) !important;
-  box-shadow:0 24px 55px rgba(0,0,0,.30),0 0 35px rgba(26,91,214,.07) !important;
-}
-#workspacePage .workspace-project-header,
-#workspacePage #step5Container{border-color:rgba(112,147,205,.18) !important}
-#workspacePage .eyebrow{color:#7691b8 !important}
-#workspacePage .workspace-project-field label{color:#edf4ff !important}
-#workspacePage .project-requirement-text{color:#8297b7 !important}
-#workspacePage .workspace-project-field select{
-  background:#07162e !important;
-  color:#edf5ff !important;
-  border-color:rgba(106,145,206,.38) !important;
-}
-#workspacePage .workspace-project-field select:focus{
-  border-color:#2e7dff !important;
-  box-shadow:0 0 0 3px rgba(46,125,255,.14) !important;
-}
-#workspacePage .workspace-project-field select:disabled{background:#0b1a31 !important;color:#7185a3 !important}
-#workspacePage .btn-switch-org{
-  background:rgba(7,21,44,.78) !important;
-  border-color:#3479ff !important;
-  color:#8db5ff !important;
-}
-#workspacePage .btn-switch-org:hover{background:rgba(31,70,135,.38) !important;color:#fff !important}
-
-/* Dynamic action panels */
-#workspacePage #step5Container > div,
-#workspacePage .bg-blue-50\/50{
-  background:linear-gradient(145deg,rgba(10,29,57,.92),rgba(7,21,43,.92)) !important;
-  border-color:rgba(70,125,218,.30) !important;
-}
-#workspacePage #step5Container label,
-#workspacePage #step5Container .text-blue-900,
-#workspacePage #step5Container .font-semibold.text-blue-900{color:#cfe0f8 !important}
-#workspacePage #step5Container .text-slate-500,
-#workspacePage #step5Container .text-xs.text-slate-500{color:#8197b8 !important}
-#workspacePage #step5Container input,
-#workspacePage #step5Container select{
-  background:#06142b !important;
-  color:#e8f1ff !important;
-  border-color:rgba(106,145,206,.38) !important;
-}
-#workspacePage #step5Container input::placeholder{color:#647b9e !important}
-#workspacePage #step5Container input:focus,
-#workspacePage #step5Container select:focus{
-  border-color:#2e7dff !important;
-  box-shadow:0 0 0 3px rgba(46,125,255,.12) !important;
-}
-#workspacePage #step5Container button:not(.text-slate-700){
-  background:linear-gradient(90deg,#2868ff,#256cf2) !important;
-  box-shadow:0 7px 20px rgba(38,105,242,.20) !important;
-}
-#workspacePage #step5Container button:not(.text-slate-700):hover{filter:brightness(1.08)}
-#workspacePage .service-agents-fetch-btn{
-  background:linear-gradient(90deg,#2868ff 0%,#286ef5 45%,#35d65a 100%) !important;
-  border:0 !important;
-}
-
-/* Status/path strips */
-#workspacePage .status-bar,
-#workspacePage .active-path-row{color:#a9bbd5 !important}
-#workspacePage .status-bar{background:rgba(8,28,55,.90) !important;border-color:rgba(91,132,195,.26) !important}
-#workspacePage .status-bar.success{background:rgba(4,58,39,.72) !important;border-color:rgba(52,211,153,.30) !important;color:#8cebc5 !important}
-#workspacePage .status-bar.error{background:rgba(67,17,25,.75) !important;border-color:rgba(248,113,113,.30) !important;color:#ffb1b1 !important}
-#workspacePage .active-path-row span{color:#b9cbe4 !important}
-#workspacePage .active-path-row a{color:#63a1ff !important}
-
-/* Overview heading */
-#workspacePage .overview-heading{color:#fff}
-#workspacePage .overview-heading h2{color:#f2f7ff !important}
-#workspacePage .project-badge{
-  background:rgba(8,24,49,.92) !important;
-  border-color:rgba(104,143,203,.34) !important;
-  color:#91acd0 !important;
-}
-
-/* KPI cards */
-#workspacePage .kpi-grid>div{
-  background:linear-gradient(145deg,rgba(10,27,55,.96),rgba(6,18,39,.96)) !important;
-  border-color:rgba(95,135,199,.25) !important;
-  box-shadow:0 18px 38px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.025) !important;
-}
-#workspacePage .kpi-grid>div:hover{
-  border-color:rgba(49,122,255,.42) !important;
-  transform:translateY(-1px);
-  transition:.18s ease;
-}
-#workspacePage .kpi-grid p:first-child{color:#7e96b9 !important}
-#workspacePage .kpi-grid p:last-child{color:#f1f6ff !important}
-
-/* Chart */
-#workspacePage #chartSection{
-  background:linear-gradient(145deg,rgba(9,24,49,.98),rgba(5,17,37,.98)) !important;
-  border:1px solid rgba(96,137,202,.26) !important;
-  box-shadow:0 18px 42px rgba(0,0,0,.25) !important;
-}
-#workspacePage #chartSection h3{color:#edf4ff !important}
-#workspacePage #chartSection .text-slate-500{color:#8197b7 !important}
-#workspacePage #chartSection button{
-  background:#0b1b35 !important;
-  color:#a9bddb !important;
-  border-color:rgba(101,139,199,.30) !important;
-}
-#workspacePage #chartSection button:hover,
-#workspacePage #chartSection button.active{
-  background:#19396f !important;
-  color:#fff !important;
-  border-color:#357cff !important;
-}
-
-/* All data cards / tables */
-#workspacePage .dashboard-content > section > div,
-#workspacePage .dashboard-content > section > .bg-white{
-  background:linear-gradient(145deg,rgba(9,24,49,.98),rgba(5,17,37,.98)) !important;
-  border-color:rgba(96,137,202,.25) !important;
-  box-shadow:0 18px 42px rgba(0,0,0,.22) !important;
-}
-#workspacePage .dashboard-content > section > div > div{
-  border-color:rgba(104,141,201,.17) !important;
-}
-#workspacePage .dashboard-content h3{color:#edf4ff !important}
-#workspacePage .dashboard-content .text-slate-400{color:#7187a8 !important}
-#workspacePage .dashboard-content .text-slate-500{color:#8298b7 !important}
-#workspacePage .dashboard-content .text-slate-600{color:#9eb1cc !important}
-#workspacePage table{color:#dbe7f8 !important}
-#workspacePage table thead tr,
-#workspacePage table tr.bg-slate-50{
-  background:#0c1d39 !important;
-  border-color:rgba(101,139,199,.20) !important;
-}
-#workspacePage table th{color:#89a1c3 !important}
-#workspacePage table td{
-  color:#d9e5f5 !important;
-  border-color:rgba(101,139,199,.13) !important;
-}
-#workspacePage table tbody tr:hover{background:rgba(31,73,135,.16) !important}
-#workspacePage .divide-y > :not([hidden]) ~ :not([hidden]){border-color:rgba(101,139,199,.13) !important}
-
-/* Table header/action areas */
-#workspacePage .dashboard-content .border-b{border-color:rgba(101,139,199,.17) !important}
-#workspacePage .dashboard-content .border-t{border-color:rgba(101,139,199,.17) !important}
-#workspacePage .dashboard-content .bg-slate-100,
-#workspacePage .dashboard-content button.bg-slate-100{
-  background:#0d223f !important;
-  color:#b7c8df !important;
-}
-#workspacePage .dashboard-content .bg-slate-100:hover,
-#workspacePage .dashboard-content button.bg-slate-100:hover{
-  background:#173765 !important;
-  color:#fff !important;
-}
-#workspacePage .dashboard-content .bg-emerald-600{
-  background:linear-gradient(90deg,#07966b,#10b981) !important;
-}
-#workspacePage .dashboard-content .bg-emerald-600:hover{filter:brightness(1.08)}
-
-/* Service connection / agent status badges remain semantically colored. */
-#workspacePage .service-status-active,
-#workspacePage .agent-status-online{
-  background:rgba(20,157,94,.18) !important;
-  color:#65e6a4 !important;
-  border-color:rgba(52,211,153,.30) !important;
-}
-#workspacePage .service-status-inactive,
-#workspacePage .agent-status-offline{
-  background:rgba(220,38,38,.18) !important;
-  color:#ff8d8d !important;
-  border-color:rgba(248,113,113,.30) !important;
-}
-
-/* Links */
-#workspacePage a{color:#69a4ff}
-#workspacePage a:hover{color:#9bc3ff}
-
-/* Keep modal readable while workspace is dark. */
-#validationModal .bg-white{background:#0a1830 !important;border-color:rgba(101,139,199,.30) !important;color:#fff !important}
-#validationModal .text-slate-900{color:#f3f7ff !important}
-#validationModal .text-slate-600{color:#9fb1cc !important}
-
-@media (max-width:1050px){
-  #workspacePage.workspace-page::before,
-  #workspacePage.workspace-page::after{left:230px}
-}
-@media (max-width:760px){
-  #workspacePage.workspace-page::before,
-  #workspacePage.workspace-page::after{left:0;top:82px}
-  #workspacePage .app-topbar{background:rgba(4,13,29,.98) !important}
-}
-
-/* ============================================================
-   MATCH LANDING PAGE — DARK NAVY / BLUE / GREEN DEVOPS THEME
-   Visual-only workspace theme. No behavior or layout logic changed.
-   ============================================================ */
-#workspacePage.workspace-page{
-  --ws-bg:#030b1b;
-  --ws-panel:#07162f;
-  --ws-panel-2:#091c3b;
-  --ws-border:rgba(67,126,220,.28);
-  --ws-blue:#2f6df6;
-  --ws-green:#32d657;
-  background:
-    radial-gradient(circle at 82% 18%,rgba(36,105,246,.13),transparent 27%),
-    radial-gradient(circle at 74% 78%,rgba(35,214,87,.08),transparent 23%),
-    linear-gradient(180deg,#030b1b 0%,#050f23 48%,#020918 100%) !important;
-  color:#eaf2ff !important;
-  position:relative;
-  isolation:isolate;
-}
-#workspacePage.workspace-page::before{
-  content:"";
-  position:fixed;
-  inset:0 0 0 282px;
-  z-index:-1;
-  pointer-events:none;
-  background-image:
-    linear-gradient(rgba(45,112,229,.055) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(45,112,229,.055) 1px,transparent 1px),
-    url("../devops-watermark.png");
-  background-size:56px 56px,56px 56px,720px 720px;
-  background-position:center,center,75% 45%;
-  opacity:.32;
-  mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.7) 18%,#000 45%,#000 100%);
-}
-#workspacePage.workspace-page::after{
-  content:"";
-  position:fixed;
-  width:520px;height:520px;
-  right:-180px;bottom:-180px;
-  z-index:-1;pointer-events:none;
-  background:radial-gradient(circle,rgba(43,214,89,.13),transparent 66%);
-}
-
-/* Header */
-#workspacePage .app-topbar{
-  background:rgba(3,11,27,.92) !important;
-  border-bottom:1px solid rgba(83,132,211,.25) !important;
-  box-shadow:0 8px 35px rgba(0,0,0,.22) !important;
-  backdrop-filter:blur(16px);
-}
-#workspacePage .app-title{color:#f7fbff !important;text-shadow:0 0 24px rgba(77,133,255,.16)}
-#workspacePage .app-subtitle{color:#8ea7ca !important}
-#workspacePage .connection-badge.connected{
-  background:rgba(11,157,102,.13) !important;
-  border-color:rgba(49,224,151,.48) !important;
-  color:#72f0b8 !important;
-  box-shadow:0 0 22px rgba(33,211,145,.10);
-}
-#workspacePage .btn-disconnect{
-  background:rgba(220,38,38,.09) !important;
-  border-color:rgba(248,113,113,.48) !important;
-  color:#ff9a9a !important;
-}
-#workspacePage .btn-disconnect:hover{background:rgba(220,38,38,.18) !important;color:#fff !important}
-
-/* Sidebar glow */
-#workspacePage .app-sidebar{
-  background:linear-gradient(180deg,#0a1830 0%,#061329 100%) !important;
-  border-right:1px solid rgba(67,126,220,.25) !important;
-  box-shadow:10px 0 40px rgba(0,0,0,.24);
-}
-#workspacePage .sidebar-brand{border-bottom-color:rgba(90,132,201,.17) !important}
-#workspacePage .sidebar-section-label{color:#6887b5 !important}
-#workspacePage .sidebar-item{color:#b9cbe4 !important}
-#workspacePage .sidebar-item:hover{background:rgba(38,103,221,.16) !important;color:#fff !important}
-#workspacePage .sidebar-item.active{
-  background:linear-gradient(90deg,rgba(40,100,225,.42),rgba(28,65,133,.34)) !important;
-  box-shadow:inset 3px 0 0 #2f7bff,0 0 24px rgba(38,105,242,.09) !important;
-  color:#fff !important;
-}
-#workspacePage .nav-icon{color:#5e9bff !important}
-#workspacePage .sidebar-connection-note{
-  background:linear-gradient(145deg,rgba(13,31,61,.9),rgba(7,19,39,.9)) !important;
-  border-color:rgba(90,133,202,.23) !important;
-  box-shadow:0 14px 30px rgba(0,0,0,.18);
-}
-#workspacePage .connection-note-title{color:#b6cae7 !important}
-#workspacePage .connection-note-text{color:#7792b9 !important}
-
-/* Project control panel */
-#workspacePage .workspace-controls,
-#workspacePage .project-selection-box{
-  background:linear-gradient(145deg,rgba(7,22,46,.97),rgba(4,14,31,.97)) !important;
-  border-color:rgba(72,128,218,.30) !important;
-  box-shadow:0 22px 55px rgba(0,0,0,.26),0 0 45px rgba(35,103,230,.06) !important;
-}
-#workspacePage .workspace-project-field label{color:#edf5ff !important}
-#workspacePage .workspace-project-field select,
-#workspacePage #step5Container input,
-#workspacePage #step5Container select,
-#workspacePage .dashboard-content input,
-#workspacePage .dashboard-content select{
-  background:#06152e !important;
-  color:#e9f2ff !important;
-  border-color:rgba(88,135,206,.40) !important;
-}
-#workspacePage .workspace-project-field select:focus,
-#workspacePage #step5Container input:focus,
-#workspacePage #step5Container select:focus,
-#workspacePage .dashboard-content input:focus,
-#workspacePage .dashboard-content select:focus{
-  border-color:#2f7cff !important;
-  box-shadow:0 0 0 3px rgba(47,124,255,.14),0 0 22px rgba(47,124,255,.08) !important;
-}
-#workspacePage .project-requirement-text{color:#7f98bb !important}
-#workspacePage .btn-switch-org{
-  background:rgba(12,31,62,.9) !important;
-  color:#78a9ff !important;
-  border-color:#2f7cff !important;
-  box-shadow:0 0 18px rgba(47,124,255,.08);
-}
-#workspacePage .btn-switch-org:hover{background:rgba(38,92,184,.22) !important;color:#fff !important}
-#workspacePage #step5Container{border-top-color:rgba(91,136,204,.22) !important}
-#workspacePage #step5Container > div{
-  background:linear-gradient(145deg,rgba(8,26,53,.94),rgba(5,18,38,.94)) !important;
-  border-color:rgba(76,132,222,.25) !important;
-}
-#workspacePage #step5Container label{color:#9db6d8 !important}
-#workspacePage #step5Container .text-blue-900{color:#9fc2ff !important}
-#workspacePage #step5Container .text-slate-500,
-#workspacePage #step5Container .text-slate-600{color:#829bbb !important}
-
-/* Status/path strips */
-#workspacePage .status-bar{background:rgba(8,27,55,.92) !important;color:#a9c1e2 !important;border:1px solid rgba(77,130,215,.20)}
-#workspacePage .status-bar.success{background:rgba(5,64,42,.62) !important;color:#79edb3 !important;border-color:rgba(52,211,153,.30) !important}
-#workspacePage .status-bar.error{background:rgba(72,17,25,.66) !important;color:#ffaaaa !important;border-color:rgba(248,113,113,.30) !important}
-#workspacePage .active-path-row,#workspacePage .active-path-row span{color:#9db4d4 !important}
-#workspacePage .active-path-row a{color:#62a2ff !important}
-
-/* Overview / KPI / chart */
-#workspacePage .overview-heading .eyebrow{color:#6e90bf !important}
-#workspacePage .overview-heading h2{color:#f5f9ff !important}
-#workspacePage .project-badge{background:#071a37 !important;color:#91b2dd !important;border-color:rgba(82,133,211,.34) !important;box-shadow:0 0 18px rgba(44,112,239,.08)}
-#workspacePage .kpi-grid>div{
-  background:linear-gradient(145deg,rgba(9,28,57,.98),rgba(4,17,37,.98)) !important;
-  border-color:rgba(78,132,216,.30) !important;
-  box-shadow:0 15px 38px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.025) !important;
-  position:relative;overflow:hidden;
-}
-#workspacePage .kpi-grid>div::after{
-  content:"";position:absolute;right:-35px;top:-55px;width:120px;height:120px;border-radius:50%;
-  background:radial-gradient(circle,rgba(47,124,255,.12),transparent 68%);pointer-events:none;
-}
-#workspacePage .kpi-grid>div:nth-child(5n+3)::after,
-#workspacePage .kpi-grid>div:nth-child(5n)::after{background:radial-gradient(circle,rgba(49,214,87,.12),transparent 68%)}
-#workspacePage .kpi-grid p:first-child{color:#7692b9 !important}
-#workspacePage .kpi-grid p:last-child{color:#f2f7ff !important}
-#workspacePage #chartSection{
-  background:linear-gradient(145deg,rgba(8,26,53,.98),rgba(4,16,35,.98)) !important;
-  border-color:rgba(80,134,218,.28) !important;
-  box-shadow:0 20px 48px rgba(0,0,0,.28),0 0 45px rgba(37,103,231,.06) !important;
-}
-#workspacePage #chartSection h3{color:#f1f7ff !important}
-#workspacePage #chartSection .text-slate-500{color:#8ca5c5 !important}
-#workspacePage #chartSection button{background:#091d3a !important;color:#9db4d4 !important;border-color:rgba(92,137,201,.34) !important}
-#workspacePage #chartSection button:hover,#workspacePage #chartSection button.active{background:#173b78 !important;color:#fff !important;border-color:#3982ff !important}
-
-/* Data cards / tables */
-#workspacePage .dashboard-content > section > div,
-#workspacePage .dashboard-content > section > .bg-white{
-  background:linear-gradient(145deg,rgba(8,25,51,.98),rgba(4,16,35,.98)) !important;
-  border-color:rgba(78,132,216,.27) !important;
-  box-shadow:0 18px 44px rgba(0,0,0,.26) !important;
-}
-#workspacePage .dashboard-content h3,
-#workspacePage .dashboard-content .text-slate-900{color:#f0f6ff !important}
-#workspacePage .dashboard-content .text-slate-400{color:#718bb0 !important}
-#workspacePage .dashboard-content .text-slate-500{color:#839bbb !important}
-#workspacePage .dashboard-content .text-slate-600{color:#9eb3cf !important}
-#workspacePage .dashboard-content .text-slate-700{color:#b4c6df !important}
-#workspacePage .dashboard-content .text-blue-900{color:#a5c4ff !important}
-#workspacePage table{color:#dce8f8 !important}
-#workspacePage table thead tr,
-#workspacePage table tr.bg-slate-50{background:#0a1e3b !important;border-color:rgba(89,137,202,.22) !important}
-#workspacePage table th{color:#89a7cc !important}
-#workspacePage table td{color:#d7e4f5 !important;border-color:rgba(83,130,198,.15) !important}
-#workspacePage table tbody tr:hover{background:rgba(31,85,164,.17) !important}
-#workspacePage .dashboard-content .border-b,
-#workspacePage .dashboard-content .border-t{border-color:rgba(88,134,199,.17) !important}
-#workspacePage .dashboard-content .bg-slate-100,
-#workspacePage .dashboard-content button.bg-slate-100{background:#0b2344 !important;color:#b7c9e1 !important;border-color:rgba(89,136,204,.22) !important}
-#workspacePage .dashboard-content .bg-slate-100:hover,
-#workspacePage .dashboard-content button.bg-slate-100:hover{background:#173b72 !important;color:#fff !important}
-#workspacePage .dashboard-content .bg-blue-600,
-#workspacePage .dashboard-content button.bg-blue-600{background:linear-gradient(90deg,#2868ff,#2376f5) !important;box-shadow:0 7px 22px rgba(38,105,242,.18)}
-#workspacePage .dashboard-content .bg-emerald-600{background:linear-gradient(90deg,#07986b,#32d657) !important;box-shadow:0 7px 22px rgba(23,191,108,.16)}
-
-/* Green/blue semantic badges */
-#workspacePage .service-status-active,#workspacePage .agent-status-online{background:rgba(20,157,94,.18) !important;color:#69efaa !important;border-color:rgba(52,211,153,.32) !important}
-#workspacePage .service-status-inactive,#workspacePage .agent-status-offline{background:rgba(220,38,38,.18) !important;color:#ff8f8f !important;border-color:rgba(248,113,113,.32) !important}
-
-/* General buttons */
-#workspacePage button{transition:background .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease}
-#workspacePage button:hover{transform:translateY(-1px)}
-#workspacePage .dashboard-content .bg-white{background:linear-gradient(145deg,rgba(8,25,51,.98),rgba(4,16,35,.98)) !important}
-
-/* Keep chart text readable on dark canvas. */
-#workspacePage #analyticsChart{filter:drop-shadow(0 4px 12px rgba(0,0,0,.12))}
-
-@media (max-width:760px){
-  #workspacePage.workspace-page::before{inset:0;opacity:.22;background-size:42px 42px,42px 42px,520px 520px}
+
+.hero-features li::before {
+  content: "✦";
+  color: #38BDF8;
+  margin-right: 10px;
+}
+
+.connection-card {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid var(--border-card);
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+}
+
+.card-step-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #38BDF8;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.card-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+/* Forms and Inputs */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.form-control,
+input[type="text"],
+input[type="password"],
+select.form-control {
+  width: 100%;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus,
+input[type="text"]:focus,
+input[type="password"]:focus,
+select.form-control:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--azure-glow);
+}
+
+.form-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.checkbox-group input[type="checkbox"] {
+  accent-color: var(--azure-blue);
+  width: 16px;
+  height: 16px;
+}
+
+/* Primary Button */
+.btn-primary {
+  width: 100%;
+  background: linear-gradient(135deg, #0078D4 0%, #005A9E 100%);
+  border: 1px solid #2B88D8;
+  border-radius: 8px;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 120, 212, 0.35);
+  transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #106EBE 0%, #004578 100%);
+  box-shadow: 0 6px 20px rgba(0, 120, 212, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   Page 2: Workspace & Dashboard
+   ========================================================================== */
+
+.workspace-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: calc(100vh - 73px);
+}
+
+/* Sidebar */
+.sidebar {
+  background-color: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.sidebar-heading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0 12px;
+  margin-bottom: 12px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.nav-item.active {
+  background-color: var(--azure-active-bg);
+  color: #38BDF8;
+  border-left: 3px solid var(--azure-blue);
+  border-radius: 0 6px 6px 0;
+  font-weight: 600;
+}
+
+.sidebar-footer {
+  padding: 14px;
+  background-color: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Main Dashboard Area */
+.main-content {
+  padding: 28px 32px;
+  background-color: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Project Selection & Filter Panel */
+.panel-card {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  padding: 20px 24px;
+  backdrop-filter: blur(8px);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Metric Stats Row */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  padding: 18px 20px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-card-hover);
+}
+
+.metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.metric-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Status Badges & Buttons */
+.badge-connected {
+  background-color: var(--success-bg);
+  border: 1px solid var(--success-border);
+  color: var(--success-text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-connected::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--success-text);
+}
+
+.btn-disconnect {
+  background: transparent;
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btn-disconnect:hover {
+  background-color: var(--danger-bg);
+}
+
+/* Activity & Charts Box */
+.activity-card {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid var(--border-card);
+  border-radius: 12px;
+  padding: 24px;
+  min-height: 280px;
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.chart-toggle-group {
+  display: flex;
+  gap: 4px;
+  background-color: var(--bg-input);
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid var(--border-card);
+}
+
+.chart-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.chart-btn.active {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 600;
 }
