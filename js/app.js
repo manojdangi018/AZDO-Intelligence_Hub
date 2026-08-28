@@ -582,12 +582,3 @@ document.addEventListener('DOMContentLoaded', function(){
   initCredentials(); 
   selectExplore('repositories'); 
 });
-
-// Landing-page visual helpers. These do not alter connection or API behavior.
-function togglePatVisibility() {
-  const input = document.getElementById('targetPat');
-  const button = document.querySelector('.pat-visibility');
-  if (!input) return;
-  input.type = input.type === 'password' ? 'text' : 'password';
-  if (button) button.textContent = input.type === 'password' ? '◉' : '◌';
-}

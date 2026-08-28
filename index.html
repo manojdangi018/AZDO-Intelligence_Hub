@@ -40,67 +40,57 @@
       <div class="landing-step">01 · CONNECTION</div>
     </header>
     <main class="connection-main">
-      <div class="landing-watermark" aria-hidden="true">
-        <img src="devops-watermark.png" alt="">
-      </div>
-
-      <section class="landing-hero-copy">
-        <div class="landing-logo-watermark" aria-hidden="true">
-          <img src="devops-ad-logo.png" alt="">
-        </div>
-        <div class="eyebrow">AZURE DEVOPS ANALYTICS</div>
-        <h1>Azure DevOps<br><span>Intelligence Hub</span></h1>
-        <div class="landing-accent"></div>
-        <p class="landing-lead">Unified visibility across your Azure DevOps organization.</p>
+      <section class="landing-hero-copy" aria-hidden="true">
+        <div class="landing-hero-logo"></div>
+        <div class="landing-hero-title">Azure DevOps<br><span>Intelligence Hub</span></div>
+        <div class="landing-hero-accent"></div>
+        <p class="landing-hero-description">Unified visibility across your Azure DevOps organization</p>
         <ul class="landing-feature-list">
-          <li><span>⌘</span> Repository Insights</li>
-          <li><span>↗</span> Pipeline &amp; Build Analytics</li>
+          <li><span>⌁</span> Repository Insights</li>
+          <li><span>◆</span> Pipeline &amp; Build Analytics</li>
           <li><span>◈</span> Security &amp; Compliance</li>
           <li><span>♙</span> Access &amp; Team Management</li>
           <li><span>▣</span> Work Item Intelligence</li>
-          <li><span>⚙</span> Agent &amp; Service Connections</li>
+          <li><span>▤</span> Agent &amp; Service Connections</li>
         </ul>
       </section>
-
       <section class="connection-card landing-connection-card">
         <div class="connection-card-head">
-          <div class="landing-connect-heading">
-            <div class="landing-lock-icon" aria-hidden="true">⌑</div>
-            <div>
-              <div class="eyebrow">01 · CONNECTION</div>
-              <h2>Connect to Azure DevOps</h2>
-              <p>Enter your organization and Personal Access Token (PAT) to connect and load projects.</p>
-            </div>
+          <div>
+            <div class="eyebrow">01 · CONNECTION</div>
+            <h2><span class="connection-lock">⌑</span> Connect to Azure DevOps</h2>
+            <p>Enter your organization and Personal Access Token (PAT) to connect and load projects.</p>
           </div>
           <a id="generatedUrlLink" href="javascript:void(0)" class="path-preview">https://dev.azure.com/</a>
         </div>
 
+        <!-- Project Load / Connection Section -->
         <div class="connection-fields">
           <div class="field-group">
             <label>Organization <span>*</span></label>
-            <div class="landing-input-wrap"><span class="landing-input-icon">▥</span><input type="text" id="targetOrg" oninput="handleOrgChange()" placeholder="e.g. CornerstoneBuildingBrands"></div>
+            <input type="text" id="targetOrg" oninput="handleOrgChange()" placeholder="e.g. CornerstoneBuildingBrands">
             <small>Organization name or https://dev.azure.com/&lt;org&gt;</small>
           </div>
 
           <div class="field-group">
-            <label>Personal Access Token (PAT) <span>*</span></label>
-            <div class="landing-input-wrap"><span class="landing-input-icon">•</span><input type="password" id="targetPat" placeholder="Enter PAT token"><button type="button" class="pat-visibility" onclick="togglePatVisibility()" aria-label="Show or hide PAT">◉</button></div>
+            <label>Personal Access Token <span>*</span></label>
+            <input type="password" id="targetPat" placeholder="Enter PAT token">
             <small>PAT is used only from this browser session to call Azure DevOps APIs.</small>
           </div>
 
           <div class="flex flex-col gap-2.5">
-            <label class="remember-toggle landing-remember">
+            <button id="btnLoadProjects" onclick="loadProjectsList()" class="btn-load-projects">Connect &amp; Load Projects</button>
+            <label class="remember-toggle">
               <input type="checkbox" id="chkRememberCreds" onchange="toggleRememberCreds()">
-              <span>Remember organization &amp; credentials</span><span class="remember-info">i</span>
+              <span>Remember organization &amp; credentials</span>
             </label>
-            <button id="btnLoadProjects" onclick="loadProjectsList()" class="btn-load-projects">↪ &nbsp; Connect &amp; Load Projects</button>
           </div>
-        </div>
 
-        <div class="landing-secure-note"><span>♢</span> Secure • Private • Browser-based connection</div>
+
+        </div>
       </section>
 
-      <div id="landingStatusBar" class="status-bar hidden"></div>
+        <div id="landingStatusBar" class="status-bar hidden"></div>
     </main>
   </div>
 
