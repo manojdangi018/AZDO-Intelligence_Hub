@@ -641,20 +641,6 @@ button, input, select {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
 
-#chartSection::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  pointer-events: none;
-  width: min(72%, 900px);
-  aspect-ratio: 1660 / 933;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  background: url("../devops-new-watermark.png") center/contain no-repeat;
-  opacity: 0.12;
-}
-
 /* ============================================================
    BACKGROUND DECORATIVE WATERMARKS
    ============================================================ */
@@ -675,10 +661,11 @@ button, input, select {
 
 .workspace-page::before {
   content: "";
-  position: absolute;
+  position: fixed;
   z-index: 0;
   pointer-events: none;
   width: min(72vw, 1100px);
+  height: auto;
   aspect-ratio: 1660 / 933;
   left: 50%;
   top: 50%;
