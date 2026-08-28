@@ -271,20 +271,22 @@ body::before{
    ============================================================ */
 .connection-page{
   min-height:100vh;
-  background:var(--bg);
+  background:linear-gradient(135deg,#071a38 0%,#0b2248 48%,#071327 100%);
   position:relative;
   z-index:1;
 }
 .landing-topbar{
   height:86px;
-  background:#fff;
-  border-bottom:1px solid #dce4ef;
+  background:#dceeff;
+  border-bottom:1px solid #c5ddf5;
   padding:0 48px;
   display:flex;
   align-items:center;
   justify-content:space-between;
 }
 .landing-brand{display:flex;align-items:center;gap:13px}
+.landing-topbar .brand-title{color:#12305c}
+.landing-topbar .brand-subtitle{color:#5d7698}
 .landing-step{
   font-size:11px;
   font-weight:850;
@@ -293,13 +295,76 @@ body::before{
 }
 .connection-main{
   min-height:calc(100vh - 86px);
+  display:grid;
+  grid-template-columns:minmax(430px, .95fr) minmax(560px, 1.05fr);
+  align-items:center;
+  gap:72px;
+  width:min(1280px,100%);
+  margin:0 auto;
+  padding:52px 56px 68px;
+}
+.landing-hero-copy{
+  align-self:center;
+  padding:12px 0 18px;
+  max-width:570px;
+}
+.landing-hero-copy h1,
+.landing-hero-copy h2{
+  margin:0;
+  font-weight:900;
+  letter-spacing:-.045em;
+  line-height:.98;
+}
+.landing-hero-copy h1{
+  font-size:clamp(42px,4.5vw,62px);
+  color:#f8fbff;
+}
+.landing-hero-copy h2{
+  font-size:clamp(42px,4.5vw,62px);
+  background:linear-gradient(90deg,#2877ef 0%,#27b6a4 62%,#22c55e 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+}
+.landing-hero-description{
+  margin:28px 0 0;
+  max-width:540px;
+  font-size:18px;
+  line-height:1.5;
+  color:#a9bad3;
+}
+.landing-hero-divider{
+  width:56px;
+  height:4px;
+  margin:28px 0 25px;
+  border-radius:999px;
+  background:linear-gradient(90deg,#2f7df4 0%,#2bd28b 100%);
+}
+.landing-hero-features{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:17px;
+}
+.landing-hero-features li{
   display:flex;
   align-items:center;
-  justify-content:center;
-  padding:42px 24px 60px;
+  gap:17px;
+  color:#e5edf9;
+  font-size:14px;
+  font-weight:750;
+}
+.landing-hero-features li > span:first-child{
+  width:18px;
+  flex:0 0 18px;
+  text-align:center;
+  color:#2f8fff;
+  font-size:15px;
 }
 .landing-connection-card{
-  width:min(860px,100%);
+  width:100%;
   padding:32px 34px 28px;
   box-shadow:0 22px 55px rgba(34,58,96,.10);
 }
@@ -307,8 +372,8 @@ body::before{
 .landing-connection-card .connection-card-head h2{font-size:25px}
 .landing-connection-card .connection-card-head p{font-size:14px;margin-top:6px}
 .landing-connection-card .connection-fields{display:grid;grid-template-columns:1fr 1fr;gap:20px 18px;padding:25px 0 10px}
-.landing-connection-card .connection-fields > .flex{grid-column:1 / -1;display:flex;flex-direction:row;align-items:center;gap:18px}
-.landing-connection-card .connection-fields > .flex .btn-load-projects{max-width:240px}
+.landing-connection-card .connection-fields > .flex{grid-column:1 / -1;display:flex;flex-direction:row;align-items:center;gap:22px}
+.landing-connection-card .connection-fields > .flex .btn-load-projects{width:320px;max-width:320px;flex:0 0 320px}
 .landing-connection-card .remember-toggle{margin-top:0}
 .workspace-page{min-height:100vh;position:relative;z-index:1}
 .workspace-controls{
@@ -346,14 +411,28 @@ body::before{
   .btn-switch-org{height:32px;padding:0 10px;font-size:11px}
   .workspace-project-field{max-width:none}
 }
+@media (max-width:1100px){
+  .connection-main{grid-template-columns:minmax(360px,.9fr) minmax(500px,1.1fr);gap:38px;padding-left:38px;padding-right:38px}
+  .landing-hero-copy h1,.landing-hero-copy h2{font-size:50px}
+}
+@media (max-width:900px){
+  .connection-main{display:flex;flex-direction:column;align-items:stretch;gap:34px;padding-top:38px}
+  .landing-hero-copy{max-width:760px}
+}
 @media (max-width:760px){
   .landing-topbar{padding:0 20px}
   .landing-step{display:none}
-  .connection-main{padding:24px 18px 40px;align-items:flex-start}
+  .connection-main{gap:28px;padding:30px 18px 40px}
+  .landing-hero-copy{max-width:none;padding:5px 4px}
+  .landing-hero-copy h1,.landing-hero-copy h2{font-size:42px}
+  .landing-hero-description{font-size:15px;margin-top:20px}
+  .landing-hero-divider{margin:22px 0 20px}
+  .landing-hero-features{gap:13px}
+  .landing-hero-features li{font-size:13px}
   .landing-connection-card{padding:24px 20px}
   .landing-connection-card .connection-fields{grid-template-columns:1fr}
   .landing-connection-card .connection-fields > .flex{grid-column:auto;flex-direction:column;align-items:stretch}
-  .landing-connection-card .connection-fields > .flex .btn-load-projects{max-width:none}
+  .landing-connection-card .connection-fields > .flex .btn-load-projects{width:100%;max-width:none;flex:1 1 auto}
 }
 
 /* Service Connections & Agent Pools filter row */
