@@ -195,20 +195,17 @@ function switchToOrganizationServiceAgents() {
   const projectSelect = document.getElementById('projectSelect');
   if (projectSelect) projectSelect.value = '';
 
+  // "Switch Org. View" is the exit point from the workspace.
+  // Return to the first page (Azure DevOps Connection) instead of
+  // navigating to the Service Connections & Agents workspace view.
+  // Credentials are intentionally preserved so the user can reconnect
+  // or continue without re-entering them.
   activeCategory = 'service_agents';
   const categorySelect = document.getElementById('categorySelect');
   if (categorySelect) categorySelect.value = 'service_agents';
 
-  document.querySelectorAll('.sidebar-item').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.view === 'serviceagents');
-  });
-
-  showSection('serviceagents');
-  if (typeof configureServiceAgentsOverview === 'function') configureServiceAgentsOverview(true);
-  if (typeof updateServiceAgentsScopeText === 'function') updateServiceAgentsScopeText();
-  updatePathPreview(extractOrgName(document.getElementById('targetOrg').value));
-  updateProjectRequirementUI();
-  renderActiveSubstep();
+  showConnectionPage();
+  setStatus('Switched to organization view. Azure DevOps connection is ready.', 'info');
 }
 
 async function handleProjectSelection() {
