@@ -48,6 +48,7 @@ button, input, select {
 
 /* ============================================================
    SHARED TOPBAR & HEADER BRANDING
+   Purpose: Top header, branding, logo, and shared navigation styling.
    ============================================================ */
 .landing-topbar,
 .app-topbar {
@@ -118,6 +119,7 @@ button, input, select {
 
 /* ============================================================
    PAGE 1: LANDING & CONNECTION EXPERIENCE
+   Purpose: Azure DevOps connection/landing page layout and controls.
    ============================================================ */
 .connection-page {
   min-height: 100vh;
@@ -394,7 +396,25 @@ button, input, select {
 
 /* ============================================================
    PAGE 2: WORKSPACE & METRIC DASHBOARD
+   Purpose: Project selection, dashboard, navigation, and metrics styling.
    ============================================================ */
+.workspace-project-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.workspace-project-field > label {
+  color: #8ea8cf !important;
+}
+
+/* Project requirement message: explains why a project must be selected. */
+#projectRequirementText {
+  color: #8ea8cf !important;
+}
+
+
+/* Page 2 main container: holds the complete dashboard workspace. */
 .workspace-page {
   min-height: 100vh;
   background-color: var(--bg-deep);
@@ -403,6 +423,7 @@ button, input, select {
   overflow: hidden;
 }
 
+/* Sidebar: dashboard navigation and service sections. */
 .app-sidebar {
   position: fixed;
   inset: 0 auto 0 0;
@@ -430,6 +451,7 @@ button, input, select {
   gap: 4px;
 }
 
+/* Sidebar item: individual dashboard navigation option. */
 .sidebar-item {
   border: 0;
   background: transparent;
@@ -506,16 +528,8 @@ button, input, select {
   padding: 24px 32px 50px;
 }
 
-/* Project section text colors */
-.workspace-project-field > label {
-  color: #8ea8cf !important;
-}
-
-#projectRequirementText {
-  color: #8ea8cf !important;
-}
-
 /* Workspace Control / Project Selector Card */
+/* Workspace controls: project selection area at the top of Page 2. */
 .workspace-controls {
   background: var(--bg-card-dark);
   border: 1px solid var(--border-dark);
@@ -565,6 +579,7 @@ button, input, select {
   background: #441414;
 }
 
+/* Project selector: lets the user choose the active Azure DevOps project. */
 .workspace-project-field select {
   height: 42px;
   background: #06132d;
@@ -574,14 +589,6 @@ button, input, select {
   padding: 0 12px;
   font-size: 13px;
   width: 100%;
-}
-
-.workspace-project-field label {
-  color: #8ea8cf;
-}
-
-.project-requirement-text {
-  color: #ffffff !important;
 }
 
 .active-path-row {
@@ -610,6 +617,7 @@ button, input, select {
   margin: 10px 0 16px;
 }
 
+/* KPI grid: displays high-level dashboard metric cards. */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -649,6 +657,7 @@ button, input, select {
   z-index: 1;
 }
 
+/* Activity chart section: contains the dashboard activity visualization. */
 #chartSection {
   position: relative;
   overflow: hidden;
@@ -660,7 +669,9 @@ button, input, select {
 
 /* ============================================================
    BACKGROUND DECORATIVE WATERMARKS
+   Purpose: Background watermark positioning and appearance for both pages.
    ============================================================ */
+/* Page 1 watermark: decorative background logo on the connection screen. */
 .connection-page::before {
   content: "";
   position: absolute;
@@ -676,6 +687,7 @@ button, input, select {
   filter: drop-shadow(0 0 35px rgba(47, 109, 246, 0.25));
 }
 
+/* Page 2 watermark: fixed decorative logo behind scrolling dashboard content. */
 .workspace-page::before {
   content: "";
   position: fixed;
@@ -693,6 +705,7 @@ button, input, select {
 
 /* ============================================================
    RESPONSIVE BREAKPOINTS
+   Purpose: Adjust layout and controls for smaller screen sizes.
    ============================================================ */
 @media (max-width: 1150px) {
   .connection-main {
@@ -732,11 +745,3 @@ button, input, select {
   }
 }
 
-/* Project section text colors */
-.workspace-project-field > label {
-  color: #8ea8cf !important;
-}
-
-#projectRequirementText {
-  color: #8ea8cf !important;
-}
