@@ -195,17 +195,30 @@ function switchToOrganizationServiceAgents() {
   const projectSelect = document.getElementById('projectSelect');
   if (projectSelect) projectSelect.value = '';
 
-  // "Switch Org. View" is the exit point from the workspace.
-  // Return to the first page (Azure DevOps Connection) instead of
-  // navigating to the Service Connections & Agents workspace view.
-  // Credentials are intentionally preserved so the user can reconnect
-  // or continue without re-entering them.
-  activeCategory = 'service_agents';
-  const categorySelect = document.getElementById('categorySelect');
-  if (categorySelect) categorySelect.value = 'service_agents';
+  // Always return to the first page (Azure DevOps Connection).
+  // Do not select or navigate to Service Connections & Agents here.
+  // The user can reconnect and then choose the desired workspace view.
+  activeCategory = 'repositories';
+  activeViewSection = 'view-repositories';
 
+  const categorySelect = document.getElementById('categorySelect');
+  if (categorySelect) categorySelect.value = 'repositories';
+
+  // Reset workspace state so the next connection starts cleanly.
+  if (typeof resetServiceAgentsScope === 'function') resetServiceAgentsScope();
+  if (typeof showSection === 'function') showSection('repositories');
+  if (typeof configureServiceAgentsOverview === 'function') configureServiceAgentsOverview(false);
+  if (typeof updateProjectRequirementUI === 'function') updateProjectRequirementUI();
+
+  const step5 = document.getElementById('step5Container');
+  if (step5) step5.classList.add('hidden');
+
+  const projectBadge = document.getElementById('overviewProjectBadge');
+  if (projectBadge) projectBadge.textContent = '—';
+
+  // Credentials are intentionally preserved.
   showConnectionPage();
-  setStatus('Switched to organization view. Azure DevOps connection is ready.', 'info');
+  setStatus('Returned to Azure DevOps Connection.', 'info');
 }
 
 async function handleProjectSelection() {
