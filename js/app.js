@@ -188,6 +188,12 @@ async function handleProjectSelection() {
   }
 
   updatePathPreview(org, project);
+  // Keep the Service Connections & Agent Pools scope aligned with the
+  // selected project. The user can still clear that field to explicitly
+  // switch back to organization-wide mode.
+  if (typeof syncServiceAgentsScopeToProject === 'function') {
+    syncServiceAgentsScopeToProject(project);
+  }
   const projectBadge = document.getElementById('overviewProjectBadge');
   if (projectBadge) projectBadge.textContent = project || '—';
 

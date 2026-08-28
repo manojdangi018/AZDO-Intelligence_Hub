@@ -41,6 +41,25 @@ function getServiceAgentsScope() {
   return select ? select.value.trim() : '';
 }
 
+function syncServiceAgentsScopeToProject(projectName) {
+  const select = document.getElementById('serviceAgentsScope');
+  if (!select) return;
+
+  const value = String(projectName || '').trim();
+  if (!value) {
+    select.value = '';
+    return;
+  }
+
+  const optionExists = [...select.options].some(option => option.value === value);
+  if (optionExists) select.value = value;
+}
+
+function clearServiceAgentsScopeToOrganization() {
+  const select = document.getElementById('serviceAgentsScope');
+  if (select) select.value = '';
+}
+
 function configureServiceAgentsOverview(isActive) {
   const chartSection = document.getElementById('chartSection');
   const kpiGrid = document.querySelector('.kpi-grid');
@@ -132,24 +151,52 @@ async function fetchAgentsForPools(org, authHeader, pools) {
 }
 
 async function getProjectAgentPools(org, project, authHeader) {
+  // Azure DevOps exposes agents at the organization/pool level.
+  // A project is associated with pools through project agent queues.
+  // Therefore project scope must be derived from queues, then only those
+  // pool IDs are used to read agents. This prevents the organization-wide
+  // /pools endpoint from becoming the source of the project result set.
+  const projectInfoUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/projects/${encodeURIComponent(project)}?api-version=${AZDO_STABLE_API_VERSION}`;
   const queueUrl = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(project)}/_apis/distributedtask/queues?api-version=${AZDO_STABLE_API_VERSION}`;
-  const queueData = await fetchAzDo(queueUrl, authHeader);
-  const refs = queueData.value || [];
-  const ids = [...new Set(refs.map(q => q.pool?.id).filter(id => id !== undefined && id !== null))];
+
+  const [projectInfo, queueData] = await Promise.all([
+    fetchAzDo(projectInfoUrl, authHeader),
+    fetchAzDo(queueUrl, authHeader)
+  ]);
+
+  const projectId = projectInfo.id ? String(projectInfo.id).toLowerCase() : '';
+  const refs = (queueData.value || []).filter(queue => {
+    // The project-scoped endpoint should already return project queues.
+    // Keep the explicit projectId check as an additional safety guard.
+    return !projectId || !queue.projectId || String(queue.projectId).toLowerCase() === projectId;
+  });
+
+  const poolRefs = new Map();
+  refs.forEach(queue => {
+    const pool = queue.pool;
+    if (pool?.id !== undefined && pool?.id !== null) {
+      poolRefs.set(String(pool.id), pool);
+    }
+  });
+
+  const ids = [...poolRefs.keys()];
   if (!ids.length) return [];
 
+  // Fetch only the pools connected to this project.
   const poolUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools?poolIds=${ids.join(',')}&api-version=${AZDO_STABLE_API_VERSION}`;
   const poolData = await fetchAzDo(poolUrl, authHeader);
   const poolById = new Map((poolData.value || []).map(pool => [String(pool.id), pool]));
 
   return ids.map(id => {
-    const pool = poolById.get(String(id));
-    const ref = refs.find(q => String(q.pool?.id) === String(id))?.pool;
-    return pool || {
-      id,
-      name: ref?.name || `Pool ${id}`,
-      isHosted: ref?.isHosted === true,
-      poolType: ref?.poolType || '—'
+    const pool = poolById.get(id);
+    const ref = poolRefs.get(id);
+    return {
+      ...(pool || {}),
+      id: Number(id),
+      name: pool?.name || ref?.name || `Pool ${id}`,
+      isHosted: pool?.isHosted === true || ref?.isHosted === true,
+      poolType: pool?.poolType || ref?.poolType || '—',
+      projectId: projectId || ref?.scope || ''
     };
   });
 }

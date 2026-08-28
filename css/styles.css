@@ -346,3 +346,13 @@ body::before{
   .landing-connection-card .connection-fields > .flex{grid-column:auto;flex-direction:column;align-items:stretch}
   .landing-connection-card .connection-fields > .flex .btn-load-projects{max-width:none}
 }
+
+/* Service Connections & Agent Pools filter row */
+.service-agents-filter{width:100%;box-sizing:border-box}
+.service-agents-filter-row{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:12px;align-items:end}
+.service-agents-scope-field{min-width:0}
+.service-agents-scope-field select{height:34px;box-sizing:border-box}
+.service-agents-fetch-btn{width:100%;height:34px;white-space:nowrap}
+@media (max-width:760px){
+  .service-agents-filter-row{grid-template-columns:1fr}
+}
