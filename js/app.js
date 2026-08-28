@@ -165,6 +165,7 @@ async function loadProjectsList() {
     });
 
     enableDropdown('projectSelect');
+    updateProjectRequirementUI();
     document.getElementById('step5Container').classList.add('hidden');
     setConnectionBadge(true);
     showWorkspacePage();
@@ -175,10 +176,46 @@ async function loadProjectsList() {
   }
 }
 
+function updateProjectRequirementUI() {
+  const mark = document.getElementById('projectRequiredMark');
+  const note = document.getElementById('projectRequirementText');
+  const select = document.getElementById('projectSelect');
+  const serviceAgentsActive = activeCategory === 'service_agents';
+
+  if (mark) mark.classList.toggle('hidden', serviceAgentsActive);
+  if (note) {
+    note.textContent = serviceAgentsActive
+      ? 'Project is optional for Service Connections & Agent Pools. Leave it blank for organization-wide information.'
+      : 'Project selection is required for Repositories, Access & Teams, User Activity, Pipelines & Builds, and Work Items.';
+  }
+  if (select) select.setAttribute('aria-required', serviceAgentsActive ? 'false' : 'true');
+}
+
+function switchToOrganizationServiceAgents() {
+  const projectSelect = document.getElementById('projectSelect');
+  if (projectSelect) projectSelect.value = '';
+
+  activeCategory = 'service_agents';
+  const categorySelect = document.getElementById('categorySelect');
+  if (categorySelect) categorySelect.value = 'service_agents';
+
+  document.querySelectorAll('.sidebar-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === 'serviceagents');
+  });
+
+  showSection('serviceagents');
+  if (typeof configureServiceAgentsOverview === 'function') configureServiceAgentsOverview(true);
+  if (typeof updateServiceAgentsScopeText === 'function') updateServiceAgentsScopeText();
+  updatePathPreview(extractOrgName(document.getElementById('targetOrg').value));
+  updateProjectRequirementUI();
+  renderActiveSubstep();
+}
+
 async function handleProjectSelection() {
   const org = extractOrgName(document.getElementById('targetOrg').value);
   const project = document.getElementById('projectSelect').value;
   const pat = document.getElementById('targetPat').value.trim();
+  updateProjectRequirementUI();
 
   if (!project) {
     if (activeCategory === 'service_agents') {
@@ -210,6 +247,7 @@ async function handleProjectSelection() {
 }
 
 function renderActiveSubstep() {
+  updateProjectRequirementUI();
   const project = document.getElementById('projectSelect').value;
   const step5 = document.getElementById('step5Container');
   const subRepo = document.getElementById('substepRepo');
@@ -252,6 +290,7 @@ function showSection(viewId) {
 
 function selectExplore(category) {
   activeCategory = category;
+  updateProjectRequirementUI();
   const categorySelect = document.getElementById('categorySelect');
   if (categorySelect) categorySelect.value = category;
 

@@ -139,10 +139,14 @@
     <main class="dashboard-main">
       <section class="workspace-controls">
         <div class="project-selection-box">
-          <div class="workspace-project-field">
+          <div class="workspace-project-header">
             <div class="eyebrow">02 · PROJECT</div>
-            <label for="projectSelect">Project</label>
+            <button id="btnSwitchOrgView" type="button" class="btn-switch-org" onclick="switchToOrganizationServiceAgents()" title="Switch to organization-level Service Connections & Agent Pools">↔ Switch Org. View</button>
+          </div>
+          <div class="workspace-project-field">
+            <label for="projectSelect">Project <span id="projectRequiredMark" aria-hidden="true">*</span></label>
             <select id="projectSelect" disabled onchange="handleProjectSelection()"><option value="">-- Load PAT first --</option></select>
+            <div id="projectRequirementText" class="project-requirement-text">Project selection is required for Repositories, Access &amp; Teams, User Activity, Pipelines &amp; Builds, and Work Items.</div>
           </div>
         </div>
         <select id="categorySelect" class="hidden"><option value="">-- Choose Category --</option></select>

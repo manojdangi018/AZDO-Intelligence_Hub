@@ -326,17 +326,26 @@ body::before{
   margin:0;
   overflow:visible;
 }
+.workspace-project-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:9px}
+.workspace-project-header .eyebrow{margin:0}
+.btn-switch-org{border:1px solid #2563eb;background:#fff;color:#1d4ed8;border-radius:8px;height:34px;padding:0 14px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;transition:.15s ease}
+.btn-switch-org:hover{background:#eff6ff}
 .workspace-project-field{
   min-width:0;
   width:100%;
-  max-width:420px;
+  max-width:760px;
   box-sizing:border-box;
 }
-.workspace-project-field .eyebrow{margin-bottom:7px}
 .workspace-project-field label{display:block;font-size:13px;font-weight:700;color:#1e293b;margin-bottom:8px}
 .workspace-project-field label span{color:#ef4444;margin-left:2px}
-.workspace-project-field select{display:block;width:100%;height:44px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:0 14px;font-size:13.5px;color:#334155;outline:none}
+.workspace-project-field select{display:block;width:100%;height:46px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:0 14px;font-size:13.5px;color:#334155;outline:none}
 .workspace-project-field select:disabled{background:#f1f5f9;color:#94a3b8;cursor:not-allowed}
+.project-requirement-text{margin-top:6px;font-size:11px;color:#94a3b8}
+@media (max-width:760px){
+  .workspace-project-header{align-items:flex-start}
+  .btn-switch-org{height:32px;padding:0 10px;font-size:11px}
+  .workspace-project-field{max-width:none}
+}
 @media (max-width:760px){
   .landing-topbar{padding:0 20px}
   .landing-step{display:none}
