@@ -293,20 +293,13 @@ body::before{
   letter-spacing:.13em;
   color:#6e84a5;
 }
-.connection-main{
-  min-height:calc(100vh - 86px);
-  display:grid;
-  grid-template-columns:minmax(430px, .95fr) minmax(560px, 1.05fr);
-  align-items:center;
-  gap:72px;
-  width:min(1280px,100%);
-  margin:0 auto;
-  padding:52px 56px 68px;
-}
+
 .landing-hero-copy{
   align-self:center;
-  padding:12px 0 18px;
-  max-width:570px;
+  padding:0;
+  max-width:520px;
+  margin-left:0;
+  transform:translateX(-15px);
 }
 .landing-hero-copy h1,
 .landing-hero-copy h2{
@@ -363,18 +356,7 @@ body::before{
   color:#2f8fff;
   font-size:15px;
 }
-.landing-connection-card{
-  width:100%;
-  padding:32px 34px 28px;
-  box-shadow:0 22px 55px rgba(34,58,96,.10);
-}
-.landing-connection-card .connection-card-head{padding-bottom:25px}
-.landing-connection-card .connection-card-head h2{font-size:25px}
-.landing-connection-card .connection-card-head p{font-size:14px;margin-top:6px}
-.landing-connection-card .connection-fields{display:grid;grid-template-columns:1fr 1fr;gap:20px 18px;padding:25px 0 10px}
-.landing-connection-card .connection-fields > .flex{grid-column:1 / -1;display:flex;flex-direction:row;align-items:center;gap:22px}
-.landing-connection-card .connection-fields > .flex .btn-load-projects{width:320px;max-width:320px;flex:0 0 320px}
-.landing-connection-card .remember-toggle{margin-top:0}
+
 .workspace-page{min-height:100vh;position:relative;z-index:1}
 .workspace-controls{
   background:#fff;
@@ -411,29 +393,6 @@ body::before{
   .btn-switch-org{height:32px;padding:0 10px;font-size:11px}
   .workspace-project-field{max-width:none}
 }
-@media (max-width:1100px){
-  .connection-main{grid-template-columns:minmax(360px,.9fr) minmax(500px,1.1fr);gap:38px;padding-left:38px;padding-right:38px}
-  .landing-hero-copy h1,.landing-hero-copy h2{font-size:50px}
-}
-@media (max-width:900px){
-  .connection-main{display:flex;flex-direction:column;align-items:stretch;gap:34px;padding-top:38px}
-  .landing-hero-copy{max-width:760px}
-}
-@media (max-width:760px){
-  .landing-topbar{padding:0 20px}
-  .landing-step{display:none}
-  .connection-main{gap:28px;padding:30px 18px 40px}
-  .landing-hero-copy{max-width:none;padding:5px 4px}
-  .landing-hero-copy h1,.landing-hero-copy h2{font-size:42px}
-  .landing-hero-description{font-size:15px;margin-top:20px}
-  .landing-hero-divider{margin:22px 0 20px}
-  .landing-hero-features{gap:13px}
-  .landing-hero-features li{font-size:13px}
-  .landing-connection-card{padding:24px 20px}
-  .landing-connection-card .connection-fields{grid-template-columns:1fr}
-  .landing-connection-card .connection-fields > .flex{grid-column:auto;flex-direction:column;align-items:stretch}
-  .landing-connection-card .connection-fields > .flex .btn-load-projects{width:100%;max-width:none;flex:1 1 auto}
-}
 
 /* Service Connections & Agent Pools filter row */
 .service-agents-filter{width:100%;box-sizing:border-box}
@@ -453,9 +412,7 @@ body::before{
 }
 
 /* ============================================================
-   FINAL LANDING / WORKSPACE BACKGROUND & CONNECTION POSITION
-   Uses the supplied DevOps logo as a large, subtle background
-   on both application pages without affecting controls.
+   PAGE 1 WATERMARK & SPLIT-LAYOUT ALIGNMENT
    ============================================================ */
 .connection-page,
 .workspace-page{
@@ -463,7 +420,22 @@ body::before{
   overflow:hidden;
 }
 
-.connection-page::before,
+/* Centered & Clear Background Watermark */
+.connection-page::before{
+  content:"";
+  position:absolute;
+  z-index:0;
+  pointer-events:none;
+  width:min(55vw, 680px);
+  aspect-ratio:1660 / 933;
+  left:48%;
+  top:52%;
+  transform:translate(-50%,-50%);
+  background:url("../devops-watermark.png") center/contain no-repeat;
+  opacity:0.28;
+  filter:drop-shadow(0 0 35px rgba(47, 109, 246, 0.25));
+}
+
 .workspace-page::before{
   content:"";
   position:absolute;
@@ -478,83 +450,97 @@ body::before{
   opacity:.18;
 }
 
-/* Keep the connection panel clearly on the right on desktop. */
+/* Wide Responsive Grid: Pushes Hero Left and Connection Card Right */
 .connection-main{
-  grid-template-columns:minmax(0,1fr) minmax(560px,620px);
+  min-height:calc(100vh - 86px);
+  width:100%;
+  max-width:1600px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:minmax(360px, 1fr) minmax(540px, 590px);
   justify-content:space-between;
-  gap:60px;
+  align-items:center;
+  gap:80px;
+  padding:40px 60px 60px;
+  box-sizing:border-box;
+  position:relative;
+  z-index:1;
 }
 
 .landing-connection-card{
-  justify-self:end;
   width:100%;
-  max-width:620px;
+  max-width:590px;
+  justify-self:end;
+  margin-right:0;
+  transform:translateX(15px);
+  padding:32px 34px 28px;
+  box-shadow:0 25px 60px rgba(0, 0, 0, 0.35);
 }
+.landing-connection-card .connection-card-head{padding-bottom:25px}
+.landing-connection-card .connection-card-head h2{font-size:25px}
+.landing-connection-card .connection-card-head p{font-size:14px;margin-top:6px}
+.landing-connection-card .connection-fields{display:grid;grid-template-columns:1fr 1fr;gap:20px 18px;padding:25px 0 10px}
+.landing-connection-card .connection-fields > .flex{grid-column:1 / -1;display:flex;flex-direction:row;align-items:center;gap:22px}
+.landing-connection-card .connection-fields > .flex .btn-load-projects{width:320px;max-width:320px;flex:0 0 320px}
+.landing-connection-card .remember-toggle{margin-top:0}
 
-@media (max-width:1100px){
+@media (max-width: 1200px){
   .connection-main{
-    grid-template-columns:minmax(0,1fr) minmax(500px,560px);
-    gap:38px;
+    gap:40px;
+    padding:30px 32px 40px;
+    grid-template-columns:1fr 520px;
   }
-  .landing-connection-card{max-width:560px}
+  .landing-hero-copy,
+  .landing-connection-card{
+    transform:none;
+  }
+  .connection-page::before{
+    width:65vw;
+    left:45%;
+    opacity:0.20;
+  }
 }
 
-@media (max-width:900px){
+@media (max-width: 900px){
   .connection-main{
     display:flex;
     flex-direction:column;
     align-items:stretch;
-    gap:34px;
+    gap:36px;
+    padding:24px 20px;
+  }
+  .landing-hero-copy{
+    max-width:100%;
+    transform:none;
   }
   .landing-connection-card{
     align-self:stretch;
-    max-width:none;
+    max-width:100%;
+    transform:none;
+  }
+  .connection-page::before{
+    width:90vw;
+    left:50%;
+    top:40%;
+    opacity:0.15;
   }
 }
 
-@media (max-width:760px){
-  .connection-page::before,
+@media (max-width: 760px){
+  .landing-topbar{padding:0 20px}
+  .landing-step{display:none}
+  .landing-hero-copy{padding:5px 4px}
+  .landing-hero-copy h1,.landing-hero-copy h2{font-size:42px}
+  .landing-hero-description{font-size:15px;margin-top:20px}
+  .landing-hero-divider{margin:22px 0 20px}
+  .landing-hero-features{gap:13px}
+  .landing-hero-features li{font-size:13px}
+  .landing-connection-card{padding:24px 20px}
+  .landing-connection-card .connection-fields{grid-template-columns:1fr}
+  .landing-connection-card .connection-fields > .flex{grid-column:auto;flex-direction:column;align-items:stretch}
+  .landing-connection-card .connection-fields > .flex .btn-load-projects{width:100%;max-width:none;flex:1 1 auto}
   .workspace-page::before{
     width:125vw;
     opacity:.11;
   }
-}
-
-/* ============================================================
-   LANDING CONNECTION PANEL — MOVE FURTHER RIGHT
-   Keeps the central DevOps watermark visible between the hero
-   content and the connection panel.
-   ============================================================ */
-@media (min-width:901px){
-  .connection-main{
-    width:min(1540px,100%);
-    grid-template-columns:minmax(0,1fr) minmax(560px,600px);
-    gap:48px;
-    padding-left:24px;
-    padding-right:24px;
-  }
-
-  .landing-connection-card{
-    width:100%;
-    max-width:600px;
-    justify-self:end;
-    transform:translateX(18px);
-  }
-
-  .connection-page::before{
-    width:min(76vw,1120px);
-    left:40%;
-    opacity:.21;
-  }
-}
-
-@media (min-width:901px) and (max-width:1100px){
-  .connection-main{
-    width:100%;
-    grid-template-columns:minmax(320px,1fr) minmax(500px,560px);
-    gap:28px;
-    padding-left:24px;
-    padding-right:24px;
-  }
-  .landing-connection-card{transform:none;max-width:560px}
 }
