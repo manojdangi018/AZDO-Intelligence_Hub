@@ -411,8 +411,8 @@ button, input, select {
 /* Project requirement message: explains why a project must be selected. */
 #projectRequirementText {
   color: #8ea8cf !important;
+  font-size: 10px;
 }
-
 
 /* Page 2 main container: holds the complete dashboard workspace. */
 .workspace-page {
@@ -585,7 +585,7 @@ button, input, select {
   background: #06132d;
   border: 1px solid #1b386e;
   border-radius: 8px;
-  color: #8ea8cf;
+  color: #fff;
   padding: 0 12px;
   font-size: 13px;
   width: 100%;
