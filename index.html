@@ -101,6 +101,9 @@
       <button class="sidebar-item" data-view="pipelines" onclick="selectExplore('pipelines')">
         <span class="nav-icon">↗</span><span>Pipelines &amp; Builds</span>
       </button>
+      <button class="sidebar-item" data-view="serviceagents" onclick="selectExplore('service_agents')">
+        <span class="nav-icon">⚙</span><span>Service Connections &amp; Agents</span>
+      </button>
       <button class="sidebar-item" data-view="workitems" onclick="selectExplore('work_items')">
         <span class="nav-icon">✓</span><span>Work Items</span>
       </button>
@@ -232,7 +235,20 @@
             </div>
           </div>
 
-          <!-- Step 5E: Work Items -->
+          <!-- Step 5E: Service Connections & Agents -->
+          <div id="substepServiceAgents" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
+            <div class="md:col-span-2">
+              <div class="text-[11px] font-semibold text-blue-900">SERVICE CONNECTIONS &amp; AGENT POOLS</div>
+              <div class="text-[11px] text-slate-500 mt-1">Fetch project service connections and organization agent pools with their agents.</div>
+            </div>
+            <div>
+              <button onclick="fetchServiceConnectionAgentData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
+                Fetch Connections &amp; Agents
+              </button>
+            </div>
+          </div>
+
+          <!-- Step 5F: Work Items -->
           <div id="substepWorkItems" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
             <div class="md:col-span-2">
               <label class="block text-[11px] font-semibold text-blue-900 mb-1">
@@ -567,7 +583,82 @@
           </div>
         </section>
 
-        <!-- VIEW 5: Work Items Table -->
+        <!-- VIEW 5: Service Connections & Agents -->
+        <section id="view-serviceagents" class="hidden space-y-6">
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h3 class="font-bold text-slate-900 text-sm">Azure DevOps Service Connections</h3>
+                <span class="text-xs text-slate-400">Project service endpoints. Authentication secrets are never displayed.</span>
+              </div>
+              <button onclick="exportServiceConnectionsToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                Export Service Connections (.xlsx)
+              </button>
+            </div>
+            <table id="table-service-connections" class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
+                  <th class="p-4">Service Connection</th>
+                  <th class="p-4">Type</th>
+                  <th class="p-4">URL</th>
+                  <th class="p-4">Ready</th>
+                  <th class="p-4">Shared</th>
+                  <th class="p-4">Created By</th>
+                  <th class="p-4">Owner</th>
+                </tr>
+              </thead>
+              <tbody id="serviceConnectionsTableBody" class="divide-y divide-slate-100">
+                <tr><td colspan="7" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load service connections.</td></tr>
+              </tbody>
+            </table>
+            <div id="seeMoreServiceConnectionsContainer" class="hidden p-4 border-t border-slate-100 text-center">
+              <button onclick="renderServiceConnectionsTableBatch(true)" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2 rounded-lg transition">
+                See More (<span id="serviceConnectionsRemainingCount">0</span> remaining)
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h3 class="font-bold text-slate-900 text-sm">Agent Pools &amp; Agents</h3>
+                <span class="text-xs text-slate-400">Organization-level pools and agents visible to the connected PAT.</span>
+              </div>
+              <button onclick="exportAgentsToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                Export Agents (.xlsx)
+              </button>
+            </div>
+            <div class="px-4 py-3 bg-amber-50 border-b border-amber-100 text-[11px] text-amber-800">
+              Azure DevOps does not expose a per-agent registration owner in the Agent REST API. When an agent has an active request, the table shows the current pipeline/job owner instead.
+            </div>
+            <table id="table-agents" class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
+                  <th class="p-4">Agent Pool</th>
+                  <th class="p-4">Hosted</th>
+                  <th class="p-4">Pool Type</th>
+                  <th class="p-4">Agent Name</th>
+                  <th class="p-4">Status</th>
+                  <th class="p-4">Enabled</th>
+                  <th class="p-4">OS</th>
+                  <th class="p-4">Version</th>
+                  <th class="p-4">Created On</th>
+                  <th class="p-4">Current Job Owner</th>
+                </tr>
+              </thead>
+              <tbody id="agentsTableBody" class="divide-y divide-slate-100">
+                <tr><td colspan="10" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load agent pools and agents.</td></tr>
+              </tbody>
+            </table>
+            <div id="seeMoreAgentsContainer" class="hidden p-4 border-t border-slate-100 text-center">
+              <button onclick="renderAgentsTableBatch(true)" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2 rounded-lg transition">
+                See More (<span id="agentsRemainingCount">0</span> remaining)
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 6: Work Items Table -->
         <section id="view-workitems" class="hidden space-y-4">
           <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
             <div class="p-4 border-b border-slate-100">
