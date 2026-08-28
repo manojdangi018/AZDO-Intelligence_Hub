@@ -561,10 +561,14 @@ button, input, select {
   background: #06132d;
   border: 1px solid #1b386e;
   border-radius: 8px;
-  color: #9ca3af;
+  color: #8ea8cf;
   padding: 0 12px;
   font-size: 13px;
   width: 100%;
+}
+
+.workspace-project-field label {
+  color: #8ea8cf;
 }
 
 .project-requirement-text {
