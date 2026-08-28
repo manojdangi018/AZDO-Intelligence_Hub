@@ -489,7 +489,11 @@ button, input, select {
 }
 
 #statusBar {
-  margin-top: 10px;
+  margin-top: 12px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #087443;
 }
 
 .app-shell {
