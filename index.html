@@ -141,7 +141,7 @@
         <div class="project-selection-box">
           <div class="workspace-project-field">
             <div class="eyebrow">02 · PROJECT</div>
-            <label for="projectSelect">Project <span class="text-slate-400">(Optional)</span></label>
+            <label for="projectSelect">Project</label>
             <select id="projectSelect" disabled onchange="handleProjectSelection()"><option value="">-- Load PAT first --</option></select>
           </div>
         </div>
@@ -237,10 +237,10 @@
 
           <!-- Step 5E: Service Connections & Agents -->
           <div id="substepServiceAgents" class="hidden service-agents-filter bg-blue-50/50 p-3 rounded-md">
-            <div class="service-agents-fetch-row">
-              <div class="service-agents-scope-text">
-                <span class="block text-[11px] font-semibold text-blue-900">SERVICE CONNECTIONS &amp; AGENT POOLS</span>
-                <span id="serviceAgentsScopeText" class="block text-[11px] text-slate-500 mt-1">Scope follows the selected Project. Leave Project blank for organization-wide information.</span>
+            <div class="service-agents-filter-row service-agents-project-row">
+              <div>
+                <div class="text-[11px] font-semibold text-blue-900">SERVICE CONNECTIONS &amp; AGENT POOLS</div>
+                <div id="serviceAgentsScopeText" class="text-[11px] text-slate-500 mt-1">Select a project above for project-level information, or leave Project blank for organization-wide information.</div>
               </div>
               <button onclick="fetchServiceConnectionAgentData()" class="service-agents-fetch-btn text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition">
                 Fetch Connections &amp; Agents
@@ -589,7 +589,7 @@
             <div class="p-4 border-b border-slate-100 flex justify-between items-center">
               <div>
                 <h3 class="font-bold text-slate-900 text-sm">Azure DevOps Service Connections</h3>
-                <span class="text-xs text-slate-400">Service endpoints visible for the selected scope. Authentication secrets are never displayed.</span>
+                <span class="text-xs text-slate-400">Service endpoints visible for the selected project or organization scope. Authentication secrets are never displayed.</span>
               </div>
               <button onclick="exportServiceConnectionsToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
                 Export Service Connections (.xlsx)
@@ -601,7 +601,7 @@
                   <th class="p-4">Service Connection</th>
                   <th class="p-4">Type</th>
                   <th class="p-4">URL</th>
-                  <th class="p-4">Status</th>
+                  <th class="p-4">Ready</th>
                   <th class="p-4">Shared</th>
                   <th class="p-4">Created By</th>
                 </tr>
@@ -621,7 +621,7 @@
             <div class="p-4 border-b border-slate-100 flex justify-between items-center">
               <div>
                 <h3 class="font-bold text-slate-900 text-sm">Agent Pools &amp; Agents</h3>
-                <span class="text-xs text-slate-400">Pools and agents visible for the selected scope. Project scope is based on pools connected to the project.</span>
+                <span class="text-xs text-slate-400">Project scans show only pools connected to the selected project; organization scans show all organization pools.</span>
               </div>
               <button onclick="exportAgentsToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
                 Export Agents (.xlsx)

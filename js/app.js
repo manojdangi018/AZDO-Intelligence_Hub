@@ -165,7 +165,6 @@ async function loadProjectsList() {
     });
 
     enableDropdown('projectSelect');
-    if (typeof populateServiceAgentsScope === 'function') populateServiceAgentsScope(projects);
     document.getElementById('step5Container').classList.add('hidden');
     setConnectionBadge(true);
     showWorkspacePage();
@@ -182,18 +181,19 @@ async function handleProjectSelection() {
   const pat = document.getElementById('targetPat').value.trim();
 
   if (!project) {
-    updatePathPreview(org);
-    if (typeof updateServiceAgentsScopeText === 'function') updateServiceAgentsScopeText('');
-    if (activeCategory === 'service_agents') renderActiveSubstep();
-    else document.getElementById('step5Container').classList.add('hidden');
+    if (activeCategory === 'service_agents') {
+      updatePathPreview(org);
+      if (typeof updateServiceAgentsScopeText === 'function') updateServiceAgentsScopeText();
+      renderActiveSubstep();
+    } else {
+      document.getElementById('step5Container').classList.add('hidden');
+      updatePathPreview(org);
+    }
     return;
   }
 
   updatePathPreview(org, project);
-  // Service Connections & Agent Pools now use the main Project selector as their scope.
-  if (typeof updateServiceAgentsScopeText === 'function') {
-    updateServiceAgentsScopeText(project);
-  }
+  if (typeof updateServiceAgentsScopeText === 'function') updateServiceAgentsScopeText();
   const projectBadge = document.getElementById('overviewProjectBadge');
   if (projectBadge) projectBadge.textContent = project || '—';
 
@@ -225,7 +225,6 @@ function renderActiveSubstep() {
   }
 
   step5.classList.remove('hidden');
-  if (typeof updateServiceAgentsScopeText === 'function') updateServiceAgentsScopeText(project);
   [subRepo, subAccess, subActivity, subPipelines, subWorkItems, subServiceAgents].forEach(el => el.classList.add('hidden'));
 
   if (activeCategory === 'repositories') {

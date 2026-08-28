@@ -1,9 +1,12 @@
 /*
  * Azure DevOps Service Connections & Agents
  * ------------------------------------------
- * Project scope: service connections + agent pools connected to the selected project.
- * Organization scope: service connections aggregated across all loaded projects + all
- * organization agent pools.
+ * Project scope is driven ONLY by the main Project selector.
+ * - Project selected: service connections + pools connected to that project.
+ *   Self-hosted agents are read only from those pools. Hosted pools are shown
+ *   as hosted pools and are not expanded into the synthetic Hosted Agent rows
+ *   returned by the organization-level agent API.
+ * - Project blank: organization-wide service connections + all organization pools.
  */
 
 function escapeHtml(value) {
@@ -15,36 +18,17 @@ function displayIdentity(identity) {
   return identity.displayName || identity.uniqueName || identity.providerDisplayName || identity.id || '—';
 }
 
-function populateServiceAgentsScope(projects = []) {
-  // Scope is now driven directly by the main Project selector.
-  updateServiceAgentsScopeText();
+function getServiceAgentsProject() {
+  return (document.getElementById('projectSelect')?.value || '').trim();
 }
 
-function resetServiceAgentsScope() {
-  updateServiceAgentsScopeText();
-}
-
-function getServiceAgentsScope() {
-  const projectSelect = document.getElementById('projectSelect');
-  return projectSelect ? projectSelect.value.trim() : '';
-}
-
-function syncServiceAgentsScopeToProject(projectName) {
-  // Kept for compatibility with existing app.js calls. The main Project selector is the source of truth.
-  updateServiceAgentsScopeText(projectName);
-}
-
-function clearServiceAgentsScopeToOrganization() {
-  updateServiceAgentsScopeText('');
-}
-
-function updateServiceAgentsScopeText(projectName) {
-  const text = document.getElementById('serviceAgentsScopeText');
-  if (!text) return;
-  const project = String(projectName ?? getServiceAgentsScope() ?? '').trim();
-  text.textContent = project
-    ? `Project scope: ${project}. Service connections and agent pools are limited to this project.`
-    : 'Organization scope: all loaded projects and all organization agent pools.';
+function updateServiceAgentsScopeText() {
+  const el = document.getElementById('serviceAgentsScopeText');
+  if (!el) return;
+  const project = getServiceAgentsProject();
+  el.textContent = project
+    ? `Project-level scan: showing service connections and agent pools connected to ${project} only.`
+    : 'Organization-level scan: showing service connections and agent pools across the connected organization.';
 }
 
 function configureServiceAgentsOverview(isActive) {
@@ -54,12 +38,10 @@ function configureServiceAgentsOverview(isActive) {
 
   if (chartSection) chartSection.classList.toggle('hidden', isActive);
   if (kpiGrid) kpiGrid.classList.toggle('serviceagents-kpi-grid', isActive);
-
   if (isActive) {
-    cards.forEach((card, index) => {
-      if (card) card.classList.toggle('hidden', index >= 3);
-    });
+    cards.forEach((card, index) => { if (card) card.classList.toggle('hidden', index >= 3); });
     updateServiceAgentsOverview();
+    updateServiceAgentsScopeText();
   } else {
     cards.forEach(card => { if (card) card.classList.remove('hidden'); });
     if (kpiGrid) kpiGrid.classList.remove('serviceagents-kpi-grid');
@@ -67,13 +49,13 @@ function configureServiceAgentsOverview(isActive) {
 }
 
 function updateServiceAgentsOverview() {
-  const validAgents = (rawStore.agents || []).filter(a => a.name && a.name !== 'Unable to read agents');
   const serviceConnectionCount = (rawStore.serviceConnections || []).length;
-  const microsoftHostedCount = validAgents.filter(a => a.isHosted === 'Yes').length;
-  const selfHostedCount = validAgents.filter(a => a.isHosted === 'No').length;
+  const validAgents = (rawStore.agents || []).filter(a => !a.isSyntheticHosted && a.name && a.name !== 'Unable to read agents');
+  const hostedPoolCount = (rawStore.agentPools || []).filter(p => p.isHosted === true).length;
+  const selfHostedAgentCount = validAgents.filter(a => a.isHosted === 'No').length;
 
-  const values = [serviceConnectionCount, microsoftHostedCount, selfHostedCount];
-  const labels = ['Total Service Connections', 'Microsoft-hosted Agents', 'Self-hosted Agents'];
+  const values = [serviceConnectionCount, hostedPoolCount, selfHostedAgentCount];
+  const labels = ['Total Service Connections', 'Microsoft-hosted Pools', 'Self-hosted Agents'];
   const classes = [
     'text-2xl font-extrabold text-slate-800 mt-1 truncate',
     'text-2xl font-extrabold text-blue-600 mt-1',
@@ -97,54 +79,84 @@ function mapServiceConnection(endpoint, projectName = '') {
     name: endpoint.name || '—',
     type: endpoint.type || '—',
     url: endpoint.url || '—',
-    isReady: endpoint.isReady === true ? 'Active' : endpoint.isReady === false ? 'Inactive' : '—',
+    status: endpoint.isReady === true ? 'Active' : 'Inactive',
+    isReady: endpoint.isReady === true ? 'Yes' : endpoint.isReady === false ? 'No' : '—',
     isShared: endpoint.isShared ? 'Yes' : 'No',
     createdBy: displayIdentity(endpoint.createdBy),
     projectName: projectName || endpoint.serviceEndpointProjectReferences?.[0]?.projectReference?.name || '—'
   };
 }
 
-async function fetchAgentsForPools(org, authHeader, pools) {
-  const agentResults = await Promise.all((pools || []).map(async pool => {
-    try {
-      const agentsUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools/${pool.id}/agents?includeAssignedRequest=true&includeLastCompletedRequest=true&api-version=${AZDO_STABLE_API_VERSION}`;
-      const agentData = await fetchAzDo(agentsUrl, authHeader);
-      return (agentData.value || []).map(agent => ({
+function statusBadge(status) {
+  const normalized = String(status || '').toLowerCase();
+  let cls = 'bg-slate-100 text-slate-600';
+  if (normalized === 'active' || normalized === 'online') cls = 'bg-emerald-100 text-emerald-700';
+  else if (normalized === 'inactive' || normalized === 'offline') cls = 'bg-red-100 text-red-700';
+  return `<span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${cls}">${escapeHtml(status || '—')}</span>`;
+}
+
+async function fetchAgentsForPools(org, authHeader, pools, options = {}) {
+  const projectScoped = options.projectScoped === true;
+  const rows = [];
+
+  for (const pool of (pools || [])) {
+    // Microsoft/GitHub hosted pools do not represent a fixed set of registered
+    // machines for a project. Do not expand the synthetic Hosted Agent N rows
+    // returned by the organization agent endpoint. Show the hosted pool once.
+    if (pool.isHosted === true) {
+      rows.push({
         poolId: pool.id,
-        poolName: pool.name || agent.pool?.name || agent.poolName || agent.properties?.poolName || `Pool ${pool.id}`,
-        isHosted: pool.isHosted === true ? 'Yes' : 'No',
+        poolName: pool.name || `Pool ${pool.id}`,
+        isHosted: 'Yes',
+        poolType: pool.poolType || '—',
+        name: 'Microsoft-hosted pool',
+        status: 'Online',
+        enabled: 'Yes',
+        os: '—',
+        version: '—',
+        createdOn: '—',
+        isSyntheticHosted: true,
+        projectScoped
+      });
+      continue;
+    }
+
+    try {
+      const agentsUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools/${encodeURIComponent(pool.id)}/agents?includeAssignedRequest=true&includeLastCompletedRequest=true&api-version=${AZDO_STABLE_API_VERSION}`;
+      const agentData = await fetchAzDo(agentsUrl, authHeader);
+      const agents = agentData.value || [];
+      agents.forEach(agent => rows.push({
+        poolId: pool.id,
+        poolName: pool.name || `Pool ${pool.id}`,
+        isHosted: 'No',
         poolType: pool.poolType || '—',
         name: agent.name || '—',
         status: agent.status || '—',
         enabled: agent.enabled === true ? 'Yes' : agent.enabled === false ? 'No' : '—',
         os: agent.osDescription || '—',
         version: agent.version || '—',
-        createdOn: agent.createdOn ? new Date(agent.createdOn).toLocaleString() : '—'
+        createdOn: agent.createdOn ? new Date(agent.createdOn).toLocaleString() : '—',
+        projectScoped
       }));
     } catch (error) {
       console.warn(`Could not fetch agents for pool ${pool.name || pool.id}:`, error);
-      return [{
+      rows.push({
         poolId: pool.id,
         poolName: pool.name || `Pool ${pool.id}`,
-        isHosted: pool.isHosted === true ? 'Yes' : 'No',
+        isHosted: 'No',
         poolType: pool.poolType || '—',
         name: 'Unable to read agents',
         status: error.message || 'Access denied',
-        enabled: '—', os: '—', version: '—', createdOn: '—'
-      }];
+        enabled: '—', os: '—', version: '—', createdOn: '—', projectScoped
+      });
     }
-  }));
-  return agentResults.flat();
+  }
+  return rows;
 }
 
 async function getProjectAgentPools(org, project, authHeader) {
-  // Azure DevOps exposes agents at the organization/pool level.
-  // A project is associated with pools through project agent queues.
-  // Therefore project scope must be derived from queues, then only those
-  // pool IDs are used to read agents. This prevents the organization-wide
-  // /pools endpoint from becoming the source of the project result set.
   const projectInfoUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/projects/${encodeURIComponent(project)}?api-version=${AZDO_STABLE_API_VERSION}`;
-  const queueUrl = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(project)}/_apis/distributedtask/queues?api-version=${AZDO_STABLE_API_VERSION}`;
+  const queueUrl = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(project)}/_apis/distributedtask/queues?$top=1000&api-version=${AZDO_STABLE_API_VERSION}`;
 
   const [projectInfo, queueData] = await Promise.all([
     fetchAzDo(projectInfoUrl, authHeader),
@@ -152,38 +164,39 @@ async function getProjectAgentPools(org, project, authHeader) {
   ]);
 
   const projectId = projectInfo.id ? String(projectInfo.id).toLowerCase() : '';
-  const refs = (queueData.value || []).filter(queue => {
-    // The project-scoped endpoint should already return project queues.
-    // Keep the explicit projectId check as an additional safety guard.
-    return !projectId || !queue.projectId || String(queue.projectId).toLowerCase() === projectId;
-  });
-
   const poolRefs = new Map();
-  refs.forEach(queue => {
-    const pool = queue.pool;
-    if (pool?.id !== undefined && pool?.id !== null) {
-      poolRefs.set(String(pool.id), pool);
+  (queueData.value || []).forEach(queue => {
+    // Project-scoped queues are authoritative. Also accept an explicit project
+    // ID when Azure DevOps includes it in the response.
+    if (projectId && queue.projectId && String(queue.projectId).toLowerCase() !== projectId) return;
+    const pool = queue.pool || {};
+    if (pool.id !== undefined && pool.id !== null) {
+      poolRefs.set(String(pool.id), {
+        id: Number(pool.id),
+        name: pool.name || queue.name || `Pool ${pool.id}`,
+        isHosted: pool.isHosted === true,
+        poolType: pool.poolType || '—'
+      });
     }
   });
 
   const ids = [...poolRefs.keys()];
   if (!ids.length) return [];
 
-  // Fetch only the pools connected to this project.
-  const poolUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools?poolIds=${ids.join(',')}&api-version=${AZDO_STABLE_API_VERSION}`;
+  const poolUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools?poolIds=${ids.map(encodeURIComponent).join(',')}&api-version=${AZDO_STABLE_API_VERSION}`;
   const poolData = await fetchAzDo(poolUrl, authHeader);
   const poolById = new Map((poolData.value || []).map(pool => [String(pool.id), pool]));
 
   return ids.map(id => {
-    const pool = poolById.get(id);
     const ref = poolRefs.get(id);
+    const pool = poolById.get(id) || {};
     return {
-      ...(pool || {}),
+      ...pool,
       id: Number(id),
-      name: pool?.name || ref?.name || `Pool ${id}`,
-      isHosted: pool?.isHosted === true || ref?.isHosted === true,
-      poolType: pool?.poolType || ref?.poolType || '—',
-      projectId: projectId || ref?.scope || ''
+      name: pool.name || ref.name || `Pool ${id}`,
+      isHosted: pool.isHosted === true || ref.isHosted === true,
+      poolType: pool.poolType || ref.poolType || '—',
+      projectId: projectId
     };
   });
 }
@@ -217,7 +230,7 @@ async function fetchOrganizationServiceConnections(org, authHeader, projects) {
 
 async function fetchServiceConnectionAgentData() {
   const org = extractOrgName(document.getElementById('targetOrg').value);
-  const scopeProject = getServiceAgentsScope();
+  const scopeProject = getServiceAgentsProject();
   const pat = document.getElementById('targetPat').value.trim();
 
   if (!org) return showModal('Please enter the Organization Name or URL first.', 'targetOrg');
@@ -229,14 +242,16 @@ async function fetchServiceConnectionAgentData() {
   if (serviceBody) serviceBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">Loading service connections...</td></tr>';
   if (agentsBody) agentsBody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-400">Loading agent pools and agents...</td></tr>';
 
+  updateServiceAgentsScopeText();
   const scopeText = scopeProject ? `project ${scopeProject}` : 'organization-wide';
   setStatus(`Fetching ${scopeText} service connections, agent pools and agents...`, 'info');
 
   try {
     let serviceConnections = [];
     let pools = [];
+    const projectScoped = Boolean(scopeProject);
 
-    if (scopeProject) {
+    if (projectScoped) {
       const serviceUrl = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(scopeProject)}/_apis/serviceendpoint/endpoints?api-version=${AZDO_STABLE_API_VERSION}`;
       const [serviceData, projectPools] = await Promise.all([
         fetchAzDo(serviceUrl, authHeader),
@@ -257,17 +272,19 @@ async function fetchServiceConnectionAgentData() {
 
     rawStore.serviceConnections = serviceConnections;
     rawStore.serviceConnectionsIndex = 0;
-    rawStore.agents = await fetchAgentsForPools(org, authHeader, pools);
+    rawStore.agentPools = pools;
+    rawStore.agents = await fetchAgentsForPools(org, authHeader, pools, { projectScoped });
     rawStore.agentsIndex = 0;
 
     renderServiceConnectionsTableBatch(false);
     renderAgentsTableBatch(false);
     updateServiceAgentsOverview();
 
-    const validAgents = rawStore.agents.filter(a => a.name !== 'Unable to read agents');
-    setStatus(`Loaded ${serviceConnections.length} service connections, ${pools.length} agent pools and ${validAgents.length} agents (${scopeText}).`, 'success');
+    const realAgentCount = rawStore.agents.filter(a => !a.isSyntheticHosted && a.name !== 'Unable to read agents').length;
+    const hostedPoolCount = pools.filter(p => p.isHosted === true).length;
+    setStatus(`Loaded ${serviceConnections.length} service connections, ${pools.length} ${projectScoped ? 'project-connected' : 'organization'} agent pools, ${realAgentCount} self-hosted agents and ${hostedPoolCount} Microsoft-hosted pools (${scopeText}).`, 'success');
   } catch (error) {
-    if (serviceBody) serviceBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`;
+    if (serviceBody) serviceBody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`;
     if (agentsBody) agentsBody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`;
     setStatus(`Error fetching service connections and agents: ${error.message}`, 'error');
   }
@@ -290,7 +307,7 @@ function renderServiceConnectionsTableBatch(loadMore = false) {
       <td class="p-4 font-medium text-slate-800">${escapeHtml(s.name)}</td>
       <td class="p-4">${escapeHtml(s.type)}</td>
       <td class="p-4 max-w-[320px] truncate" title="${escapeHtml(s.url)}">${escapeHtml(s.url)}</td>
-      <td class="p-4"><span class="status-pill ${s.isReady === 'Active' ? 'status-pill-success' : s.isReady === 'Inactive' ? 'status-pill-danger' : 'status-pill-neutral'}">${escapeHtml(s.isReady)}</span></td>
+      <td class="p-4">${statusBadge(s.status)}</td>
       <td class="p-4">${escapeHtml(s.isShared)}</td>
       <td class="p-4">${escapeHtml(s.createdBy)}</td>`;
     body.appendChild(row);
@@ -321,7 +338,7 @@ function renderAgentsTableBatch(loadMore = false) {
       <td class="p-4">${escapeHtml(a.isHosted)}</td>
       <td class="p-4">${escapeHtml(a.poolType)}</td>
       <td class="p-4 font-medium">${escapeHtml(a.name)}</td>
-      <td class="p-4"><span class="status-pill ${String(a.status).toLowerCase() === 'online' ? 'status-pill-success' : String(a.status).toLowerCase() === 'offline' ? 'status-pill-danger' : 'status-pill-neutral'}">${escapeHtml(a.status)}</span></td>
+      <td class="p-4">${statusBadge(a.status)}</td>
       <td class="p-4">${escapeHtml(a.enabled)}</td>
       <td class="p-4">${escapeHtml(a.os)}</td>
       <td class="p-4">${escapeHtml(a.version)}</td>
@@ -333,7 +350,7 @@ function renderAgentsTableBatch(loadMore = false) {
   const remaining = Math.max(0, data.length - end);
   if (count) count.textContent = remaining;
   if (container) container.classList.toggle('hidden', remaining === 0);
-  if (!data.length) body.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-400">No agents found in the selected scope.</td></tr>';
+  if (!data.length) body.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-400">No agents or connected hosted pools found in the selected scope.</td></tr>';
 }
 
 function exportServiceConnectionsToXLSX() {
@@ -341,7 +358,7 @@ function exportServiceConnectionsToXLSX() {
     'Service Connection': s.name,
     'Type': s.type,
     'URL': s.url,
-    'Ready': s.isReady,
+    'Status': s.status,
     'Shared': s.isShared,
     'Created By': s.createdBy,
     ...(s.projectName && s.projectName !== '—' ? {'Project': s.projectName} : {})
@@ -370,7 +387,7 @@ function exportServiceConnectionsAndAgentsToXLSX() {
       'Service Connection': s.name,
       'Type': s.type,
       'URL': s.url,
-      'Ready': s.isReady,
+      'Status': s.status,
       'Shared': s.isShared,
       'Created By': s.createdBy,
       ...(s.projectName && s.projectName !== '—' ? {'Project': s.projectName} : {})
