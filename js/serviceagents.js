@@ -1,13 +1,13 @@
 /*
  * Azure DevOps Service Connections & Agents
  * ------------------------------------------
- * Keeps all service-connection and agent-pool functionality isolated from
- * the main application module. Existing global functions/variables from
- * api.js and app.js are intentionally reused to preserve current behavior.
+ * Project scope: service connections + agent pools connected to the selected project.
+ * Organization scope: service connections aggregated across all loaded projects + all
+ * organization agent pools.
  */
 
 function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>'"`]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;',"\"":'&quot;','`':'&#96;'}[ch]));
+  return String(value ?? '').replace(/[&<>'"`]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;','`':'&#96;'}[ch]));
 }
 
 function displayIdentity(identity) {
@@ -15,9 +15,30 @@ function displayIdentity(identity) {
   return identity.displayName || identity.uniqueName || identity.providerDisplayName || identity.id || '—';
 }
 
-function displayRequestOwner(request) {
-  if (!request || !request.owner) return '—';
-  return displayIdentity(request.owner);
+function populateServiceAgentsScope(projects = []) {
+  const select = document.getElementById('serviceAgentsScope');
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = '<option value="">-- Organization Level (All Projects / All Agent Pools) --</option>';
+  (projects || []).forEach(project => {
+    const name = project.name || project;
+    if (!name) return;
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    select.appendChild(option);
+  });
+  if (current && [...select.options].some(o => o.value === current)) select.value = current;
+}
+
+function resetServiceAgentsScope() {
+  const select = document.getElementById('serviceAgentsScope');
+  if (select) select.innerHTML = '<option value="">-- Organization Level (All Projects / All Agent Pools) --</option>';
+}
+
+function getServiceAgentsScope() {
+  const select = document.getElementById('serviceAgentsScope');
+  return select ? select.value.trim() : '';
 }
 
 function configureServiceAgentsOverview(isActive) {
@@ -34,9 +55,7 @@ function configureServiceAgentsOverview(isActive) {
     });
     updateServiceAgentsOverview();
   } else {
-    cards.forEach(card => {
-      if (card) card.classList.remove('hidden');
-    });
+    cards.forEach(card => { if (card) card.classList.remove('hidden'); });
     if (kpiGrid) kpiGrid.classList.remove('serviceagents-kpi-grid');
   }
 }
@@ -66,89 +85,156 @@ function updateServiceAgentsOverview() {
   }
 }
 
+function mapServiceConnection(endpoint, projectName = '') {
+  return {
+    id: endpoint.id || '',
+    name: endpoint.name || '—',
+    type: endpoint.type || '—',
+    url: endpoint.url || '—',
+    isReady: endpoint.isReady === true ? 'Yes' : endpoint.isReady === false ? 'No' : '—',
+    isShared: endpoint.isShared ? 'Yes' : 'No',
+    createdBy: displayIdentity(endpoint.createdBy),
+    projectName: projectName || endpoint.serviceEndpointProjectReferences?.[0]?.projectReference?.name || '—'
+  };
+}
+
+async function fetchAgentsForPools(org, authHeader, pools) {
+  const agentResults = await Promise.all((pools || []).map(async pool => {
+    try {
+      const agentsUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools/${pool.id}/agents?includeAssignedRequest=true&includeLastCompletedRequest=true&api-version=${AZDO_STABLE_API_VERSION}`;
+      const agentData = await fetchAzDo(agentsUrl, authHeader);
+      return (agentData.value || []).map(agent => ({
+        poolId: pool.id,
+        poolName: pool.name || agent.pool?.name || agent.poolName || agent.properties?.poolName || `Pool ${pool.id}`,
+        isHosted: pool.isHosted === true ? 'Yes' : 'No',
+        poolType: pool.poolType || '—',
+        name: agent.name || '—',
+        status: agent.status || '—',
+        enabled: agent.enabled === true ? 'Yes' : agent.enabled === false ? 'No' : '—',
+        os: agent.osDescription || '—',
+        version: agent.version || '—',
+        createdOn: agent.createdOn ? new Date(agent.createdOn).toLocaleString() : '—'
+      }));
+    } catch (error) {
+      console.warn(`Could not fetch agents for pool ${pool.name || pool.id}:`, error);
+      return [{
+        poolId: pool.id,
+        poolName: pool.name || `Pool ${pool.id}`,
+        isHosted: pool.isHosted === true ? 'Yes' : 'No',
+        poolType: pool.poolType || '—',
+        name: 'Unable to read agents',
+        status: error.message || 'Access denied',
+        enabled: '—', os: '—', version: '—', createdOn: '—'
+      }];
+    }
+  }));
+  return agentResults.flat();
+}
+
+async function getProjectAgentPools(org, project, authHeader) {
+  const queueUrl = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(project)}/_apis/distributedtask/queues?api-version=${AZDO_STABLE_API_VERSION}`;
+  const queueData = await fetchAzDo(queueUrl, authHeader);
+  const refs = queueData.value || [];
+  const ids = [...new Set(refs.map(q => q.pool?.id).filter(id => id !== undefined && id !== null))];
+  if (!ids.length) return [];
+
+  const poolUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools?poolIds=${ids.join(',')}&api-version=${AZDO_STABLE_API_VERSION}`;
+  const poolData = await fetchAzDo(poolUrl, authHeader);
+  const poolById = new Map((poolData.value || []).map(pool => [String(pool.id), pool]));
+
+  return ids.map(id => {
+    const pool = poolById.get(String(id));
+    const ref = refs.find(q => String(q.pool?.id) === String(id))?.pool;
+    return pool || {
+      id,
+      name: ref?.name || `Pool ${id}`,
+      isHosted: ref?.isHosted === true,
+      poolType: ref?.poolType || '—'
+    };
+  });
+}
+
+async function getOrganizationProjects() {
+  const projectSelect = document.getElementById('projectSelect');
+  if (!projectSelect) return [];
+  return [...projectSelect.options]
+    .filter(option => option.value && !option.disabled)
+    .map(option => ({ name: option.value }));
+}
+
+async function fetchOrganizationServiceConnections(org, authHeader, projects) {
+  const results = await Promise.all((projects || []).map(async project => {
+    try {
+      const url = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(project.name)}/_apis/serviceendpoint/endpoints?api-version=${AZDO_STABLE_API_VERSION}`;
+      const data = await fetchAzDo(url, authHeader);
+      return (data.value || []).map(endpoint => mapServiceConnection(endpoint, project.name));
+    } catch (error) {
+      console.warn(`Could not fetch service connections for project ${project.name}:`, error);
+      return [];
+    }
+  }));
+
+  const byId = new Map();
+  results.flat().forEach(connection => {
+    if (connection.id && !byId.has(connection.id)) byId.set(connection.id, connection);
+  });
+  return [...byId.values()];
+}
+
 async function fetchServiceConnectionAgentData() {
   const org = extractOrgName(document.getElementById('targetOrg').value);
-  const project = document.getElementById('projectSelect').value;
+  const scopeProject = getServiceAgentsScope();
   const pat = document.getElementById('targetPat').value.trim();
 
   if (!org) return showModal('Please enter the Organization Name or URL first.', 'targetOrg');
   if (!pat) return showModal('Please enter your Personal Access Token (PAT).', 'targetPat');
-  if (!project) return showModal('Please select a project first.', 'projectSelect');
 
   const authHeader = 'Basic ' + btoa(':' + pat);
   const serviceBody = document.getElementById('serviceConnectionsTableBody');
   const agentsBody = document.getElementById('agentsTableBody');
-  if (serviceBody) serviceBody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">Loading service connections...</td></tr>';
-  if (agentsBody) agentsBody.innerHTML = '<tr><td colspan="10" class="p-4 text-center text-slate-400">Loading agent pools and agents...</td></tr>';
-  setStatus('Fetching service connections, agent pools and agents...', 'info');
+  if (serviceBody) serviceBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">Loading service connections...</td></tr>';
+  if (agentsBody) agentsBody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-400">Loading agent pools and agents...</td></tr>';
+
+  const scopeText = scopeProject ? `project ${scopeProject}` : 'organization-wide';
+  setStatus(`Fetching ${scopeText} service connections, agent pools and agents...`, 'info');
 
   try {
-    const serviceUrl = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(project)}/_apis/serviceendpoint/endpoints?api-version=${AZDO_STABLE_API_VERSION}`;
-    const poolsUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools?api-version=${AZDO_STABLE_API_VERSION}`;
+    let serviceConnections = [];
+    let pools = [];
 
-    const [serviceData, poolData] = await Promise.all([
-      fetchAzDo(serviceUrl, authHeader),
-      fetchAzDo(poolsUrl, authHeader)
-    ]);
+    if (scopeProject) {
+      const serviceUrl = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(scopeProject)}/_apis/serviceendpoint/endpoints?api-version=${AZDO_STABLE_API_VERSION}`;
+      const [serviceData, projectPools] = await Promise.all([
+        fetchAzDo(serviceUrl, authHeader),
+        getProjectAgentPools(org, scopeProject, authHeader)
+      ]);
+      serviceConnections = (serviceData.value || []).map(endpoint => mapServiceConnection(endpoint, scopeProject));
+      pools = projectPools;
+    } else {
+      const projects = await getOrganizationProjects();
+      if (!projects.length) throw new Error('No projects are loaded. Load projects from the Azure DevOps connection first.');
+      const [orgServiceConnections, poolData] = await Promise.all([
+        fetchOrganizationServiceConnections(org, authHeader, projects),
+        fetchAzDo(`https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools?api-version=${AZDO_STABLE_API_VERSION}`, authHeader)
+      ]);
+      serviceConnections = orgServiceConnections;
+      pools = poolData.value || [];
+    }
 
-    rawStore.serviceConnections = (serviceData.value || []).map(endpoint => ({
-      id: endpoint.id || '',
-      name: endpoint.name || '—',
-      type: endpoint.type || '—',
-      url: endpoint.url || '—',
-      isReady: endpoint.isReady === true ? 'Yes' : endpoint.isReady === false ? 'No' : '—',
-      isShared: endpoint.isShared ? 'Yes' : 'No',
-      createdBy: displayIdentity(endpoint.createdBy),
-      owner: endpoint.owner || '—'
-    }));
+    rawStore.serviceConnections = serviceConnections;
     rawStore.serviceConnectionsIndex = 0;
-
-    const pools = poolData.value || [];
-    const agentResults = await Promise.all(pools.map(async pool => {
-      try {
-        const agentsUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools/${pool.id}/agents?includeAssignedRequest=true&includeLastCompletedRequest=true&api-version=${AZDO_STABLE_API_VERSION}`;
-        const agentData = await fetchAzDo(agentsUrl, authHeader);
-        return (agentData.value || []).map(agent => ({
-          // The agent endpoint is scoped to the pool ID. Prefer any pool name
-          // exposed by the agent payload, then fall back to the canonical pool
-          // object returned by /distributedtask/pools. This keeps the pool name
-          // tied to the actual pool ID instead of the agent display name.
-          poolId: pool.id,
-          poolName: agent.pool?.name || agent.poolName || agent.properties?.poolName || pool.name || `Pool ${pool.id}`,
-          isHosted: pool.isHosted === true ? 'Yes' : 'No',
-          poolType: pool.poolType || '—',
-          name: agent.name || '—',
-          status: agent.status || '—',
-          enabled: agent.enabled === true ? 'Yes' : agent.enabled === false ? 'No' : '—',
-          os: agent.osDescription || '—',
-          version: agent.version || '—',
-          createdOn: agent.createdOn ? new Date(agent.createdOn).toLocaleString() : '—',
-          currentJobOwner: displayRequestOwner(agent.assignedRequest)
-        }));
-      } catch (error) {
-        console.warn(`Could not fetch agents for pool ${pool.name || pool.id}:`, error);
-        return [{
-          poolId: pool.id,
-          poolName: pool.name || `Pool ${pool.id}`,
-          isHosted: pool.isHosted === true ? 'Yes' : 'No',
-          poolType: pool.poolType || '—',
-          name: 'Unable to read agents',
-          status: error.message || 'Access denied',
-          enabled: '—', os: '—', version: '—', createdOn: '—', currentJobOwner: '—'
-        }];
-      }
-    }));
-
-    rawStore.agents = agentResults.flat();
+    rawStore.agents = await fetchAgentsForPools(org, authHeader, pools);
     rawStore.agentsIndex = 0;
+
     renderServiceConnectionsTableBatch(false);
     renderAgentsTableBatch(false);
     updateServiceAgentsOverview();
 
-    setStatus(`Loaded ${rawStore.serviceConnections.length} service connections, ${pools.length} agent pools and ${rawStore.agents.filter(a => a.name !== 'Unable to read agents').length} agents.`, 'success');
+    const validAgents = rawStore.agents.filter(a => a.name !== 'Unable to read agents');
+    setStatus(`Loaded ${serviceConnections.length} service connections, ${pools.length} agent pools and ${validAgents.length} agents (${scopeText}).`, 'success');
   } catch (error) {
-    if (serviceBody) serviceBody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`;
-    if (agentsBody) agentsBody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`;
+    if (serviceBody) serviceBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`;
+    if (agentsBody) agentsBody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`;
     setStatus(`Error fetching service connections and agents: ${error.message}`, 'error');
   }
 }
@@ -172,8 +258,7 @@ function renderServiceConnectionsTableBatch(loadMore = false) {
       <td class="p-4 max-w-[320px] truncate" title="${escapeHtml(s.url)}">${escapeHtml(s.url)}</td>
       <td class="p-4">${escapeHtml(s.isReady)}</td>
       <td class="p-4">${escapeHtml(s.isShared)}</td>
-      <td class="p-4">${escapeHtml(s.createdBy)}</td>
-      <td class="p-4">${escapeHtml(s.owner)}</td>`;
+      <td class="p-4">${escapeHtml(s.createdBy)}</td>`;
     body.appendChild(row);
   });
 
@@ -181,7 +266,7 @@ function renderServiceConnectionsTableBatch(loadMore = false) {
   const remaining = Math.max(0, data.length - end);
   if (count) count.textContent = remaining;
   if (container) container.classList.toggle('hidden', remaining === 0);
-  if (!data.length) body.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">No service connections found for this project.</td></tr>';
+  if (!data.length) body.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">No service connections found for the selected scope.</td></tr>';
 }
 
 function renderAgentsTableBatch(loadMore = false) {
@@ -206,8 +291,7 @@ function renderAgentsTableBatch(loadMore = false) {
       <td class="p-4">${escapeHtml(a.enabled)}</td>
       <td class="p-4">${escapeHtml(a.os)}</td>
       <td class="p-4">${escapeHtml(a.version)}</td>
-      <td class="p-4">${escapeHtml(a.createdOn)}</td>
-      <td class="p-4">${escapeHtml(a.currentJobOwner)}</td>`;
+      <td class="p-4">${escapeHtml(a.createdOn)}</td>`;
     body.appendChild(row);
   });
 
@@ -215,60 +299,58 @@ function renderAgentsTableBatch(loadMore = false) {
   const remaining = Math.max(0, data.length - end);
   if (count) count.textContent = remaining;
   if (container) container.classList.toggle('hidden', remaining === 0);
-  if (!data.length) body.innerHTML = '<tr><td colspan="10" class="p-4 text-center text-slate-400">No agents found in the visible agent pools.</td></tr>';
+  if (!data.length) body.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-400">No agents found in the selected scope.</td></tr>';
 }
 
 function exportServiceConnectionsToXLSX() {
   const data = (rawStore.serviceConnections || []).map(s => ({
-    "Service Connection": s.name,
-    "Type": s.type,
-    "URL": s.url,
-    "Ready": s.isReady,
-    "Shared": s.isShared,
-    "Created By": s.createdBy,
-    "Owner": s.owner
+    'Service Connection': s.name,
+    'Type': s.type,
+    'URL': s.url,
+    'Ready': s.isReady,
+    'Shared': s.isShared,
+    'Created By': s.createdBy,
+    ...(s.projectName && s.projectName !== '—' ? {'Project': s.projectName} : {})
   }));
-  exportToExcelFile({ "Service Connections": data }, "AzureDevOps_Service_Connections");
+  exportToExcelFile({ 'Service Connections': data }, 'AzureDevOps_Service_Connections');
 }
 
 function exportAgentsToXLSX() {
   const data = (rawStore.agents || []).map(a => ({
-    "Agent Pool": a.poolName,
-    "Hosted": a.isHosted,
-    "Pool Type": a.poolType,
-    "Agent Name": a.name,
-    "Status": a.status,
-    "Enabled": a.enabled,
-    "OS": a.os,
-    "Version": a.version,
-    "Created On": a.createdOn,
-    "Current Job Owner": a.currentJobOwner
+    'Agent Pool': a.poolName,
+    'Hosted': a.isHosted,
+    'Pool Type': a.poolType,
+    'Agent Name': a.name,
+    'Status': a.status,
+    'Enabled': a.enabled,
+    'OS': a.os,
+    'Version': a.version,
+    'Created On': a.createdOn
   }));
-  exportToExcelFile({ "Agents": data }, "AzureDevOps_Agents");
+  exportToExcelFile({ 'Agents': data }, 'AzureDevOps_Agents');
 }
 
 function exportServiceConnectionsAndAgentsToXLSX() {
   exportToExcelFile({
-    "Service Connections": (rawStore.serviceConnections || []).map(s => ({
-      "Service Connection": s.name,
-      "Type": s.type,
-      "URL": s.url,
-      "Ready": s.isReady,
-      "Shared": s.isShared,
-      "Created By": s.createdBy,
-      "Owner": s.owner
+    'Service Connections': (rawStore.serviceConnections || []).map(s => ({
+      'Service Connection': s.name,
+      'Type': s.type,
+      'URL': s.url,
+      'Ready': s.isReady,
+      'Shared': s.isShared,
+      'Created By': s.createdBy,
+      ...(s.projectName && s.projectName !== '—' ? {'Project': s.projectName} : {})
     })),
-    "Agents": (rawStore.agents || []).map(a => ({
-      "Agent Pool": a.poolName,
-      "Hosted": a.isHosted,
-      "Pool Type": a.poolType,
-      "Agent Name": a.name,
-      "Status": a.status,
-      "Enabled": a.enabled,
-      "OS": a.os,
-      "Version": a.version,
-      "Created On": a.createdOn,
-      "Current Job Owner": a.currentJobOwner
+    'Agents': (rawStore.agents || []).map(a => ({
+      'Agent Pool': a.poolName,
+      'Hosted': a.isHosted,
+      'Pool Type': a.poolType,
+      'Agent Name': a.name,
+      'Status': a.status,
+      'Enabled': a.enabled,
+      'OS': a.os,
+      'Version': a.version,
+      'Created On': a.createdOn
     }))
-  }, "AzureDevOps_ServiceConnections_Agents");
+  }, 'AzureDevOps_ServiceConnections_Agents');
 }

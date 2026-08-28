@@ -111,6 +111,7 @@ function handleOrgChange() {
   const projectBadge = document.getElementById('overviewProjectBadge');
   if (projectBadge) projectBadge.textContent = '—';
   resetDropdown('projectSelect', '-- Load PAT first --');
+  if (typeof resetServiceAgentsScope === 'function') resetServiceAgentsScope();
   document.getElementById('step5Container').classList.add('hidden');
   if (document.getElementById('chkRememberCreds').checked) {
     localStorage.setItem('azdo_org', document.getElementById('targetOrg').value.trim());
@@ -164,6 +165,7 @@ async function loadProjectsList() {
     });
 
     enableDropdown('projectSelect');
+    if (typeof populateServiceAgentsScope === 'function') populateServiceAgentsScope(projects);
     document.getElementById('step5Container').classList.add('hidden');
     setConnectionBadge(true);
     showWorkspacePage();
@@ -298,6 +300,7 @@ function disconnectSession() {
 
   document.getElementById('targetPat').value = '';
   resetDropdown('projectSelect', '-- Load PAT first --');
+  if (typeof resetServiceAgentsScope === 'function') resetServiceAgentsScope();
   document.getElementById('step5Container').classList.add('hidden');
   document.getElementById('overviewProjectBadge').textContent = '—';
 
@@ -322,9 +325,9 @@ function disconnectSession() {
   document.getElementById('pipelineTableBody').innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No build runs loaded.</td></tr>`;
   document.getElementById('workItemsTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Query work items to view backlog.</td></tr>`;
   const serviceConnectionsBody = document.getElementById('serviceConnectionsTableBody');
-  if (serviceConnectionsBody) serviceConnectionsBody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load service connections.</td></tr>`;
+  if (serviceConnectionsBody) serviceConnectionsBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load service connections.</td></tr>`;
   const agentsBody = document.getElementById('agentsTableBody');
-  if (agentsBody) agentsBody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load agent pools and agents.</td></tr>`;
+  if (agentsBody) agentsBody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load agent pools and agents.</td></tr>`;
 
   ['seeMoreRepoContainer', 'seeMoreRepoPrsContainer', 'seeMoreAccessContainer', 'seeMoreCommitsContainer', 'seeMorePipelineSummaryContainer', 'seeMorePipelinesContainer', 'seeMoreWorkItemsContainer', 'seeMoreServiceConnectionsContainer', 'seeMoreAgentsContainer'].forEach(id => {
     const el = document.getElementById(id);

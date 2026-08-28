@@ -238,8 +238,13 @@
           <!-- Step 5E: Service Connections & Agents -->
           <div id="substepServiceAgents" class="hidden grid grid-cols-1 md:grid-cols-3 gap-3 bg-blue-50/50 p-3 rounded-md items-end">
             <div class="md:col-span-2">
-              <div class="text-[11px] font-semibold text-blue-900">SERVICE CONNECTIONS &amp; AGENT POOLS</div>
-              <div class="text-[11px] text-slate-500 mt-1">Fetch project service connections and organization agent pools with their agents.</div>
+              <label for="serviceAgentsScope" class="block text-[11px] font-semibold text-blue-900 mb-1">
+                SERVICE CONNECTIONS &amp; AGENT POOLS
+              </label>
+              <select id="serviceAgentsScope" class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <option value="">-- Organization Level (All Projects / All Agent Pools) --</option>
+              </select>
+              <div class="text-[11px] text-slate-500 mt-1">Select a project for project-level service connections and agent pools, or leave blank to load organization-wide information.</div>
             </div>
             <div>
               <button onclick="fetchServiceConnectionAgentData()" class="w-full text-xs bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700 transition h-[34px]">
@@ -604,11 +609,10 @@
                   <th class="p-4">Ready</th>
                   <th class="p-4">Shared</th>
                   <th class="p-4">Created By</th>
-                  <th class="p-4">Owner</th>
                 </tr>
               </thead>
               <tbody id="serviceConnectionsTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="7" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load service connections.</td></tr>
+                <tr><td colspan="6" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load service connections.</td></tr>
               </tbody>
             </table>
             <div id="seeMoreServiceConnectionsContainer" class="hidden p-4 border-t border-slate-100 text-center">
@@ -628,9 +632,6 @@
                 Export Agents (.xlsx)
               </button>
             </div>
-            <div class="px-4 py-3 bg-amber-50 border-b border-amber-100 text-[11px] text-amber-800">
-              Azure DevOps does not expose a per-agent registration owner in the Agent REST API. When an agent has an active request, the table shows the current pipeline/job owner instead.
-            </div>
             <table id="table-agents" class="w-full text-left border-collapse text-sm">
               <thead>
                 <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
@@ -643,11 +644,10 @@
                   <th class="p-4">OS</th>
                   <th class="p-4">Version</th>
                   <th class="p-4">Created On</th>
-                  <th class="p-4">Current Job Owner</th>
                 </tr>
               </thead>
               <tbody id="agentsTableBody" class="divide-y divide-slate-100">
-                <tr><td colspan="10" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load agent pools and agents.</td></tr>
+                <tr><td colspan="9" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load agent pools and agents.</td></tr>
               </tbody>
             </table>
             <div id="seeMoreAgentsContainer" class="hidden p-4 border-t border-slate-100 text-center">
