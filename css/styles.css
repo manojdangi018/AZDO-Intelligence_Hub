@@ -405,13 +405,13 @@ button, input, select {
 }
 
 .workspace-project-field > label {
-  color: #8ea8cf !important;
+  color: #00d2ff !important;
 }
 
 /* Project requirement message: explains why a project must be selected. */
 #projectRequirementText {
   color: #8ea8cf !important;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 /* Page 2 main container: holds the complete dashboard workspace. */
