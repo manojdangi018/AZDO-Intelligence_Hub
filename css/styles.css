@@ -590,9 +590,36 @@ padding: 24px 32px 50px;
 }
 
 /* ============================================================
-   STEP 5 — PAGE 2: CONNECTION STATUS & PROJECT SELECTION
-   Purpose: Connected status, project label, and requirement message.
+   REPOSITORY INSPECT — FETCHING SPINNER
+   Purpose: Shows a small rotating spinner before the fetching text.
    ============================================================ */
+
+#statusBar.fetching {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+#statusBar.fetching::before {
+  content: "";
+  width: 11px;
+  height: 11px;
+  flex: 0 0 11px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: repoFetchingSpin 0.8s linear infinite;
+}
+
+@keyframes repoFetchingSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
 /* ============================================================
 PAGE 2: WORKSPACE & METRIC DASHBOARD
 Purpose: This is used in second page for connected button.
