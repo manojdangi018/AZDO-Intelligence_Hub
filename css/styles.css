@@ -418,6 +418,24 @@ transition: transform 0.15s ease, opacity 0.15s ease;
 margin-top: 6px;
 }
 
+/* ============================================================
+   LOAD PROJECTS BUTTON — LOADING STATE
+   Purpose: Darkens the button while projects are loading.
+   ============================================================ */
+
+#btnLoadProjects.loading {
+  background: #1264b8 !important;
+  color: #ffffff !important;
+  cursor: wait !important;
+  opacity: 0.9;
+}
+
+
+.btn-load-projects:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
 .btn-load-projects:hover {
 opacity: 0.95;
 transform: translateY(-1px);
