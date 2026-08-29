@@ -407,13 +407,16 @@ accent-color: var(--azure-bright);
   display: inline-flex !important;
   align-items: center;
   gap: 6px;
-  background: #d1fae5 !important;
+
+  background: transparent !important;
   border: 1px solid #0b9f72 !important;
-  color: #087443 !important;
+  color: #0b9f72 !important;
+
   border-radius: 6px !important;
-  padding: 7px 12px !important;
-  height: 30px;
+  padding: 0 12px !important;
+  height: 30px !important;
   box-sizing: border-box;
+
   font-size: 11px !important;
   font-weight: 700 !important;
 }
@@ -421,6 +424,7 @@ accent-color: var(--azure-bright);
 .connection-badge.connected .status-dot {
   width: 8px !important;
   height: 8px !important;
+  border-radius: 50%;
   background: #0b9f72 !important;
   box-shadow: 0 0 7px rgba(11, 159, 114, 0.45) !important;
 }
@@ -744,18 +748,39 @@ color: #059669 !important;
    SELECTED PROJECT NAME
    Purpose: Display the selected project name such as XYZ..clearly above the Repository KPI cards.
    ============================================================ */
+.overview-heading {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 4px !important;
+  margin-bottom: 16px !important;
+}
+
+.overview-heading > div {
+  display: block !important;
+}
+
 #overviewProjectBadge {
   display: block !important;
+
+  position: static !important;
+
   width: auto !important;
   height: auto !important;
-  margin: 0 0 16px 0 !important;
+
+  margin: 0 0 0 0 !important;
   padding: 0 !important;
+
   background: transparent !important;
   border: none !important;
+
   color: #8ea8cf !important;
-  font-size: 16px !important;
-  font-weight: 500 !important;
+
+  font-size: 14px !important;
+  font-weight: 600 !important;
   line-height: 1.4 !important;
+
   opacity: 1 !important;
   visibility: visible !important;
 }
