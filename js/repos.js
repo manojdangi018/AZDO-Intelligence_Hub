@@ -620,7 +620,8 @@ async function fetchRepositoryData() {
     'info'
   );
 
-
+  document.getElementById('statusBar')?.classList.add('fetching');
+  
   ensurePolicyTableHeaders();
 
   clearBranchPolicyCache();
@@ -662,12 +663,14 @@ async function fetchRepositoryData() {
     targetRepos.length === 0
   ) {
 
-    setStatus(
-      `No repository found matching "${rawInput}".`,
-      'error'
-    );
-
-    return;
+  setStatus(
+    `No repository found matching "${rawInput}".`,
+    'error'
+  );
+  
+  document.getElementById('statusBar')?.classList.remove('fetching');
+  
+  return;
   }
 
 
@@ -1133,17 +1136,16 @@ async function fetchRepositoryData() {
       ).length;
 
 
-    setStatus(
-
-      `Loaded ${rawStore.repos.length} branches, ` +
-      `${branchPolicyCount} branches with policies, ` +
-      `${allPRs.length} pull requests, and ` +
-      `${prPolicyCount} PR target branches with policies ` +
-      `across ${targetRepos.length} repositories.`,
-
-      'success'
-
-    );
+  setStatus(
+    `Loaded ${rawStore.repos.length} branches, ` +
+    `${branchPolicyCount} branches with policies, ` +
+    `${allPRs.length} pull requests, and ` +
+    `${prPolicyCount} PR target branches with policies ` +
+    `across ${targetRepos.length} repositories.`,
+    'success'
+  );
+  
+  document.getElementById('statusBar')?.classList.remove('fetching');
 
 
   } catch (err) {
@@ -1153,6 +1155,7 @@ async function fetchRepositoryData() {
       'error'
     );
 
+    document.getElementById('statusBar')?.classList.remove('fetching');
   }
 
 }
