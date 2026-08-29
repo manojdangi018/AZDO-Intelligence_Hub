@@ -258,6 +258,15 @@ async function loadProjectsList() {
   if (!org) return showModal('Please enter the Organization Name or URL first.', 'targetOrg');
   if (!pat) return showModal('Please enter your Personal Access Token (PAT).', 'targetPat');
 
+   // Show loading state while projects are being fetched.
+   const loadBtn = document.getElementById('btnLoadProjects');
+   
+   if (loadBtn) {
+     loadBtn.disabled = true;
+     loadBtn.textContent = 'Loading projects...';
+     loadBtn.classList.add('loading');
+   }
+
   if (document.getElementById('chkRememberCreds').checked) {
     localStorage.setItem('azdo_org', org);
     localStorage.setItem('azdo_pat', pat);
