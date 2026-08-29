@@ -430,12 +430,6 @@ margin-top: 6px;
   opacity: 0.9;
 }
 
-
-.btn-load-projects:hover {
-  opacity: 0.95;
-  transform: translateY(-1px);
-}
-
 .btn-load-projects:hover {
 opacity: 0.95;
 transform: translateY(-1px);
@@ -456,111 +450,83 @@ accent-color: var(--azure-bright);
 }
 
 /* ============================================================
-   STEP 4 — PAGE 2: WORKSPACE SHELL & SIDEBAR
-   Purpose: Dashboard page background, sidebar navigation, and shell.
+   PAGE 2 — WORKSPACE SHELL
+   Fixed 250px sidebar + remaining content
    ============================================================ */
+
 .workspace-page {
-min-height: 100vh;
-background-color: var(--bg-deep);
-position: relative;
-isolation: isolate;
-overflow: hidden;
+    min-height: 100vh;
+    width: 100%;
+    background-color: var(--bg-deep);
+    position: relative;
+    isolation: isolate;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
-/* Sidebar: dashboard navigation and service sections. */
+/* Fixed sidebar */
 .app-sidebar {
-position: fixed;
-inset: 0 auto 0 0;
-width: 250px;
-background: var(--bg-dark);
-color: #dbe7ff;
-z-index: 50;
-display: flex;
-flex-direction: column;
-border-right: 1px solid var(--border-dark);
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
+
+    background: var(--bg-dark);
+    color: #dbe7ff;
+
+    z-index: 50;
+
+    display: flex;
+    flex-direction: column;
+
+    border-right: 1px solid var(--border-dark);
+
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
-.sidebar-section-label {
-font-size: 10px;
-font-weight: 800;
-letter-spacing: 0.1em;
-color: var(--text-muted);
-margin: 22px 18px 8px;
+/* Main content */
+.app-shell {
+    width: calc(100% - 250px);
+    min-height: 100vh;
+    margin-left: 250px;
+    position: relative;
+    z-index: 1;
 }
 
-.sidebar-nav {
-padding: 0 10px;
-display: flex;
-flex-direction: column;
-gap: 4px;
+/* Top header */
+.app-topbar {
+    width: 100%;
 }
 
-/* Sidebar item: individual dashboard navigation option. */
-.sidebar-item {
-border: 0;
-background: transparent;
-color: #8ea8cf;
-height: 40px;
-border-radius: 8px;
-padding: 0 14px;
-display: flex;
-align-items: center;
-gap: 12px;
-font-size: 13px;
-font-weight: 600;
-cursor: pointer;
-text-align: left;
-transition: all 0.15s ease;
+/* Dashboard */
+.dashboard-main {
+    width: 100%;
+    padding: 24px 32px 50px;
 }
 
-.sidebar-item:hover {
-background: #0e2756;
-color: #fff;
-}
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
 
-.sidebar-item.active {
-background: #113374;
-color: #fff;
-border-left: 3px solid var(--azure-cyan);
-}
+@media (max-width: 760px) {
 
-.sidebar-connection-note {
-margin: auto 14px 16px;
-padding: 12px 14px;
-border: 1px solid var(--border-dark);
-background: #051024;
-border-radius: 10px;
-display: flex;
-align-items: center;
-gap: 10px;
-}
+    .app-sidebar {
+        display: none;
+    }
 
-.connection-note-title {
-font-size: 12px;
-font-weight: 700;
-color: #fff;
-}
+    .app-shell {
+        width: 100%;
+        margin-left: 0;
+    }
 
-.connection-note-text {
-font-size: 10px;
-color: var(--text-muted);
-}
-
-.status-dot {
-width: 8px;
-height: 8px;
-border-radius: 999px;
-background: var(--accent-green);
-box-shadow: 0 0 8px var(--accent-green);
-}
-
-#statusBar {
-margin-top: 10px;
-background: transparent !important;
-border: none !important;
-padding: 0 !important;
-color: #087443 !important;
-box-shadow: none !important;
+    .dashboard-main {
+        padding: 20px;
+    }
 }
 
 /* ============================================================
@@ -631,12 +597,6 @@ Purpose: This is used in second page for connected button.
 }
 
 /* Keep Connected transparent with green border/text */
-.app-topbar .connection-badge.connected {
-  background: transparent !important;
-  border: 1px solid #0b9f72 !important;
-  color: #0b9f72 !important;
-}
-
 .app-topbar .connection-badge.connected .status-dot {
   background: #0b9f72 !important;
   box-shadow: 0 0 7px rgba(11, 159, 114, 0.45) !important;
@@ -862,33 +822,18 @@ margin: 4px 0 0 !important;
 #kpi-1-val {
 color: #2563eb !important;
 }
-
 #kpi-2-val {
 color: #7c3aed !important;
 }
-
 #kpi-3-val {
 color: #0891b2 !important;
 }
-
 #kpi-4-val {
 color: #d97706 !important;
 }
-
 #kpi-5-val {
 color: #059669 !important;
 }
-
-/* ============================================================
-PAGE 2 — KPI VALUE COLORS
-Purpose: Gives each summary card value a different color.
-============================================================ */
-#kpi-1-val { color: #2563eb !important; }
-#kpi-2-val { color: #7c3aed !important; }
-#kpi-3-val { color: #0891b2 !important; }
-#kpi-4-val { color: #d97706 !important; }
-#kpi-5-val { color: #059669 !important; }
-
 
 /* ============================================================
    STEP 10 — PAGE 2: PROJECT BADGE & ACTIVITY CHART
@@ -1037,5 +982,3 @@ grid-template-columns: 1fr 1fr;
 grid-template-columns: 1fr;
 }
 }
-~
-
