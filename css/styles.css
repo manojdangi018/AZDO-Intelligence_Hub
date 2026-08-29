@@ -564,16 +564,33 @@ box-shadow: none !important;
 }
 
 /* ============================================================
-   REPOSITORY INSPECT — FETCHING STATE
-   Purpose: Makes the fetching message visibly pulse while data loads.
+   INSPECT — FETCHING SPINNER + SUBTLE BLINK
+   Purpose: Shows a small rotating spinner and gentle pulse
+   while repository data is being fetched.
    ============================================================ */
+
 #statusBar.fetching {
-  animation: repoFetchingPulse 1.2s ease-in-out infinite;
+  animation: fetchingPulse 1.4s ease-in-out infinite;
 }
 
-@keyframes repoFetchingPulse {
+/* Small rotating spinner */
+#statusBar.fetching::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 8px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  vertical-align: -1px;
+  animation: fetchingSpin 0.8s linear infinite;
+}
+
+/* Gentle blinking/pulse */
+@keyframes fetchingPulse {
   0%, 100% {
-    opacity: 0.45;
+    opacity: 0.65;
   }
 
   50% {
@@ -581,13 +598,15 @@ box-shadow: none !important;
   }
 }
 
-.app-shell {
-margin-left: 250px;
-min-height: 100vh;
-}
+/* Spinner rotation */
+@keyframes fetchingSpin {
+  from {
+    transform: rotate(0deg);
+  }
 
-.dashboard-main {
-padding: 24px 32px 50px;
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ============================================================
