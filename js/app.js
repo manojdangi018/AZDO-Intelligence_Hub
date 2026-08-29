@@ -21,6 +21,110 @@ let rawStore = {
   agents: [], agentsIndex: 0
 };
 
+/* ============================================================
+   WORKSPACE DISPLAY STATE
+   Purpose: Keep each workspace's loaded KPI/chart display separate.
+   This does NOT clear or refetch rawStore data when switching.
+   ============================================================ */
+let workspaceDisplayStore = {};
+
+function workspaceHasData(category) {
+  switch (category) {
+    case 'repositories':
+      return (rawStore.repos?.length || 0) > 0 || (rawStore.repoPrs?.length || 0) > 0;
+    case 'pipelines':
+      return (rawStore.pipelineSummaries?.length || 0) > 0 || (rawStore.pipelines?.length || 0) > 0;
+    case 'work_items':
+      return (rawStore.workitems?.length || 0) > 0;
+    case 'user_access':
+      return (rawStore.access?.length || 0) > 0;
+    case 'user_activity':
+      return (rawStore.commits?.length || 0) > 0;
+    case 'service_agents':
+      return (rawStore.serviceConnections?.length || 0) > 0 ||
+             (rawStore.agents?.length || 0) > 0 ||
+             (rawStore.agentPools?.length || 0) > 0;
+    default:
+      return false;
+  }
+}
+
+function saveWorkspaceDisplayState(category) {
+  if (!category || !workspaceHasData(category)) return;
+
+  const kpis = {};
+  for (let i = 1; i <= 5; i++) {
+    const label = document.getElementById(`kpi-${i}-label`);
+    const value = document.getElementById(`kpi-${i}-val`);
+    if (label && value) {
+      kpis[i] = {
+        label: label.textContent,
+        value: value.textContent,
+        className: value.className
+      };
+    }
+  }
+
+  workspaceDisplayStore[category] = {
+    kpis,
+    chart: {
+      labels: Array.isArray(currentChartData?.labels) ? [...currentChartData.labels] : [],
+      values: Array.isArray(currentChartData?.values) ? [...currentChartData.values] : [],
+      label: currentChartData?.label || 'Overview',
+      type: currentChartType || 'bar'
+    }
+  };
+}
+
+function setWorkspaceDefaultKpis(category) {
+  const defaults = {
+    repositories: [['Repository', '-'], ['Branches', '0'], ['Total PRs', '0'], ['Active PRs', '0'], ['Completed PRs', '0']],
+    pipelines: [['Active Scope', '—'], ['Total Pipelines', '0'], ['Successful Builds', '0'], ['Auto / CI Triggers', '0'], ['Scanned Runs', '0']],
+    work_items: [['Total Work Items', '0'], ['Active / New', '0'], ['In Progress', '0'], ['Resolved', '0'], ['Closed / Done', '0']],
+    user_access: [['Active Scope', '—'], ['Groups & Teams', '0'], ['Total Memberships', '0'], ['Mode', 'Security Access'], ['Status', 'Ready']],
+    user_activity: [['Active Scope', '—'], ['Active Repos', '0'], ['Commits Made', '0'], ['Pull Requests', '0'], ['Status', 'No Commits']],
+    service_agents: [['Total Service Connections', '0'], ['Microsoft-hosted Pools', '0'], ['Self-hosted Agents', '0']]
+  };
+
+  const values = defaults[category] || defaults.repositories;
+  for (let i = 1; i <= 5; i++) {
+    const label = document.getElementById(`kpi-${i}-label`);
+    const value = document.getElementById(`kpi-${i}-val`);
+    const item = values[i - 1];
+    if (label && value && item) {
+      label.textContent = item[0];
+      value.textContent = item[1];
+      value.className = 'text-2xl font-extrabold text-slate-800 mt-1 truncate';
+    }
+  }
+}
+
+function restoreWorkspaceDisplayState(category) {
+  const state = workspaceDisplayStore[category];
+  if (!state) {
+    setWorkspaceDefaultKpis(category);
+    return;
+  }
+
+  for (let i = 1; i <= 5; i++) {
+    const label = document.getElementById(`kpi-${i}-label`);
+    const value = document.getElementById(`kpi-${i}-val`);
+    const item = state.kpis?.[i];
+    if (label && value && item) {
+      label.textContent = item.label;
+      value.textContent = item.value;
+      value.className = item.className;
+    }
+  }
+
+  if (state.chart) {
+    currentChartType = state.chart.type || 'bar';
+    if (typeof renderChart === 'function') {
+      renderChart(state.chart.labels || [], state.chart.values || [], state.chart.label || 'Overview');
+    }
+  }
+}
+
 function extractOrgName(input) {
   let cleaned = input.trim().replace(/^https?:\/\//, '').replace(/^dev\.azure\.com\//, '');
   return cleaned.split('/')[0] || '';
@@ -299,6 +403,11 @@ function showSection(viewId) {
 }
 
 function selectExplore(category) {
+  /* Save only the workspace that is actually loaded. */
+  if (activeCategory && workspaceHasData(activeCategory)) {
+    saveWorkspaceDisplayState(activeCategory);
+  }
+
   activeCategory = category;
   updateProjectRequirementUI();
   const categorySelect = document.getElementById('categorySelect');
@@ -323,6 +432,10 @@ function selectExplore(category) {
     configureServiceAgentsOverview(viewId === 'serviceagents');
   }
   renderActiveSubstep();
+
+  /* Restore this workspace's own KPI/chart display.
+     The rawStore data and tables are left untouched. */
+  restoreWorkspaceDisplayState(category);
 }
 
 function setConnectionBadge(connected) {
@@ -352,6 +465,7 @@ function disconnectSession() {
     agents: [], agentsIndex: 0
   };
   cachedRepos = [];
+  workspaceDisplayStore = {};
 
   document.getElementById('targetPat').value = '';
   resetDropdown('projectSelect', '-- Load PAT first --');
