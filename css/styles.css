@@ -1,4 +1,27 @@
 /* ============================================================
+   AZURE DEVOPS INTELLIGENCE HUB — ORGANIZED PRODUCTION STYLESHEET
+   Purpose: Same CSS rules as the supplied file, rearranged into a
+   clear step-by-step order. No styling declarations were intentionally
+   changed; comments only explain what each section controls.
+
+   CODE ORDER
+   1. Global variables and base rules
+   2. Shared header / branding
+   3. Page 1 — connection screen
+   4. Page 2 — workspace shell and sidebar
+   5. Page 2 — connection status
+   6. Page 2 — project selection and workspace controls
+   7. Page 2 — repository selection
+   8. Page 2 — KPI cards and value colors
+   9. Page 2 — overview / chart
+   10. Background watermarks
+   11. Responsive layout
+   ============================================================ */
+/* ============================================================
+   STEP 1 — GLOBAL VARIABLES & BASE STYLES
+   Purpose: Shared colors, page defaults, and common form fonts.
+   ============================================================ */
+/* ============================================================
 AZURE DEVOPS INTELLIGENCE HUB — COMPLETE PRODUCTION STYLESHEET
 ============================================================ */
 
@@ -42,10 +65,10 @@ overflow-x: hidden;
 position: relative;
 }
 
-button, input, select {
-font: inherit;
-}
-
+/* ============================================================
+   STEP 2 — SHARED HEADER & BRANDING
+   Purpose: Header height, logo, title, subtitle, and top actions.
+   ============================================================ */
 /* ============================================================
 SHARED TOPBAR & HEADER BRANDING
 Purpose: Top header, branding, logo, and shared navigation styling.
@@ -117,6 +140,10 @@ align-items: center;
 gap: 14px;
 }
 
+/* ============================================================
+   STEP 3 — PAGE 1: AZURE DEVOPS CONNECTION
+   Purpose: Landing page, hero content, connection card, and fields.
+   ============================================================ */
 /* ============================================================
 PAGE 1: LANDING & CONNECTION EXPERIENCE
 Purpose: Azure DevOps connection/landing page layout and controls.
@@ -400,62 +427,9 @@ accent-color: var(--azure-bright);
 }
 
 /* ============================================================
-PAGE 2: WORKSPACE & METRIC DASHBOARD
-Purpose: This is used in second page for connected button.
-============================================================ */
-
-/* Page 2- Azure DevOps Intelligence Hub filed*/
-::selection {
-  background: #1b386e !important;
-  color: #06132d !important;
-}
-
-* Page 2- connted button fuction*/
-.connection-badge.connected {
-display: inline-flex !important;
-align-items: center;
-gap: 6px;
-
-background: transparent !important;
-border: 1px solid #0b9f72 !important;
-color: #0b9f72 !important;
-
-border-radius: 6px !important;
-padding: 0 12px !important;
-height: 30px !important;
-box-sizing: border-box;
-
-font-size: 11px !important;
-font-weight: 700 !important;
-}
-
-.connection-badge.connected .status-dot {
-width: 8px !important;
-height: 8px !important;
-border-radius: 50%;
-background: #0b9f72 !important;
-box-shadow: 0 0 7px rgba(11, 159, 114, 0.45) !important;
-}
-
-/* ============================================================
-PAGE 2 — PROJECT SELECTION
-Purpose: Controls the Project label, dropdown, spacing, and requirement message.
-============================================================ */
-.workspace-project-field {
-display: flex;
-flex-direction: column;
-gap: 8px;
-}
-
-.workspace-project-field > label {
-color: #00d2ff !important;
-}
-
-#projectRequirementText {
-color: #8ea8cf !important;
-font-size: 11px !important;
-}
-
+   STEP 4 — PAGE 2: WORKSPACE SHELL & SIDEBAR
+   Purpose: Dashboard page background, sidebar navigation, and shell.
+   ============================================================ */
 .workspace-page {
 min-height: 100vh;
 background-color: var(--bg-deep);
@@ -570,6 +544,71 @@ padding: 24px 32px 50px;
 }
 
 /* ============================================================
+   STEP 5 — PAGE 2: CONNECTION STATUS & PROJECT SELECTION
+   Purpose: Connected status, project label, and requirement message.
+   ============================================================ */
+/* ============================================================
+PAGE 2: WORKSPACE & METRIC DASHBOARD
+Purpose: This is used in second page for connected button.
+============================================================ */
+
+/* Page 2- Azure DevOps Intelligence Hub filed*/
+::selection {
+  background: #1b386e !important;
+  color: #06132d !important;
+}
+
+* Page 2- connted button fuction*/
+.connection-badge.connected {
+display: inline-flex !important;
+align-items: center;
+gap: 6px;
+
+background: transparent !important;
+border: 1px solid #0b9f72 !important;
+color: #0b9f72 !important;
+
+border-radius: 6px !important;
+padding: 0 12px !important;
+height: 30px !important;
+box-sizing: border-box;
+
+font-size: 11px !important;
+font-weight: 700 !important;
+}
+
+.connection-badge.connected .status-dot {
+width: 8px !important;
+height: 8px !important;
+border-radius: 50%;
+background: #0b9f72 !important;
+box-shadow: 0 0 7px rgba(11, 159, 114, 0.45) !important;
+}
+
+/* ============================================================
+PAGE 2 — PROJECT SELECTION
+Purpose: Controls the Project label, dropdown, spacing, and requirement message.
+============================================================ */
+.workspace-project-field {
+display: flex;
+flex-direction: column;
+gap: 8px;
+}
+
+.workspace-project-field > label {
+color: #00d2ff !important;
+}
+
+#projectRequirementText {
+color: #8ea8cf !important;
+font-size: 11px !important;
+}
+
+/* ============================================================
+   STEP 6 — PAGE 2: WORKSPACE CONTROLS
+   Purpose: Project controls, switch button, project dropdown, and path.
+   ============================================================ */
+/* ============================================================
 PAGE 2 — WORKSPACE CONTROL CARD
 Purpose: Main dark card containing project selection and service controls.
 ============================================================ */
@@ -659,6 +698,10 @@ text-decoration: none;
 }
 
 /* ============================================================
+   STEP 7 — PAGE 2: REPOSITORY SELECTION
+   Purpose: Spacing for the repository selection control.
+   ============================================================ */
+/* ============================================================
 PAGE 2 — REPOSITORY SELECTION
 Purpose: Adds clear spacing between the repository label and selector controls.
 ============================================================ */
@@ -666,6 +709,11 @@ Purpose: Adds clear spacing between the repository label and selector controls.
 margin-bottom: 8px !important;
 }
 
+
+/* ============================================================
+   STEP 8 — PAGE 2: KPI CARD LAYOUT
+   Purpose: Dashboard KPI grid, card layout, labels, and values.
+   ============================================================ */
 /* ============================================================
 PAGE 2 — DASHBOARD KPI CARDS
 Purpose: Styles the five summary cards showing repository, branch, and PR metrics.
@@ -717,6 +765,11 @@ color: #0f172a !important;
 margin: 4px 0 0 !important;
 }
 
+
+/* ============================================================
+   STEP 9 — PAGE 2: KPI VALUE COLORS
+   Purpose: Gives each summary KPI value its assigned color.
+   ============================================================ */
 /* ============================================================
  PAGE 2 — REPOSITORY KPI VALUE COLORS
  Purpose: Gives each repository KPI value a distinct color.
@@ -752,6 +805,11 @@ Purpose: Gives each summary card value a different color.
 #kpi-4-val { color: #d97706 !important; }
 #kpi-5-val { color: #059669 !important; }
 
+
+/* ============================================================
+   STEP 10 — PAGE 2: PROJECT BADGE & ACTIVITY CHART
+   Purpose: Selected project name, chart container, and chart content.
+   ============================================================ */
 /* ============================================================
   SELECTED PROJECT NAME
   Purpose: Display the selected project name such as XYZ..clearly above the Repository KPI cards.
@@ -808,6 +866,11 @@ padding: 24px;
 box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
 
+
+/* ============================================================
+   STEP 11 — BACKGROUND WATERMARKS
+   Purpose: Decorative DevOps logo behind both application pages.
+   ============================================================ */
 /* ============================================================
 BACKGROUND DECORATIVE WATERMARKS
 Purpose: Background watermark positioning and appearance for both pages.
@@ -844,6 +907,11 @@ background: url("../devops-new-watermark.png") center/contain no-repeat;
 opacity: 0.12;
 }
 
+
+/* ============================================================
+   STEP 12 — RESPONSIVE BREAKPOINTS
+   Purpose: Keeps the layout usable on smaller screens.
+   ============================================================ */
 /* ============================================================
 RESPONSIVE BREAKPOINTS
 Purpose: Adjust layout and controls for smaller screen sizes.
@@ -886,3 +954,4 @@ grid-template-columns: 1fr;
 }
 }
 ~
+
