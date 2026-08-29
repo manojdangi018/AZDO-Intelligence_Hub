@@ -405,9 +405,12 @@ accent-color: var(--azure-bright);
  ============================================================ */
 
 /* Page 2- Azure DevOps Intelligence Hub filed*/
-::selection {
-  background: #1b386e !important;
-  color: #06132d !important;
+.brand-title {
+  color: #8ea8cf !important;
+}
+
+.brand-subtitle {
+  color: #8ea8cf !important;
 }
 
 * Page 2- connted button fuction*/
