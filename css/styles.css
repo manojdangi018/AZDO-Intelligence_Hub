@@ -595,10 +595,15 @@ height: 42px;
 background: #06132d;
 border: 1px solid #1b386e;
 border-radius: 8px;
-color: #8ea8cf !important;
+color: #ffffff  !important;
 padding: 0 12px;
 font-size: 13px;
 width: 100%;
+}
+
+.workspace-project-field select option {
+  color: #ffffff !important;
+  background: #06132d;
 }
 
 .active-path-row {
@@ -713,7 +718,8 @@ color: #059669 !important;
  Purpose: Styles the project badge displayed above the dashboard (for example, EDS).
  ============================================================ */
 #overviewProjectBadge {
-color: #8ea8cf !important;
+  display: block;
+  margin-bottom: 16px;
 }
 
 #chartSection > * {
