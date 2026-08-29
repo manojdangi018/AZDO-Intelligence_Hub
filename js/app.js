@@ -236,6 +236,7 @@ function enableDropdown(id) {
   el.disabled = false;
   el.classList.remove('bg-slate-100', 'cursor-not-allowed');
   el.classList.add('bg-white');
+  el.classList.remove('bg-white');
 }
 
 async function loadProjectsList() {
