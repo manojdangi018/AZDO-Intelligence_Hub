@@ -669,6 +669,31 @@ button, input, select {
 }
 
 /* ============================================================
+   PAGE 2 — REPOSITORY KPI VALUE COLORS
+   Purpose: Gives each repository KPI value a distinct color.
+   ============================================================ */
+
+#kpi-1-val {
+  color: #2563eb !important;
+}
+
+#kpi-2-val {
+  color: #7c3aed !important;
+}
+
+#kpi-3-val {
+  color: #0891b2 !important;
+}
+
+#kpi-4-val {
+  color: #d97706 !important;
+}
+
+#kpi-5-val {
+  color: #059669 !important;
+}
+
+/* ============================================================
    PAGE 2 — KPI VALUE COLORS
    Purpose: Gives each summary card value a different color.
    ============================================================ */
