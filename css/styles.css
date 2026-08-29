@@ -404,12 +404,25 @@ accent-color: var(--azure-bright);
  Purpose: This is used in second page for connected button.
  ============================================================ */
 .connection-badge.connected {
-  color: #0b9f72 !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  background: #d1fae5 !important;
+  border: 1px solid #0b9f72 !important;
+  color: #087443 !important;
+  border-radius: 6px !important;
+  padding: 7px 12px !important;
+  height: 30px;
+  box-sizing: border-box;
+  font-size: 11px !important;
+  font-weight: 700 !important;
 }
 
 .connection-badge.connected .status-dot {
+  width: 8px !important;
+  height: 8px !important;
   background: #0b9f72 !important;
-  box-shadow: 0 0 8px #0b9f72 !important;
+  box-shadow: 0 0 7px rgba(11, 159, 114, 0.45) !important;
 }
 
 /* ============================================================
@@ -728,17 +741,23 @@ color: #059669 !important;
 #kpi-5-val { color: #059669 !important; }
 
 /* ============================================================
- PAGE 2 — SELECTED PROJECT NAME
- Purpose: Styles the project badge displayed above the dashboard (for example, EDS).
- ============================================================ */
-/* Selected project name spacing and color */
+   SELECTED PROJECT NAME
+   Purpose: Display the selected project name such as XYZ..clearly above the Repository KPI cards.
+   ============================================================ */
 #overviewProjectBadge {
-  display: block;
-  margin-bottom: 16px;
-  color: #8ea8cf !important;
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 0 16px 0 !important;
+  padding: 0 !important;
   background: transparent !important;
   border: none !important;
-  padding: 0 !important;
+  color: #8ea8cf !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 #chartSection > * {
