@@ -551,11 +551,29 @@ padding: 24px 32px 50px;
 PAGE 2: WORKSPACE & METRIC DASHBOARD
 Purpose: This is used in second page for connected button.
 ============================================================ */
+/* ============================================================
+   FINAL HEADER COLOR FIX
+   Purpose: Keep header title (Azure DevOps Intelligence Hub) and subtitle clearly visible.
+   ============================================================ */
 
-/* Page 2- Azure DevOps Intelligence Hub filed*/
-::selection {
-  background: #1b386e !important;
-  color: #06132d !important;
+.app-topbar .brand-title {
+  color: #ffffff !important;
+}
+
+.app-topbar .brand-subtitle {
+  color: #8ea8cf !important;
+}
+
+/* Keep Connected transparent with green border/text */
+.app-topbar .connection-badge.connected {
+  background: transparent !important;
+  border: 1px solid #0b9f72 !important;
+  color: #0b9f72 !important;
+}
+
+.app-topbar .connection-badge.connected .status-dot {
+  background: #0b9f72 !important;
+  box-shadow: 0 0 7px rgba(11, 159, 114, 0.45) !important;
 }
 
 /* Page 2 - Connected button function */
