@@ -21,140 +21,6 @@ let rawStore = {
   agents: [], agentsIndex: 0
 };
 
-
-/* ============================================================
-   WORKSPACE DISPLAY STATE
-   Purpose: Keep KPI values and chart state separately for each
-   workspace while the shared rawStore data remains untouched.
-   This prevents one workspace's KPIs from appearing in another
-   workspace when the user switches views.
-   ============================================================ */
-let workspaceDisplayStore = {};
-
-function getKpiSnapshot() {
-  const kpis = {};
-
-  for (let i = 1; i <= 5; i++) {
-    const label = document.getElementById(`kpi-${i}-label`);
-    const value = document.getElementById(`kpi-${i}-val`);
-
-    if (label && value) {
-      kpis[i] = {
-        label: label.textContent,
-        value: value.textContent,
-        className: value.className
-      };
-    }
-  }
-
-  return kpis;
-}
-
-function saveWorkspaceDisplayState(category) {
-  if (!category) return;
-
-  workspaceDisplayStore[category] = {
-    kpis: getKpiSnapshot(),
-    chart: {
-      labels: Array.isArray(currentChartData?.labels) ? [...currentChartData.labels] : [],
-      values: Array.isArray(currentChartData?.values) ? [...currentChartData.values] : [],
-      label: currentChartData?.label || 'Overview',
-      type: currentChartType || 'bar'
-    }
-  };
-}
-
-function setWorkspaceEmptyKpis(category) {
-  const defaults = {
-    repositories: [
-      ['Repository', '-'],
-      ['Branches', '0'],
-      ['Total PRs', '0'],
-      ['Active PRs', '0'],
-      ['Completed PRs', '0']
-    ],
-    pipelines: [
-      ['Active Scope', '—'],
-      ['Total Pipelines', '0'],
-      ['Successful Builds', '0'],
-      ['Auto / CI Triggers', '0'],
-      ['Scanned Runs', '0']
-    ],
-    work_items: [
-      ['Total Work Items', '0'],
-      ['Active / New', '0'],
-      ['In Progress', '0'],
-      ['Resolved', '0'],
-      ['Closed / Done', '0']
-    ],
-    user_access: [
-      ['Active Scope', '—'],
-      ['Groups & Teams', '0'],
-      ['Total Memberships', '0'],
-      ['Mode', 'Security Access'],
-      ['Status', 'Ready']
-    ],
-    user_activity: [
-      ['Active Scope', '—'],
-      ['Active Repos', '0'],
-      ['Commits Made', '0'],
-      ['Pull Requests', '0'],
-      ['Status', 'No Commits']
-    ],
-    service_agents: [
-      ['Total Service Connections', '0'],
-      ['Microsoft-hosted Pools', '0'],
-      ['Self-hosted Agents', '0']
-    ]
-  };
-
-  const values = defaults[category] || defaults.repositories;
-
-  for (let i = 1; i <= 5; i++) {
-    const label = document.getElementById(`kpi-${i}-label`);
-    const value = document.getElementById(`kpi-${i}-val`);
-    const item = values[i - 1];
-
-    if (label && value && item) {
-      label.textContent = item[0];
-      value.textContent = item[1];
-      value.className = 'text-2xl font-extrabold text-slate-800 mt-1 truncate';
-    }
-  }
-}
-
-function restoreWorkspaceDisplayState(category) {
-  const state = workspaceDisplayStore[category];
-
-  if (!state) {
-    setWorkspaceEmptyKpis(category);
-    return;
-  }
-
-  const kpis = state.kpis || {};
-
-  for (let i = 1; i <= 5; i++) {
-    const label = document.getElementById(`kpi-${i}-label`);
-    const value = document.getElementById(`kpi-${i}-val`);
-    const item = kpis[i];
-
-    if (label && value && item) {
-      label.textContent = item.label;
-      value.textContent = item.value;
-      value.className = item.className;
-    }
-  }
-
-  if (state.chart && typeof renderChart === 'function') {
-    currentChartType = state.chart.type || 'bar';
-    renderChart(
-      state.chart.labels || [],
-      state.chart.values || [],
-      state.chart.label || 'Overview'
-    );
-  }
-}
-
 function extractOrgName(input) {
   let cleaned = input.trim().replace(/^https?:\/\//, '').replace(/^dev\.azure\.com\//, '');
   return cleaned.split('/')[0] || '';
@@ -433,11 +299,6 @@ function showSection(viewId) {
 }
 
 function selectExplore(category) {
-  /* Save the workspace we are leaving before changing the active view. */
-  if (activeCategory) {
-    saveWorkspaceDisplayState(activeCategory);
-  }
-
   activeCategory = category;
   updateProjectRequirementUI();
   const categorySelect = document.getElementById('categorySelect');
@@ -462,11 +323,7 @@ function selectExplore(category) {
     configureServiceAgentsOverview(viewId === 'serviceagents');
   }
   renderActiveSubstep();
-
-  /* Restore only this workspace's saved display state. */
-  restoreWorkspaceDisplayState(category);
 }
-
 
 function setConnectionBadge(connected) {
   const text = document.getElementById('connectionBadgeText');
@@ -495,9 +352,6 @@ function disconnectSession() {
     agents: [], agentsIndex: 0
   };
   cachedRepos = [];
-
-  /* Clear workspace display state because the session is disconnected. */
-  workspaceDisplayStore = {};
 
   document.getElementById('targetPat').value = '';
   resetDropdown('projectSelect', '-- Load PAT first --');
