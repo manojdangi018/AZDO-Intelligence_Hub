@@ -595,7 +595,7 @@ height: 42px;
 background: #06132d;
 border: 1px solid #1b386e;
 border-radius: 8px;
-color: #ffffff  !important;
+color: #ffffff !important;
 padding: 0 12px;
 font-size: 13px;
 width: 100%;
@@ -649,6 +649,11 @@ display: grid;
 grid-template-columns: repeat(5, minmax(0, 1fr));
 gap: 14px;
 margin-bottom: 24px;
+}
+
+/* Service Connections & Agents: align 3 KPI cards evenly */
+.serviceagents-kpi-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 }
 
 .kpi-grid > div {
