@@ -21,9 +21,59 @@ let rawStore = {
   agents: [], agentsIndex: 0
 };
 
-function extractOrgName(input) {
-  let cleaned = input.trim().replace(/^https?:\/\//, '').replace(/^dev\.azure\.com\//, '');
-  return cleaned.split('/')[0] || '';
+/* ============================================================
+   WORKSPACE KPI STATE
+   Purpose: Remember KPI values separately for each workspace
+   so switching workspaces does not lose previous KPI values.
+   ============================================================ */
+let workspaceKpiStore = {};
+
+
+/* ============================================================
+   SAVE CURRENT WORKSPACE KPIs
+   Purpose: Save the KPI labels, values, and styling before
+   switching from the current workspace.
+   ============================================================ */
+function saveWorkspaceKpis(category) {
+  const kpis = {};
+
+  for (let i = 1; i <= 5; i++) {
+    const label = document.getElementById(`kpi-${i}-label`);
+    const value = document.getElementById(`kpi-${i}-val`);
+
+    if (label && value) {
+      kpis[i] = {
+        label: label.textContent,
+        value: value.textContent,
+        className: value.className
+      };
+    }
+  }
+
+  workspaceKpiStore[category] = kpis;
+}
+
+
+/* ============================================================
+   RESTORE WORKSPACE KPIs
+   Purpose: Restore the KPI values belonging to the workspace
+   being opened instead of showing the previous workspace KPIs.
+   ============================================================ */
+function restoreWorkspaceKpis(category) {
+  const kpis = workspaceKpiStore[category];
+
+  if (!kpis) return;
+
+  for (let i = 1; i <= 5; i++) {
+    const label = document.getElementById(`kpi-${i}-label`);
+    const value = document.getElementById(`kpi-${i}-val`);
+
+    if (label && value && kpis[i]) {
+      label.textContent = kpis[i].label;
+      value.textContent = kpis[i].value;
+      value.className = kpis[i].className;
+    }
+  }
 }
 
 function showModal(message, targetFocusId) {
@@ -299,8 +349,15 @@ function showSection(viewId) {
 }
 
 function selectExplore(category) {
+
+  /* Save KPI values before leaving the current workspace */
+  if (activeCategory) {
+    saveWorkspaceKpis(activeCategory);
+  }
+
   activeCategory = category;
   updateProjectRequirementUI();
+
   const categorySelect = document.getElementById('categorySelect');
   if (categorySelect) categorySelect.value = category;
 
@@ -312,17 +369,25 @@ function selectExplore(category) {
     user_access: 'access',
     service_agents: 'serviceagents'
   };
+
   const viewId = viewMap[category] || 'repositories';
 
   document.querySelectorAll('.sidebar-item').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.view === viewId);
   });
 
-  if (typeof showSection === 'function') showSection(viewId);
+  if (typeof showSection === 'function') {
+    showSection(viewId);
+  }
+
   if (typeof configureServiceAgentsOverview === 'function') {
     configureServiceAgentsOverview(viewId === 'serviceagents');
   }
+
   renderActiveSubstep();
+
+  /* Restore KPI values for the workspace being opened */
+  restoreWorkspaceKpis(category);
 }
 
 function setConnectionBadge(connected) {
@@ -352,6 +417,9 @@ function disconnectSession() {
     agents: [], agentsIndex: 0
   };
   cachedRepos = [];
+
+    /* Clear saved KPI state because the Azure DevOps session is disconnected */
+  workspaceKpiStore = {};
 
   document.getElementById('targetPat').value = '';
   resetDropdown('projectSelect', '-- Load PAT first --');
