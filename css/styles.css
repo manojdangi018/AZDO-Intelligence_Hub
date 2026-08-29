@@ -669,6 +669,30 @@ button, input, select {
 }
 
 /* ============================================================
+   PAGE 2 — SERVICE CONNECTIONS & AGENTS KPI LAYOUT
+   Purpose: Makes the 3 service-agent KPI cards fill the row evenly.
+   ============================================================ */
+.kpi-grid.service-agents-kpi {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* Different value colors for each KPI */
+.kpi-grid.service-agents-kpi #kpi-1-val {
+  color: #0b9f72 !important;
+}
+
+.kpi-grid.service-agents-kpi #kpi-2-val {
+  color: #2563eb !important;
+}
+
+.kpi-grid.service-agents-kpi #kpi-3-val {
+  color: #0891b2 !important;
+}
+
+
+#chartSection > * {
+
+/* ============================================================
    PAGE 2 — REPOSITORY KPI VALUE COLORS
    Purpose: Gives each repository KPI value a distinct color.
    ============================================================ */
@@ -709,8 +733,10 @@ button, input, select {
    ============================================================ */
 #overviewProjectBadge {
   color: #8ea8cf !important;
+  display: inline-block;
+  margin-top: 0 !important;
+  margin-bottom: 18px !important;
 }
-
 #chartSection > * {
   position: relative;
   z-index: 1;
@@ -736,9 +762,9 @@ button, input, select {
   position: absolute;
   z-index: 0;
   pointer-events: none;
-  width: min(55vw, 680px);
+  width: min(65vw, 800px);
   aspect-ratio: 1660 / 933;
-  left: 30%;
+  left: 36%;
   top: 52%;
   transform: translate(-50%, -50%);
   background: url("../devops-new-watermark.png") center/contain no-repeat;
