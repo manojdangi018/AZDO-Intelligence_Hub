@@ -401,8 +401,17 @@ accent-color: var(--azure-bright);
 
 /* ============================================================
  PAGE 2: WORKSPACE & METRIC DASHBOARD
- Purpose: Project selection, dashboard, navigation, and metrics styling.
+ Purpose: This is used in second page for connected button.
  ============================================================ */
+.connection-badge.connected {
+  color: #0b9f72 !important;
+}
+
+.connection-badge.connected .status-dot {
+  background: #0b9f72 !important;
+  box-shadow: 0 0 8px #0b9f72 !important;
+}
+
 /* ============================================================
  PAGE 2 — PROJECT SELECTION
  Purpose: Controls the Project label, dropdown, spacing, and requirement message.
@@ -722,9 +731,14 @@ color: #059669 !important;
  PAGE 2 — SELECTED PROJECT NAME
  Purpose: Styles the project badge displayed above the dashboard (for example, EDS).
  ============================================================ */
+/* Selected project name spacing and color */
 #overviewProjectBadge {
   display: block;
   margin-bottom: 16px;
+  color: #8ea8cf !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
 }
 
 #chartSection > * {
