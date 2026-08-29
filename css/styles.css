@@ -398,6 +398,10 @@ button, input, select {
    PAGE 2: WORKSPACE & METRIC DASHBOARD
    Purpose: Project selection, dashboard, navigation, and metrics styling.
    ============================================================ */
+/* ============================================================
+   PAGE 2 — PROJECT SELECTION
+   Purpose: Controls the Project label, dropdown, spacing, and requirement message.
+   ============================================================ */
 .workspace-project-field {
   display: flex;
   flex-direction: column;
@@ -408,13 +412,11 @@ button, input, select {
   color: #00d2ff !important;
 }
 
-/* Project requirement message: explains why a project must be selected. */
 #projectRequirementText {
   color: #8ea8cf !important;
-  font-size: 11px;
+  font-size: 11px !important;
 }
 
-/* Page 2 main container: holds the complete dashboard workspace. */
 .workspace-page {
   min-height: 100vh;
   background-color: var(--bg-deep);
@@ -528,7 +530,10 @@ button, input, select {
   padding: 24px 32px 50px;
 }
 
-/* Workspace Control / Project Selector Card */
+/* ============================================================
+   PAGE 2 — WORKSPACE CONTROL CARD
+   Purpose: Main dark card containing project selection and service controls.
+   ============================================================ */
 /* Workspace controls: project selection area at the top of Page 2. */
 .workspace-controls {
   background: var(--bg-card-dark);
@@ -585,7 +590,7 @@ button, input, select {
   background: #06132d;
   border: 1px solid #1b386e;
   border-radius: 8px;
-  color: #fff;
+  color: #8ea8cf !important;
   padding: 0 12px;
   font-size: 13px;
   width: 100%;
@@ -609,7 +614,18 @@ button, input, select {
   text-decoration: none;
 }
 
-/* Page 2 Metric KPI Grid (White Cards with Dark Text) */
+/* ============================================================
+   PAGE 2 — REPOSITORY SELECTION
+   Purpose: Adds clear spacing between the repository label and selector controls.
+   ============================================================ */
+#substepRepo > div:first-child > label {
+  margin-bottom: 8px !important;
+}
+
+/* ============================================================
+   PAGE 2 — DASHBOARD KPI CARDS
+   Purpose: Styles the five summary cards showing repository, branch, and PR metrics.
+   ============================================================ */
 .overview-heading h2 {
   font-size: 18px;
   font-weight: 800;
@@ -650,6 +666,24 @@ button, input, select {
   font-weight: 850 !important;
   color: #0f172a !important;
   margin: 4px 0 0 !important;
+}
+
+/* ============================================================
+   PAGE 2 — KPI VALUE COLORS
+   Purpose: Gives each summary card value a different color.
+   ============================================================ */
+#kpi-1-val { color: #2563eb !important; }
+#kpi-2-val { color: #7c3aed !important; }
+#kpi-3-val { color: #0891b2 !important; }
+#kpi-4-val { color: #d97706 !important; }
+#kpi-5-val { color: #059669 !important; }
+
+/* ============================================================
+   PAGE 2 — SELECTED PROJECT NAME
+   Purpose: Styles the project badge displayed above the dashboard (for example, EDS).
+   ============================================================ */
+#overviewProjectBadge {
+  color: #8ea8cf !important;
 }
 
 #chartSection > * {
