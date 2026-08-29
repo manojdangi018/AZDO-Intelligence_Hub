@@ -563,6 +563,24 @@ color: #087443 !important;
 box-shadow: none !important;
 }
 
+/* ============================================================
+   REPOSITORY INSPECT — FETCHING STATE
+   Purpose: Makes the fetching message visibly pulse while data loads.
+   ============================================================ */
+#statusBar.fetching {
+  animation: repoFetchingPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes repoFetchingPulse {
+  0%, 100% {
+    opacity: 0.45;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 .app-shell {
 margin-left: 250px;
 min-height: 100vh;
