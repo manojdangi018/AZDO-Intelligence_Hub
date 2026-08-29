@@ -1,3 +1,15 @@
+/* ============================================================
+   PAGE RESTORE — PREVENT CONNECTION PAGE FLASH
+   Purpose: If Page 2 was active before refresh, hide Page 1
+   immediately so the user never sees the connection screen.
+   ============================================================ */
+
+(function () {
+  if (sessionStorage.getItem('azdo_workspace_active') === 'true') {
+    document.documentElement.classList.add('restore-workspace-page');
+  }
+})();
+
 let chartInstance = null;
 let currentFocusTarget = null;
 let cachedRepos = [];
