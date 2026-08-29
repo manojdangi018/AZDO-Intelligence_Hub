@@ -79,7 +79,6 @@ async function fetchBranchPolicies(org, project, repoId, branchName, authHeader)
 
     }
 
-
     // =========================================================
     // FALLBACK POLICY API
     // =========================================================
@@ -92,7 +91,6 @@ async function fetchBranchPolicies(org, project, repoId, branchName, authHeader)
       `&api-version=7.1-preview.1`;
 
     try {
-
       console.log(
         `[Azure DevOps Policy] Trying fallback policy API for ${repoId} ${refName}`
       );
@@ -129,18 +127,15 @@ async function fetchBranchPolicies(org, project, repoId, branchName, authHeader)
             return false;
           }
 
-
           const scopes =
             Array.isArray(policy.settings?.scope)
               ? policy.settings.scope
               : [];
 
-
           // No scope means project-wide policy.
           if (scopes.length === 0) {
             return true;
           }
-
 
           return scopes.some(scope => {
 
@@ -163,7 +158,6 @@ async function fetchBranchPolicies(org, project, repoId, branchName, authHeader)
               return false;
             }
 
-
             // All branches.
             if (
               !scopeRef ||
@@ -173,12 +167,10 @@ async function fetchBranchPolicies(org, project, repoId, branchName, authHeader)
               return true;
             }
 
-
             const matchKind =
               String(
                 scope.matchKind || 'Exact'
               ).toLowerCase();
-
 
             // Default branch policy.
             if (
@@ -186,7 +178,6 @@ async function fetchBranchPolicies(org, project, repoId, branchName, authHeader)
             ) {
               return true;
             }
-
 
             // Prefix branch policy.
             if (
@@ -197,7 +188,6 @@ async function fetchBranchPolicies(org, project, repoId, branchName, authHeader)
               );
             }
 
-
             // Exact branch policy.
             return currentRef === scopeRef;
 
@@ -205,16 +195,13 @@ async function fetchBranchPolicies(org, project, repoId, branchName, authHeader)
 
         });
 
-
       console.log(
         `[Azure DevOps Policy] ${repoId} ${refName}: ` +
         `${applicablePolicies.length} fallback policy(s) found`,
         applicablePolicies
       );
 
-
       return applicablePolicies;
-
 
     } catch (err) {
 
@@ -229,16 +216,13 @@ async function fetchBranchPolicies(org, project, repoId, branchName, authHeader)
 
   })();
 
-
   window.__azdoBranchPolicyCache.set(
     cacheKey,
     request
   );
 
-
   return request;
 }
-
 
 function parsePolicyInformation(policies) {
 
@@ -272,7 +256,6 @@ function parsePolicyInformation(policies) {
 
   };
 
-
   (policies || []).forEach(policy => {
 
     if (
@@ -283,24 +266,19 @@ function parsePolicyInformation(policies) {
       return;
     }
 
-
     const typeId =
       (policy.type?.id || '')
         .toLowerCase();
-
 
     const typeName =
       (policy.type?.displayName || '')
         .trim();
 
-
     const typeNameLower =
       typeName.toLowerCase();
 
-
     const settings =
       policy.settings || {};
-
 
     // =======================================================
     // MINIMUM REVIEWERS
@@ -315,22 +293,18 @@ function parsePolicyInformation(policies) {
           settings.minimumApproverCount
         ) || 1;
 
-
       minReviewers =
         Math.max(
           minReviewers,
           count
         );
 
-
       policyList.push(
         `${count} Required Reviewer${count > 1 ? 's' : ''}`
       );
 
-
       return;
     }
-
 
     // =======================================================
     // BUILD VALIDATION
@@ -349,10 +323,8 @@ function parsePolicyInformation(policies) {
         'Build Validation'
       );
 
-
       return;
     }
-
 
     // =======================================================
     // REQUIRED REVIEWERS
@@ -370,10 +342,8 @@ function parsePolicyInformation(policies) {
         'Required Reviewers'
       );
 
-
       return;
     }
-
 
     // =======================================================
     // WORK ITEM LINKING
@@ -391,10 +361,8 @@ function parsePolicyInformation(policies) {
         'Work Item Linking'
       );
 
-
       return;
     }
-
 
     // =======================================================
     // COMMENT RESOLUTION
@@ -412,10 +380,8 @@ function parsePolicyInformation(policies) {
         'Comment Resolution'
       );
 
-
       return;
     }
-
 
     // =======================================================
     // MERGE STRATEGY
@@ -433,10 +399,8 @@ function parsePolicyInformation(policies) {
         'Merge Strategy'
       );
 
-
       return;
     }
-
 
     // =======================================================
     // STATUS CHECK
@@ -455,10 +419,8 @@ function parsePolicyInformation(policies) {
         'Status Check'
       );
 
-
       return;
     }
-
 
     // =======================================================
     // UNKNOWN POLICY TYPE
@@ -470,7 +432,6 @@ function parsePolicyInformation(policies) {
     );
 
   });
-
 
   return {
 
@@ -487,7 +448,6 @@ function parsePolicyInformation(policies) {
 
 }
 
-
 function clearBranchPolicyCache() {
 
   if (
@@ -500,7 +460,6 @@ function clearBranchPolicyCache() {
 
 }
 
-
 function ensurePolicyTableHeaders() {
 
   const branchTable =
@@ -508,12 +467,10 @@ function ensurePolicyTableHeaders() {
       'table-repos'
     );
 
-
   const prTable =
     document.getElementById(
       'table-repo-prs'
     );
-
 
   if (branchTable) {
 
@@ -521,7 +478,6 @@ function ensurePolicyTableHeaders() {
       branchTable.querySelector(
         'thead tr'
       );
-
 
     if (headerRow) {
 
@@ -539,14 +495,12 @@ function ensurePolicyTableHeaders() {
 
   }
 
-
   if (prTable) {
 
     const headerRow =
       prTable.querySelector(
         'thead tr'
       );
-
 
     if (headerRow) {
 
@@ -566,7 +520,6 @@ function ensurePolicyTableHeaders() {
 
 }
 
-
 async function fetchRepositoryData() {
 
   const org =
@@ -576,24 +529,20 @@ async function fetchRepositoryData() {
       ).value
     );
 
-
   const project =
     document.getElementById(
       'projectSelect'
     ).value;
-
 
   const rawInput =
     document.getElementById(
       'repoSelect'
     ).value.trim();
 
-
   const pat =
     document.getElementById(
       'targetPat'
     ).value.trim();
-
 
   if (!rawInput) {
 
@@ -604,16 +553,13 @@ async function fetchRepositoryData() {
 
   }
 
-
   const authHeader =
     'Basic ' +
     btoa(':' + pat);
 
-
   showSection(
     'repositories'
   );
-
 
   setStatus(
     'Fetching branches, branch policies, and PR telemetry across selected repository...',
@@ -626,10 +572,8 @@ async function fetchRepositoryData() {
 
   clearBranchPolicyCache();
 
-
   let targetRepos =
     cachedRepos;
-
 
   if (
     rawInput !== '-- All Repositories --' &&
@@ -643,7 +587,6 @@ async function fetchRepositoryData() {
           rawInput.toLowerCase()
       );
 
-
     targetRepos =
       exactMatches.length > 0
         ? exactMatches
@@ -655,9 +598,7 @@ async function fetchRepositoryData() {
                   rawInput.toLowerCase()
                 )
           );
-
   }
-
 
   if (
     targetRepos.length === 0
@@ -673,14 +614,12 @@ async function fetchRepositoryData() {
   return;
   }
 
-
   let repoBranchCounts = {};
 
   let allPRs = [];
 
   const now =
     new Date();
-
 
   try {
 
@@ -691,10 +630,8 @@ async function fetchRepositoryData() {
           const refsUrl =
             `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/refs?filter=heads/&api-version=${API_VERSION}`;
 
-
           const prUrl =
             `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/pullrequests?searchCriteria.status=all&$top=100&api-version=${API_VERSION}`;
-
 
           const [
             refsPromise,
@@ -711,10 +648,8 @@ async function fetchRepositoryData() {
               )
             ]);
 
-
           let branchDetails =
             [];
-
 
           if (
             refsPromise.status ===
@@ -726,10 +661,8 @@ async function fetchRepositoryData() {
               refsPromise.value.value ||
               [];
 
-
             repoBranchCounts[r.name] =
               refs.length;
-
 
             branchDetails =
               await Promise.all(
@@ -743,10 +676,8 @@ async function fetchRepositoryData() {
                         ''
                       );
 
-
                     const commitUrl =
                       `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/commits?searchCriteria.itemVersion.version=${encodeURIComponent(bName)}&searchCriteria.itemVersion.versionType=branch&$top=1&api-version=${API_VERSION}`;
-
 
                     const [
                       commitResult,
@@ -769,13 +700,11 @@ async function fetchRepositoryData() {
 
                       ]);
 
-
                     const commitData =
                       commitResult.status ===
                         'fulfilled'
                         ? commitResult.value
                         : null;
-
 
                     const policies =
                       policyResult.status ===
@@ -783,12 +712,10 @@ async function fetchRepositoryData() {
                         ? policyResult.value
                         : [];
 
-
                     const policyInfo =
                       parsePolicyInformation(
                         policies
                       );
-
 
                     const topCommit =
                       (
@@ -798,14 +725,12 @@ async function fetchRepositoryData() {
                         ? commitData.value[0]
                         : null;
 
-
                     const commitDate =
                       topCommit?.author?.date
                         ? new Date(
                             topCommit.author.date
                           )
                         : null;
-
 
                     const isStale =
                       commitDate
@@ -814,7 +739,6 @@ async function fetchRepositoryData() {
                             (1000 * 60 * 60 * 24)
                           ) > 90
                         : false;
-
 
                     return {
 
@@ -858,7 +782,6 @@ async function fetchRepositoryData() {
 
           }
 
-
           if (
             prsPromise.status ===
               'fulfilled' &&
@@ -868,7 +791,6 @@ async function fetchRepositoryData() {
             const prList =
               prsPromise.value.value ||
               [];
-
 
             const prRows =
               await Promise.all(
@@ -885,7 +807,6 @@ async function fetchRepositoryData() {
                         ''
                       );
 
-
                     const targetBranch =
                       (
                         pr.targetRefName ||
@@ -894,7 +815,6 @@ async function fetchRepositoryData() {
                         /^refs\/heads\//,
                         ''
                       );
-
 
                     // Branch policies apply to
                     // the target branch.
@@ -907,19 +827,16 @@ async function fetchRepositoryData() {
                         authHeader
                       );
 
-
                     const policyInfo =
                       parsePolicyInformation(
                         policies
                       );
-
 
                     const actualReviewers =
                       (
                         pr.reviewers ||
                         []
                       ).length;
-
 
                     return {
 
@@ -967,45 +884,36 @@ async function fetchRepositoryData() {
 
               );
 
-
             allPRs.push(
               ...prRows
             );
 
           }
 
-
           return branchDetails;
 
         }
       );
-
 
     const results =
       await Promise.all(
         repoPromises
       );
 
-
     rawStore.repos =
       results.flat();
-
 
     rawStore.repoIndex =
       0;
 
-
     rawStore.policyBranchesIndex =
       0;
-
 
     rawStore.repoPrs =
       allPRs;
 
-
     rawStore.repoPrsIndex =
       0;
-
 
     const activePRsCount =
       allPRs.filter(
@@ -1014,7 +922,6 @@ async function fetchRepositoryData() {
           'active'
       ).length;
 
-
     const completedPRsCount =
       allPRs.filter(
         p =>
@@ -1022,12 +929,10 @@ async function fetchRepositoryData() {
           'completed'
       ).length;
 
-
     document.getElementById(
       'kpi-1-label'
     ).textContent =
       'Repository';
-
 
     document.getElementById(
       'kpi-1-val'
@@ -1038,18 +943,15 @@ async function fetchRepositoryData() {
         ? `${targetRepos.length} Repos`
         : targetRepos[0]?.name;
 
-
     document.getElementById(
       'kpi-1-val'
     ).className =
       'text-2xl font-extrabold text-slate-800 mt-1 truncate';
 
-
     document.getElementById(
       'kpi-2-label'
     ).textContent =
       'Branches';
-
 
     document.getElementById(
       'kpi-2-val'
@@ -1059,57 +961,47 @@ async function fetchRepositoryData() {
         b => b.isStale
       ).length} Stale)`;
 
-
     document.getElementById(
       'kpi-3-label'
     ).textContent =
       'Total PRs';
-
 
     document.getElementById(
       'kpi-3-val'
     ).textContent =
       allPRs.length;
 
-
     document.getElementById(
       'kpi-4-label'
     ).textContent =
       'Active PRs';
-
 
     document.getElementById(
       'kpi-4-val'
     ).textContent =
       activePRsCount;
 
-
     document.getElementById(
       'kpi-5-label'
     ).textContent =
       'Completed PRs';
-
 
     document.getElementById(
       'kpi-5-val'
     ).textContent =
       completedPRsCount;
 
-
     renderRepoTableBatch(
       false
     );
-
 
     renderPolicyBranchesTableBatch(
       false
     );
 
-
     renderRepoPrsTableBatch(
       false
     );
-
 
     renderChart(
       Object.keys(
@@ -1121,12 +1013,10 @@ async function fetchRepositoryData() {
       'Branches per Repository'
     );
 
-
     const branchPolicyCount =
       rawStore.repos.filter(
         b => b.hasPolicy
       ).length;
-
 
     const prPolicyCount =
       allPRs.filter(
@@ -1134,7 +1024,6 @@ async function fetchRepositoryData() {
           p.targetPolicies &&
           p.targetPolicies.length > 0
       ).length;
-
 
   setStatus(
     `Loaded ${rawStore.repos.length} branches, ` +
@@ -1146,7 +1035,6 @@ async function fetchRepositoryData() {
   );
   
   document.getElementById('statusBar')?.classList.remove('fetching');
-
 
   } catch (err) {
 
@@ -1160,36 +1048,30 @@ async function fetchRepositoryData() {
 
 }
 
-
 function renderRepoTableBatch(
   append = false
 ) {
 
   ensurePolicyTableHeaders();
 
-
   const tbody =
     document.getElementById(
       'branchesTableBody'
     );
-
 
   const container =
     document.getElementById(
       'seeMoreRepoContainer'
     );
 
-
   const remainingEl =
     document.getElementById(
       'repoRemainingCount'
     );
 
-
   if (!append) {
     tbody.innerHTML = '';
   }
-
 
   if (
     rawStore.repos.length === 0
@@ -1203,16 +1085,13 @@ function renderRepoTableBatch(
         </td>
       </tr>`;
 
-
     container.classList.add(
       'hidden'
     );
 
-
     return;
 
   }
-
 
   const nextBatch =
     rawStore.repos.slice(
@@ -1221,10 +1100,8 @@ function renderRepoTableBatch(
         PAGE_SIZE
     );
 
-
   rawStore.repoIndex +=
     nextBatch.length;
-
 
   const html =
     nextBatch.map(
@@ -1271,7 +1148,6 @@ function renderRepoTableBatch(
                 No Policies Set
 
               </span>`;
-
 
         return `
         <tr class="hover:bg-slate-50 transition">
@@ -1329,24 +1205,20 @@ function renderRepoTableBatch(
       }
     ).join('');
 
-
   tbody.insertAdjacentHTML(
     'beforeend',
     html
   );
 
-
   const remaining =
     rawStore.repos.length -
     rawStore.repoIndex;
-
 
   if (remaining > 0) {
 
     container.classList.remove(
       'hidden'
     );
-
 
     remainingEl.textContent =
       remaining;
@@ -1360,7 +1232,6 @@ function renderRepoTableBatch(
   }
 
 }
-
 
 // ============================================================
 // BRANCHES WITH POLICIES
@@ -1379,7 +1250,6 @@ function getPolicyBranches() {
       b.policies.length > 0
   );
 }
-
 
 function renderPolicyBranchesTableBatch(
   append = false
@@ -1479,7 +1349,6 @@ function renderPolicyBranchesTableBatch(
   }
 }
 
-
 function exportPolicyBranchesToXLSX() {
 
   const policyBranches =
@@ -1508,36 +1377,30 @@ function exportPolicyBranchesToXLSX() {
   );
 }
 
-
 function renderRepoPrsTableBatch(
   append = false
 ) {
 
   ensurePolicyTableHeaders();
 
-
   const tbody =
     document.getElementById(
       'repoPrsTableBody'
     );
-
 
   const container =
     document.getElementById(
       'seeMoreRepoPrsContainer'
     );
 
-
   const remainingEl =
     document.getElementById(
       'repoPrsRemainingCount'
     );
 
-
   if (!append) {
     tbody.innerHTML = '';
   }
-
 
   if (
     rawStore.repoPrs.length === 0
@@ -1553,16 +1416,13 @@ function renderRepoPrsTableBatch(
         </td>
       </tr>`;
 
-
     container.classList.add(
       'hidden'
     );
 
-
     return;
 
   }
-
 
   const nextBatch =
     rawStore.repoPrs.slice(
@@ -1571,10 +1431,8 @@ function renderRepoPrsTableBatch(
         PAGE_SIZE
     );
 
-
   rawStore.repoPrsIndex +=
     nextBatch.length;
-
 
   const html =
     nextBatch.map(
@@ -1582,7 +1440,6 @@ function renderRepoPrsTableBatch(
 
         let policyBadge =
           '';
-
 
         if (
           pr.minRequiredReviewers > 0
@@ -1600,7 +1457,6 @@ function renderRepoPrsTableBatch(
                 (${pr.reviewersCount} Assigned)
 
               </span>
-
 
               ${
                 pr.targetPolicies
@@ -1668,7 +1524,6 @@ function renderRepoPrsTableBatch(
 
         }
 
-
         return `
         <tr class="hover:bg-slate-50 transition">
 
@@ -1679,7 +1534,6 @@ function renderRepoPrsTableBatch(
 
           </td>
 
-
           <td
             class="p-4 font-medium text-slate-800 max-w-xs truncate"
             title="${pr.title}">
@@ -1687,7 +1541,6 @@ function renderRepoPrsTableBatch(
             ${pr.title}
 
           </td>
-
 
           <td
             class="p-4 font-mono text-xs text-slate-500">
@@ -1698,13 +1551,11 @@ function renderRepoPrsTableBatch(
 
           </td>
 
-
           <td class="p-4">
 
             ${policyBadge}
 
           </td>
-
 
           <td
             class="p-4 text-xs font-medium text-slate-700">
@@ -1712,7 +1563,6 @@ function renderRepoPrsTableBatch(
             ${pr.creator}
 
           </td>
-
 
           <td class="p-4">
 
@@ -1733,7 +1583,6 @@ function renderRepoPrsTableBatch(
 
           </td>
 
-
           <td
             class="p-4 text-xs text-slate-500">
 
@@ -1747,24 +1596,20 @@ function renderRepoPrsTableBatch(
       }
     ).join('');
 
-
   tbody.insertAdjacentHTML(
     'beforeend',
     html
   );
 
-
   const remaining =
     rawStore.repoPrs.length -
     rawStore.repoPrsIndex;
-
 
   if (remaining > 0) {
 
     container.classList.remove(
       'hidden'
     );
-
 
     remainingEl.textContent =
       remaining;
@@ -1779,7 +1624,6 @@ function renderRepoPrsTableBatch(
 
 }
 
-
 function exportBranchesToXLSX() {
 
   if (
@@ -1788,7 +1632,6 @@ function exportBranchesToXLSX() {
   ) {
     return;
   }
-
 
   const data =
     rawStore.repos.map(
@@ -1825,7 +1668,6 @@ function exportBranchesToXLSX() {
       })
     );
 
-
   exportToExcelFile(
     {
       "Branches & Policies":
@@ -1836,7 +1678,6 @@ function exportBranchesToXLSX() {
 
 }
 
-
 function exportRepoPrsToXLSX() {
 
   if (
@@ -1845,7 +1686,6 @@ function exportRepoPrsToXLSX() {
   ) {
     return;
   }
-
 
   const data =
     rawStore.repoPrs.map(
@@ -1885,7 +1725,6 @@ function exportRepoPrsToXLSX() {
 
       })
     );
-
 
   exportToExcelFile(
     {
