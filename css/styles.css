@@ -321,6 +321,11 @@ outline: none;
 transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+#targetOrg {
+  background: #06132d !important;
+  color: #ffffff !important;
+}
+
 .field-group input:focus,
 .field-group select:focus {
 border-color: var(--azure-cyan);
