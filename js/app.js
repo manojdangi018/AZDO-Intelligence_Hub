@@ -7,7 +7,7 @@ let activeViewSection = 'view-repositories';
 let activeCategory = 'repositories';
 const PAGE_SIZE = 10;
 const PIPELINE_PAGE_SIZE = 25;
-const API_VERSION = '7.1';
+const AZDO_STABLE_API_VERSION = '7.1';
 
 let rawStore = {
   repos: [], repoIndex: 0,
