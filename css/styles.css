@@ -24,7 +24,18 @@
 /* ============================================================
 AZURE DEVOPS INTELLIGENCE HUB — COMPLETE PRODUCTION STYLESHEET
 ============================================================ */
+/* ============================================================
+   PAGE RESTORE — NO CONNECTION PAGE FLASH
+   Purpose: Immediately show Page 2 when a Page 2 session exists.
+   ============================================================ */
 
+html.restore-workspace-page #connectionPage {
+  display: none !important;
+}
+
+html.restore-workspace-page #workspacePage {
+  display: block !important;
+}
 :root {
 --bg-deep: #030d22;
 --bg-dark: #071530;
