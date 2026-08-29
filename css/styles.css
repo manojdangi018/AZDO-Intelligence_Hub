@@ -403,6 +403,14 @@ accent-color: var(--azure-bright);
  PAGE 2: WORKSPACE & METRIC DASHBOARD
  Purpose: This is used in second page for connected button.
  ============================================================ */
+
+/* Page 2- Azure DevOps Intelligence Hub filed*/
+::selection {
+  background: #1b386e !important;
+  color: #06132d !important;
+}
+
+* Page 2- connted button fuction*/
 .connection-badge.connected {
   display: inline-flex !important;
   align-items: center;
