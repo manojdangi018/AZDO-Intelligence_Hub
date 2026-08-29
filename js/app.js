@@ -323,7 +323,82 @@ function selectExplore(category) {
     configureServiceAgentsOverview(viewId === 'serviceagents');
   }
   renderActiveSubstep();
+  restoreWorkspaceData(viewId);
 }
+
+/* ============================================================
+   WORKSPACE DATA RESTORE
+   Purpose: Restore previously loaded workspace data when
+   switching between sidebar workspaces.
+   Data is not cleared and is not fetched again just because
+   the user changes the active workspace.
+   ============================================================ */
+function restoreWorkspaceData(viewId) {
+
+  if (viewId === 'repositories') {
+    if (rawStore.repos && rawStore.repos.length > 0) {
+      if (typeof renderRepoTableBatch === 'function') {
+        renderRepoTableBatch(false);
+      }
+    }
+
+    if (rawStore.repoPrs && rawStore.repoPrs.length > 0) {
+      if (typeof renderRepoPrsTableBatch === 'function') {
+        renderRepoPrsTableBatch(false);
+      }
+    }
+  }
+
+  else if (viewId === 'pipelines') {
+    if (rawStore.pipelineSummaries && rawStore.pipelineSummaries.length > 0) {
+      if (typeof renderPipelineSummaryTableBatch === 'function') {
+        renderPipelineSummaryTableBatch(false);
+      }
+    }
+
+    if (rawStore.pipelines && rawStore.pipelines.length > 0) {
+      if (typeof renderPipelineTableBatch === 'function') {
+        renderPipelineTableBatch(false);
+      }
+    }
+  }
+
+  else if (viewId === 'workitems') {
+    if (rawStore.workitems && rawStore.workitems.length > 0) {
+      if (typeof renderWorkItemsTableBatch === 'function') {
+        renderWorkItemsTableBatch(false);
+      }
+    }
+  }
+
+  else if (viewId === 'access') {
+    if (rawStore.access && rawStore.access.length > 0) {
+      if (typeof renderAccessTableBatch === 'function') {
+        renderAccessTableBatch(false);
+      }
+    }
+  }
+
+  else if (viewId === 'activity') {
+    if (rawStore.commits && rawStore.commits.length > 0) {
+      if (typeof renderUserCommitsTableBatch === 'function') {
+        renderUserCommitsTableBatch(false);
+      }
+    }
+  }
+
+  else if (viewId === 'serviceagents') {
+    if (
+      (rawStore.serviceConnections && rawStore.serviceConnections.length > 0) ||
+      (rawStore.agents && rawStore.agents.length > 0)
+    ) {
+      if (typeof updateServiceAgentsOverview === 'function') {
+        updateServiceAgentsOverview();
+      }
+    }
+  }
+}
+
 
 function setConnectionBadge(connected) {
   const text = document.getElementById('connectionBadgeText');
