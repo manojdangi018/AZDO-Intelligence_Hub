@@ -1,1050 +1,2388 @@
-/* ============================================================
-  AZURE DEVOPS INTELLIGENCE HUB — ORGANIZED PRODUCTION STYLESHEET
-  Purpose: Same CSS rules as the supplied file, rearranged into a
-  clear step-by-step order. No styling declarations were intentionally
-  changed; comments only explain what each section controls.
+Today 3:33 PM
+Pasted text(20260829-100401).txt
+Document
+.brand-title original rule
+.brand-subtitle original rule colour still not chnaged
+i have already added this in here ? 
+when i click on the refresh page, it land to the first page fix refresh need only refresh page two
+Pasted text(20260829-104015).txt
+Document
+thsi my my app.js file update the required chnages in this file and give me full updated file 
+Pasted text(20260829-105323).txt
+Document
+is this correct ?
+Pasted text(20260829-105729).txt
+Document
+now, if its not correct then tell the exact line or replace with code
+Pasted text(20260829-110257).txt
+Document
+now ?
+Today 5:36 PM
+after these chnages its not connect to azure devosp
 
-  CODE ORDER
-  1. Global variables and base rules
-  2. Shared header / branding
-  3. Page 1 — connection screen
-  4. Page 2 — workspace shell and sidebar
-  5. Page 2 — connection status
-  6. Page 2 — project selection and workspace controls
-  7. Page 2 — repository selection
-  8. Page 2 — KPI cards and value colors
-  9. Page 2 — overview / chart
-  10. Background watermarks
-  11. Responsive layout
-  ============================================================ */
-/* ============================================================
-  STEP 1 — GLOBAL VARIABLES & BASE STYLES
-  Purpose: Shared colors, page defaults, and common form fonts.
-  ============================================================ */
-/* ============================================================
-AZURE DEVOPS INTELLIGENCE HUB — COMPLETE PRODUCTION STYLESHEET
-============================================================ */
-/* ============================================================
-  PAGE RESTORE — NO CONNECTION PAGE FLASH
-  Purpose: Immediately show Page 2 when a Page 2 session exists.
-  ============================================================ */
+after these chnages and also refresh with Ctrl + Shift + R. . but sill to abke to connect
 
-html.restore-workspace-page #connectionPage {
-display: none !important;
-}
+while refeshing the seocnd page for couple to second it still go first page and then come again second page 
+Pasted text(20260829-122412).txt
+Document
+i want when i refesh second page its only comes second not for mili seocnd jump for first page 
+i want to change the colur of load button and when i click the colur has been dark so that it looks load project in progress
+sould add here ?
+Pasted text(20260829-124455).txt
+Document
+analize and let me know exact line number where ic place the above css chnage 
+is this correct ?
+after click on inspect the fetching process is continouly blicking so, it easy to understandy that process is under going
+Pasted text(20260829-125747).txt
+Document
+Pasted text (2)(1).txt
+Document
+i have shared both file with now give me exact line where we can update 
+Pasted text(20260829-131053).txt
+Document
+now check this i have update correctly ?
+Pasted text(20260829-131422).txt
+Document
+now
 
-html.restore-workspace-page #workspacePage {
-display: block !important;
-}
-:root {
---bg-deep: #030d22;
---bg-dark: #071530;
---bg-card-dark: #0a1b3d;
---bg-surface: #0d224d;
---border-dark: #162f65;
---border-glow: #1a56db;
---azure-blue: #0078d4;
---azure-bright: #2f80ed;
---azure-cyan: #00d2ff;
---accent-green: #00e676;
---accent-gradient: linear-gradient(90deg, #2f80ed 0%, #00d2ff 50%, #00e676 100%);
---btn-gradient: linear-gradient(90deg, #1d61f2 0%, #00c896 100%);
---text-white: #ffffff;
---text-dim: #94a9c9;
---text-muted: #5d759e;
---navy: #0b1730;
---navy-2: #111f3b;
---blue: #116DF4;
---blue-soft: #eaf2ff;
---bg: #030d22;
---border: #162f65;
---green: #42C13F;
---orange: #f59e0b;
---purple: #4f46e5;
-}
+I checked the latest file you uploaded.
 
-* {
-box-sizing: border-box;
-}
+There is still one error in your success block.
 
-body {
-margin: 0 !important;
-background-color: var(--bg-deep) !important;
-color: var(--text-white);
-font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-overflow-x: hidden;
-position: relative;
-}
+At line 1148, you have:
 
-/* ============================================================
-  STEP 2 — SHARED HEADER & BRANDING
-  Purpose: Header height, logo, title, subtitle, and top actions.
-  ============================================================ */
-/* ============================================================
-SHARED TOPBAR & HEADER BRANDING
-Purpose: Top header, branding, logo, and shared navigation styling.
-============================================================ */
-.landing-topbar,
-.app-topbar {
-height: 76px;
-background: var(--bg-dark);
-border-bottom: 1px solid var(--border-dark);
-padding: 0 36px;
-display: flex;
-align-items: center;
-justify-content: space-between;
-}
+document.getElementById('statusBar')?.classList.remove('fetching');
 
-.landing-brand,
-.sidebar-brand {
-display: flex;
-align-items: center;
-gap: 12px;
-}
+);
 
-.brand-mark {
-width: 38px;
-height: 38px;
-border-radius: 8px;
-background: var(--azure-bright);
-display: grid;
-place-items: center;
-color: #fff;
-font-weight: 800;
-font-size: 13px;
-box-shadow: 0 4px 14px rgba(47, 128, 237, 0.4);
-overflow: hidden;
-position: relative;
-}
+The ); is extra and will cause a JavaScript syntax error.
 
-.brand-mark img {
-width: 100%;
-height: 100%;
-object-fit: cover;
-border-radius: inherit;
-display: block;
-}
+Replace lines 1139–1148 with this:
+setStatus(
+  `Loaded ${rawStore.repos.length} branches, ` +
+  `${branchPolicyCount} branches with policies, ` +
+  `${allPRs.length} pull requests, and ` +
+  `${prPolicyCount} PR target branches with policies ` +
+  `across ${targetRepos.length} repositories.`,
+  'success'
+);
 
-.brand-title {
-font-weight: 700;
-font-size: 14px;
-color: #fff;
-line-height: 1.2;
-}
+document.getElementById('statusBar')?.classList.remove('fetching');
+The rest is correct ✅
 
-.brand-subtitle {
-font-size: 11px;
-color: var(--text-muted);
-margin-top: 3px;
-}
+Your fetching animation starts correctly at line 623.
 
-.landing-step {
-font-size: 11px;
-font-weight: 700;
-letter-spacing: 0.08em;
-color: var(--text-dim);
-}
+Your no repository found handling is also correct at line 671.
 
-.topbar-actions {
-display: flex;
-align-items: center;
-gap: 14px;
-}
+Your error handling correctly removes the fetching class at line 1160.
 
-/* ============================================================
-  STEP 3 — PAGE 1: AZURE DEVOPS CONNECTION
-  Purpose: Landing page, hero content, connection card, and fields.
-  ============================================================ */
-/* ============================================================
-PAGE 1: LANDING & CONNECTION EXPERIENCE
-Purpose: Azure DevOps connection/landing page layout and controls.
-============================================================ */
-.connection-page {
-min-height: 100vh;
-background: radial-gradient(circle at 10% 20%, #0c2044 0%, var(--bg-deep) 70%);
-position: relative;
-isolation: isolate;
-overflow: hidden;
-}
+So only remove the extra ); after line 1148. Don't change anything else.
 
-.connection-main {
-min-height: calc(100vh - 76px);
-width: 100%;
-max-width: 1540px;
-margin: 0 auto;
-display: grid;
-grid-template-columns: minmax(360px, 1fr) minmax(520px, 580px);
-align-items: center;
-justify-content: space-between;
-gap: 60px;
-padding: 40px 48px;
-box-sizing: border-box;
-position: relative;
-z-index: 1;
-}
+Pasted text(20260829-131556).txt
+Document
+now ?
 
-/* Hero Section (Left) */
-.landing-hero-copy {
-max-width: 540px;
-align-self: center;
-}
+Yes — now it is correct. ✅
 
-.hero-infinity-logo {
-width: 280px;
-max-width: 100%;
-height: auto;
-margin-bottom: 24px;
-filter: drop-shadow(0 10px 25px rgba(0, 210, 255, 0.25));
-}
+I checked the latest repos.js you uploaded.
 
-.landing-hero-copy h1,
-.landing-hero-copy h2 {
-margin: 0;
-font-weight: 850;
-letter-spacing: -0.035em;
-line-height: 1.25 !important;
-}
+1. Fetching animation — correct
 
-.landing-hero-copy h1 {
-font-size: clamp(34px, 3.8vw, 48px);
-color: #ffffff;
-}
+At lines 618–623:
 
-.landing-hero-copy h2 {
-display: inline-block;
-font-size: clamp(34px, 3.8vw, 48px);
-background: var(--accent-gradient);
--webkit-background-clip: text;
--webkit-text-fill-color: transparent;
-background-clip: text;
-color: transparent;
-padding-bottom: 0.18em;
-margin-bottom: -0.18em;
-}
+setStatus(
+  'Fetching branches, branch policies, and PR telemetry across selected repository...',
+  'info'
+);
 
-.landing-hero-description {
-margin: 18px 0 28px;
-font-size: 15px;
-line-height: 1.5;
-color: var(--text-dim);
-}
+document.getElementById('statusBar')?.classList.add('fetching');
 
-.landing-hero-features {
-list-style: none;
-margin: 0;
-padding: 0;
-display: grid;
-grid-template-columns: 1fr 1fr;
-gap: 14px 20px;
-}
+Correct.
 
-.landing-hero-features li {
-display: flex;
-align-items: center;
-gap: 10px;
-color: #d1deef;
-font-size: 13px;
-font-weight: 500;
-}
+2. No repository found — correct
 
-.landing-hero-features li > span:first-child {
-color: var(--azure-bright);
-font-size: 14px;
-}
+At lines 666–673, you remove the fetching class before returning. Correct.
 
-/* Glass Connection Card (Right) */
-.landing-connection-card {
-background: rgba(9, 23, 53, 0.85);
-backdrop-filter: blur(14px);
-border: 1px solid #19407f;
-border-radius: 20px;
-padding: 34px 36px;
-box-shadow: 0 0 35px rgba(0, 120, 212, 0.15), 0 20px 50px rgba(0, 0, 0, 0.5);
-position: relative;
-width: 100%;
-max-width: 580px;
-justify-self: end;
-}
+3. Successful completion — correct
 
-.landing-connection-card::before {
-content: "";
-position: absolute;
-inset: -1px;
-border-radius: 21px;
-padding: 1px;
-background: linear-gradient(135deg, rgba(0, 210, 255, 0.6) 0%, rgba(0, 230, 118, 0.4) 100%);
--webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
--webkit-mask-composite: xor;
-mask-composite: exclude;
-pointer-events: none;
-}
+At lines 1139–1148:
 
-/* Header: Clean vertical stack to prevent horizontal line breaks */
-.connection-card-head,
-.landing-connection-card .connection-card-head {
-display: flex !important;
-flex-direction: column !important;
-align-items: flex-start !important;
-justify-content: flex-start !important;
-gap: 6px !important;
-width: 100% !important;
-padding-bottom: 18px !important;
-border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
+setStatus(
+  `Loaded ${rawStore.repos.length} branches, ` +
+  `${branchPolicyCount} branches with policies, ` +
+  `${allPRs.length} pull requests, and ` +
+  `${prPolicyCount} PR target branches with policies ` +
+  `across ${targetRepos.length} repositories.`,
+  'success'
+);
 
-.eyebrow {
-font-size: 11px;
-letter-spacing: 0.12em;
-text-transform: uppercase;
-font-weight: 800;
-color: var(--azure-cyan);
-}
+document.getElementById('statusBar')?.classList.remove('fetching');
 
-.connection-card-head h2,
-.landing-connection-card .connection-card-head h2 {
-margin: 0 !important;
-font-size: 22px !important;
-font-weight: 700 !important;
-color: #ffffff !important;
-white-space: nowrap !important;
-width: 100% !important;
-}
+This is now correctly placed outside setStatus().
 
-.connection-card-head p,
-.landing-connection-card .connection-card-head p {
-margin: 0 !important;
-font-size: 13px !important;
-color: var(--text-dim) !important;
-line-height: 1.4 !important;
-width: 100% !important;
-}
+4. Error — correct
 
-/* Form Fields */
-.connection-fields {
-display: flex;
-flex-direction: column;
-gap: 16px;
-padding: 22px 0 10px;
-}
+At lines 1153–1160, the fetching class is also removed when an error occurs.
 
-.field-group {
-display: flex;
-flex-direction: column;
-}
+Final verdict
 
-.field-group label {
-display: block;
-font-size: 12px;
-font-weight: 600;
-color: #c9d8ee;
-margin-bottom: 6px;
-}
+Your latest repos.js is correct. ✅
 
-.field-group label span {
-color: #ff5252;
-}
+Don't make any more changes to these four locations.
 
-.field-group input,
-.field-group select {
-width: 100%;
-height: 44px;
-border: 1px solid #1b386e;
-border-radius: 8px;
-background: #06132d;
-padding: 0 14px;
-font-size: 13.5px;
-color: #ffffff;
-outline: none;
-transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-#targetOrg {
-background: #06132d !important;
-color: #ffffff !important;
-}
-
-.field-group input:focus,
-.field-group select:focus {
-border-color: var(--azure-cyan);
-box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.15);
-}
-
-.field-group small {
-font-size: 11px;
-color: var(--text-muted);
-margin-top: 5px;
-}
-
-/* Dynamic URL Preview Box (Positioned above button) */
-.path-preview,
-#generatedUrlLink {
-display: block !important;
-width: 100% !important;
-max-width: 100% !important;
-box-sizing: border-box !important;
-overflow: hidden !important;
-text-overflow: ellipsis !important;
-white-space: nowrap !important;
-background: rgba(6, 19, 45, 0.95) !important;
-border: 1px solid #1a4b91 !important;
-border-radius: 8px !important;
-padding: 10px 14px !important;
-margin: 4px 0 2px 0 !important;
-color: #00d2ff !important;
-font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace !important;
-text-decoration: none !important;
-box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.4);
-}
-
-#generatedUrlLink:empty,
-.path-preview:empty,
-.hidden {
-display: none !important;
-}
-
-.btn-load-projects {
-width: 100%;
-height: 46px;
-border: 0;
-border-radius: 8px;
-background: var(--btn-gradient);
-color: #fff;
-font-size: 14px;
-font-weight: 700;
-cursor: pointer;
-box-shadow: 0 6px 20px rgba(0, 200, 150, 0.3);
-transition: transform 0.15s ease, opacity 0.15s ease;
-margin-top: 6px;
-}
-
-/* ============================================================
-  LOAD PROJECTS BUTTON — LOADING STATE
-  Purpose: Darkens the button while projects are loading.
-  ============================================================ */
-
-#btnLoadProjects.loading {
-background: #1264b8 !important;
-color: #ffffff !important;
-cursor: wait !important;
-opacity: 0.9;
-}
-
-
-.btn-load-projects:hover {
-opacity: 0.95;
-transform: translateY(-1px);
-}
-
-.btn-load-projects:hover {
-opacity: 0.95;
-transform: translateY(-1px);
-}
-
-.remember-toggle {
-display: inline-flex;
-align-items: center;
-gap: 8px;
-color: var(--text-dim);
-font-size: 12px;
-cursor: pointer;
-margin-top: 4px;
-}
-
-.remember-toggle input {
-accent-color: var(--azure-bright);
-}
-
-/* ============================================================
-  STEP 4 — PAGE 2: WORKSPACE SHELL & SIDEBAR
-  Purpose: Dashboard page background, sidebar navigation, and shell.
-  ============================================================ */
-.workspace-page {
-min-height: 100vh;
-background-color: var(--bg-deep);
-position: relative;
-isolation: isolate;
-overflow: hidden;
-}
-
-/* Sidebar: dashboard navigation and service sections. */
-.app-sidebar {
-position: fixed;
-inset: 0 auto 0 0;
-width: 250px;
-background: var(--bg-dark);
-color: #dbe7ff;
-z-index: 50;
-display: flex;
-flex-direction: column;
-border-right: 1px solid var(--border-dark);
-}
-
-.sidebar-section-label {
-font-size: 10px;
-font-weight: 800;
-letter-spacing: 0.1em;
-color: var(--text-muted);
-margin: 22px 18px 8px;
-}
-
-.sidebar-nav {
-padding: 0 10px;
-display: flex;
-flex-direction: column;
-gap: 4px;
-}
-
-/* Sidebar item: individual dashboard navigation option. */
-.sidebar-item {
-border: 0;
-background: transparent;
-color: #8ea8cf;
-height: 40px;
-border-radius: 8px;
-padding: 0 14px;
-display: flex;
-align-items: center;
-gap: 12px;
-font-size: 13px;
-font-weight: 600;
-cursor: pointer;
-text-align: left;
-transition: all 0.15s ease;
-}
-
-.sidebar-item:hover {
-background: #0e2756;
-color: #fff;
-}
-
-.sidebar-item.active {
-background: #113374;
-color: #fff;
-border-left: 3px solid var(--azure-cyan);
-}
-
-.sidebar-connection-note {
-margin: auto 14px 16px;
-padding: 12px 14px;
-border: 1px solid var(--border-dark);
-background: #051024;
-border-radius: 10px;
-display: flex;
-align-items: center;
-gap: 10px;
-}
-
-.connection-note-title {
-font-size: 12px;
-font-weight: 700;
-color: #fff;
-}
-
-.connection-note-text {
-font-size: 10px;
-color: var(--text-muted);
-}
-
-.status-dot {
-width: 8px;
-height: 8px;
-border-radius: 999px;
-background: var(--accent-green);
-box-shadow: 0 0 8px var(--accent-green);
-}
-
-#statusBar {
-margin-top: 10px;
-background: transparent !important;
-border: none !important;
-padding: 0 !important;
-color: #087443 !important;
-box-shadow: none !important;
-}
-
-/* ============================================================
-   REPOSITORY INSPECT — FETCHING STATE
-   Purpose: Makes the fetching message visibly pulse while data loads.
-   INSPECT — FETCHING SPINNER + SUBTLE BLINK
-   Purpose: Shows a small rotating spinner and gentle pulse
-   while repository data is being fetched.
-  ============================================================ */
+Now just make sure your CSS contains:
 
 #statusBar.fetching {
   animation: repoFetchingPulse 1.2s ease-in-out infinite;
-  animation: fetchingPulse 1.4s ease-in-out infinite;
-}
-
-/* Small rotating spinner */
-#statusBar.fetching::before {
-  content: '';
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 8px;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  vertical-align: -1px;
-  animation: fetchingSpin 0.8s linear infinite;
 }
 
 @keyframes repoFetchingPulse {
-/* Gentle blinking/pulse */
-@keyframes fetchingPulse {
-0%, 100% {
+  0%, 100% {
     opacity: 0.45;
-    opacity: 0.65;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
-50% {
-opacity: 1;
-}
-}
+Then do Ctrl + Shift + R and test Inspect.
 
+Pasted text(20260829-132534).txt
+Document
+check it its currect ?
+this chan ge bteaks the page aligment 
+1000 zoom also break
+Pasted text(20260829-133435).txt
+Document
+Pasted text (2)(2).txt
+Document
+Pasted text (3).txt
+Document
+Pasted text(20260829-134029).txt
+Document
+is this correct now ?
+Pasted text(20260829-134350).txt
+Document
+now ?
+Pasted text(20260829-134744).txt
+Document
+now ?
+
+Yes — I checked the latest CSS you uploaded. This version is cleaner than the previous one.
+
+✅ What is correct now
+Sidebar
+Fixed at 250px
+min-width and max-width also 250px
+This prevents the sidebar from changing width.
+
+Main content
+
+Correctly starts after the sidebar:
 .app-shell {
-margin-left: 250px;
-min-height: 100vh;
-}
-/* Spinner rotation */
-@keyframes fetchingSpin {
-  from {
-    transform: rotate(0deg);
-  }
-
-.dashboard-main {
-padding: 24px 32px 50px;
-  to {
-    transform: rotate(360deg);
-  }
+    width: calc(100% - 250px);
+    min-height: 100vh;
+    margin-left: 250px;
 }
 
-/* ============================================================
-  STEP 5 — PAGE 2: CONNECTION STATUS & PROJECT SELECTION
-  Purpose: Connected status, project label, and requirement message.
-  ============================================================ */
-/* ============================================================
-PAGE 2: WORKSPACE & METRIC DASHBOARD
-Purpose: This is used in second page for connected button.
-============================================================ */
-/* ============================================================
-  FINAL HEADER COLOR FIX
-  Purpose: Keep header title (Azure DevOps Intelligence Hub) and subtitle clearly visible.
-  ============================================================ */
+Horizontal overflow
 
-.app-topbar .app-title {
-color: #ffffff !important;
+You have:
+overflow-x: hidden;
+overflow-y: auto;
+
+on the workspace, which is good for preventing the dashboard from creating a horizontal page overflow.
+
+Loading button
+The dark loading state is correctly placed immediately after the normal button CSS.
+Spinner
+Spinner + pulse animation is correctly defined and should not affect page alignment because it is attached to #statusBar.fetching::before.
+Connected button
+Transparent green styling is correct.
+Project name
+#overviewProjectBadge is correctly forced into the normal document flow with position: static.
+⚠️ One small cleanup
+
+You still have this duplicate rule:
+
+.app-topbar .connection-badge.connected .status-dot
+
+at lines 600–603, and then another:
+
+.connection-badge.connected .status-dot
+
+at lines 624–629.
+
+It does not currently break the page, so I recommend not touching it now.
+
+🟢 My recommendation
+
+Do not make any more CSS changes right now.
+
+Commit this version and test:
+
+Chrome zoom 100%
+Open Page 1
+Connect
+Select project
+Go to Page 2
+Click Inspect
+Confirm spinner appears
+Refresh Page 2 with Ctrl + Shift + R
+Confirm Page 2 stays aligned and does not briefly show Page 1.
+
+The current CSS structure itself looks correct.
+
+these change break page 2 fully 
+
+Yes — I found the exact problem. The last CSS rearrangement removed the sidebar navigation styling. That is why Page 2 is now broken: WORKSPACE, Repositories, Pipelines & Builds, etc. are appearing as plain text instead of the original aligned sidebar buttons.
+
+Your current file has .app-sidebar, but immediately after it goes to .app-shell; it is missing the rules for .sidebar-section-label, .sidebar-nav, .sidebar-item, and .sidebar-connection-note.
+
+Fix only this — don't change anything else
+
+In your current CSS, find:
+
+.app-sidebar {
+    ...
+    overflow-x: hidden;
 }
 
-.app-topbar .app-subtitle {
-color: #8ea8cf !important;
+/* Main content */
+.app-shell {
+
+Between those two sections, add this:
+
+/* Sidebar section title */
+.sidebar-section-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin: 22px 18px 8px;
 }
 
-/* Keep Connected transparent with green border/text */
-.app-topbar .connection-badge.connected {
-background: transparent !important;
-border: 1px solid #0b9f72 !important;
-color: #0b9f72 !important;
+/* Sidebar navigation container */
+.sidebar-nav {
+    padding: 0 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
-.app-topbar .connection-badge.connected .status-dot {
-background: #0b9f72 !important;
-box-shadow: 0 0 7px rgba(11, 159, 114, 0.45) !important;
+/* Individual sidebar navigation button */
+.sidebar-item {
+    border: 0;
+    background: transparent;
+    color: #8ea8cf;
+    height: 40px;
+    border-radius: 8px;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
 }
 
-/* Page 2 - Connected button function */
-.connection-badge.connected {
-display: inline-flex !important;
-align-items: center;
-gap: 6px;
-
-background: transparent !important;
-border: 1px solid #0b9f72 !important;
-color: #0b9f72 !important;
-
-border-radius: 6px !important;
-padding: 0 12px !important;
-height: 30px !important;
-box-sizing: border-box;
-
-font-size: 11px !important;
-font-weight: 700 !important;
+/* Sidebar button hover */
+.sidebar-item:hover {
+    background: #0e2756;
+    color: #fff;
 }
 
-.connection-badge.connected .status-dot {
-width: 8px !important;
-height: 8px !important;
-border-radius: 50%;
-background: #0b9f72 !important;
-box-shadow: 0 0 7px rgba(11, 159, 114, 0.45) !important;
+/* Currently selected sidebar button */
+.sidebar-item.active {
+    background: #113374;
+    color: #fff;
+    border-left: 3px solid var(--azure-cyan);
 }
 
-/* ============================================================
-PAGE 2 — PROJECT SELECTION
-Purpose: Controls the Project label, dropdown, spacing, and requirement message.
-============================================================ */
-.workspace-project-field {
-display: flex;
-flex-direction: column;
-gap: 8px;
+/* Client-side connection information at bottom */
+.sidebar-connection-note {
+    margin: auto 14px 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-dark);
+    background: #051024;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.workspace-project-field > label {
-color: #00d2ff !important;
+/* Connection note title */
+.connection-note-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
 }
 
-#projectRequirementText {
-color: #8ea8cf !important;
-font-size: 11px !important;
+/* Connection note description */
+.connection-note-text {
+    font-size: 10px;
+    color: var(--text-muted);
 }
 
-/* ============================================================
-  STEP 6 — PAGE 2: WORKSPACE CONTROLS
-  Purpose: Project controls, switch button, project dropdown, and path.
-  ============================================================ */
-/* ============================================================
-PAGE 2 — WORKSPACE CONTROL CARD
-Purpose: Main dark card containing project selection and service controls.
-============================================================ */
-/* Workspace controls: project selection area at the top of Page 2. */
-.workspace-controls {
-background: var(--bg-card-dark);
-border: 1px solid var(--border-dark);
-border-radius: 14px;
-padding: 28px 24px 20px;
-margin-bottom: 22px;
+/* Small connection status dot */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--accent-green);
+    box-shadow: 0 0 8px var(--accent-green);
 }
 
-.workspace-project-header {
-display: flex;
-align-items: center;
-justify-content: space-between;
-margin-bottom: 16px;
-}
+These are the original sidebar rules from your earlier working CSS.
 
-.btn-switch-org {
-border: 1px solid #1a4f9c;
-background: #091d44;
-color: #92b8f7;
-border-radius: 6px;
-height: 30px;
-padding: 0 12px;
-font-size: 11px;
-font-weight: 700;
-cursor: pointer;
-transition: background 0.15s ease;
-}
+So your order should be exactly:
+.app-sidebar
+      ↓
+.sidebar-section-label
+      ↓
+.sidebar-nav
+      ↓
+.sidebar-item
+      ↓
+.sidebar-item:hover
+      ↓
+.sidebar-item.active
+      ↓
+.sidebar-connection-note
+      ↓
+.connection-note-title
+      ↓
+.connection-note-text
+      ↓
+.status-dot
+      ↓
+.app-shell
+      ↓
+.dashboard-main
 
-.btn-switch-org:hover {
-background: #123472;
-}
+Do not change your .app-sidebar or .app-shell values. Those are already correct.
 
-.btn-disconnect {
-border: 1px solid #742525;
-background: #2b0e0e;
-color: #fca5a5;
-border-radius: 6px;
-height: 30px;
-padding: 0 12px;
-font-size: 11px;
-font-weight: 700;
-cursor: pointer;
-transition: background 0.15s ease;
-}
+And do not remove the spinner CSS. It is unrelated to this problem.
 
-.btn-disconnect:hover {
-background: #441414;
-}
-
-/* Project selector: lets the user choose the active Azure DevOps project. */
-.workspace-project-field select {
-height: 42px;
-background: #06132d;
-border: 1px solid #1b386e;
-border-radius: 8px;
-color: #ffffff !important;
-padding: 0 12px;
-font-size: 13px;
-width: 100%;
-}
-
-.workspace-project-field select option {
-color: #ffffff !important;
-background: #06132d;
-}
-
-.active-path-row {
-background: #071530;
-border: 1px solid #142a54;
-border-radius: 8px;
-padding: 10px 14px;
-margin-top: 14px;
-display: flex;
-align-items: center;
-gap: 10px;
-font-size: 12px;
-color: var(--text-dim);
-}
-
-.active-path-row a {
-color: var(--azure-cyan);
-text-decoration: none;
-}
-
-/* ============================================================
-  STEP 7 — PAGE 2: REPOSITORY SELECTION
-  Purpose: Spacing for the repository selection control.
-  ============================================================ */
-/* ============================================================
-PAGE 2 — REPOSITORY SELECTION
-Purpose: Adds clear spacing between the repository label and selector controls.
-============================================================ */
-#substepRepo > div:first-child > label {
-margin-bottom: 8px !important;
-}
-
-
-/* ============================================================
-  STEP 8 — PAGE 2: KPI CARD LAYOUT
-  Purpose: Dashboard KPI grid, card layout, labels, and values.
-  ============================================================ */
-/* ============================================================
-PAGE 2 — DASHBOARD KPI CARDS
-Purpose: Styles the five summary cards showing repository, branch, and PR metrics.
-============================================================ */
-.overview-heading h2 {
-font-size: 18px;
-font-weight: 800;
-color: #ffffff;
-margin: 10px 0 16px;
-}
-
-/* KPI grid: displays high-level dashboard metric cards. */
-.kpi-grid {
-display: grid;
-grid-template-columns: repeat(5, minmax(0, 1fr));
-gap: 14px;
-margin-bottom: 24px;
-}
-
-/* Service Connections & Agents: align 3 KPI cards evenly */
-.serviceagents-kpi-grid {
-grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-}
-
-.kpi-grid > div {
-background: #ffffff;
-border-radius: 12px;
-padding: 18px 20px;
-box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-display: flex;
-flex-direction: column;
-justify-content: space-between;
-min-height: 95px;
-}
-
-.kpi-grid p:first-child {
-font-size: 11px !important;
-font-weight: 700 !important;
-color: #64748b !important;
-margin: 0 !important;
-text-transform: uppercase;
-letter-spacing: 0.05em;
-}
-
-.kpi-grid p:last-child {
-font-size: 26px !important;
-font-weight: 850 !important;
-color: #0f172a !important;
-margin: 4px 0 0 !important;
-}
-
-
-/* ============================================================
-  STEP 9 — PAGE 2: KPI VALUE COLORS
-  Purpose: Gives each summary KPI value its assigned color.
-  ============================================================ */
-/* ============================================================
-PAGE 2 — REPOSITORY KPI VALUE COLORS
-Purpose: Gives each repository KPI value a distinct color.
-============================================================ */
-
-#kpi-1-val {
-color: #2563eb !important;
-}
-
-#kpi-2-val {
-color: #7c3aed !important;
-}
-
-#kpi-3-val {
-color: #0891b2 !important;
-}
-
-#kpi-4-val {
-color: #d97706 !important;
-}
-
-#kpi-5-val {
-color: #059669 !important;
-}
-
-/* ============================================================
-PAGE 2 — KPI VALUE COLORS
-Purpose: Gives each summary card value a different color.
-============================================================ */
-#kpi-1-val { color: #2563eb !important; }
-#kpi-2-val { color: #7c3aed !important; }
-#kpi-3-val { color: #0891b2 !important; }
-#kpi-4-val { color: #d97706 !important; }
-#kpi-5-val { color: #059669 !important; }
-
-
-/* ============================================================
-  STEP 10 — PAGE 2: PROJECT BADGE & ACTIVITY CHART
-  Purpose: Selected project name, chart container, and chart content.
-  ============================================================ */
-/* ============================================================
- SELECTED PROJECT NAME
- Purpose: Display the selected project name such as XYZ..clearly above the Repository KPI cards.
- ============================================================ */
-.overview-heading {
-display: flex !important;
-flex-direction: column !important;
-align-items: flex-start !important;
-justify-content: flex-start !important;
-gap: 4px !important;
-margin-bottom: 16px !important;
-}
-
-.overview-heading > div {
-display: block !important;
-}
-
-#overviewProjectBadge {
-display: block !important;
-
-position: static !important;
-
-width: auto !important;
-height: auto !important;
-
-margin: 0 0 0 0 !important;
-padding: 0 !important;
-
-background: transparent !important;
-border: none !important;
-
-color: #8ea8cf !important;
-
-font-size: 14px !important;
-font-weight: 600 !important;
-line-height: 1.4 !important;
-
-opacity: 1 !important;
-visibility: visible !important;
-}
-
-#chartSection > * {
-position: relative;
-z-index: 1;
-}
-
-/* Activity chart section: contains the dashboard activity visualization. */
-#chartSection {
-position: relative;
-overflow: hidden;
-background: #ffffff;
-border-radius: 14px !important;
-padding: 24px;
-box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-}
-
-
-/* ============================================================
-  STEP 11 — BACKGROUND WATERMARKS
-  Purpose: Decorative DevOps logo behind both application pages.
-  ============================================================ */
-/* ============================================================
-BACKGROUND DECORATIVE WATERMARKS
-Purpose: Background watermark positioning and appearance for both pages.
-============================================================ */
-/* Page 1 watermark: decorative background logo on the connection screen. */
-.connection-page::before {
-content: "";
-position: absolute;
-z-index: 0;
-pointer-events: none;
-width: min(65vw, 800px);
-aspect-ratio: 1660 / 933;
-left: 34%;
-top: 52%;
-transform: translate(-50%, -50%);
-background: url("../devops-new-watermark.png") center/contain no-repeat;
-opacity: 0.28;
-filter: drop-shadow(0 0 35px rgba(47, 109, 246, 0.25));
-}
-
-/* Page 2 watermark: fixed decorative logo behind scrolling dashboard content. */
-.workspace-page::before {
-content: "";
-position: fixed;
-z-index: 0;
-pointer-events: none;
-width: min(70vw, 1080px);
-height: auto;
-aspect-ratio: 1660 / 933;
-left: 60%;
-top: 50%;
-transform: translate(-50%, -50%);
-background: url("../devops-new-watermark.png") center/contain no-repeat;
-opacity: 0.12;
-}
-
-
-/* ============================================================
-  STEP 12 — RESPONSIVE BREAKPOINTS
-  Purpose: Keeps the layout usable on smaller screens.
-  ============================================================ */
-/* ============================================================
-RESPONSIVE BREAKPOINTS
-Purpose: Adjust layout and controls for smaller screen sizes.
-============================================================ */
-@media (max-width: 1150px) {
-.connection-main {
-grid-template-columns: 1fr;
-gap: 40px;
-padding: 30px 24px;
-}
-.landing-hero-copy {
-max-width: 100%;
-}
-.landing-connection-card {
-max-width: 100%;
-}
-.kpi-grid {
-grid-template-columns: repeat(3, 1fr);
-}
-}
+After adding this block, do Ctrl + Shift + R. Your Page 2 sidebar should return to the proper button alignment shown in your earlier working version.
 
 @media (max-width: 760px) {
+
+    .app-sidebar {
+        display: none;
+    }
+
+    .app-shell {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .dashboard-main {
+        padding: 20px;
+    }
+}
+i find this ?
+
+Yes, you found the responsive section, but don't add the sidebar CSS there.
+
+The section you found:
+
+@media (max-width: 760px) {
+
+    .app-sidebar {
+        display: none;
+    }
+
+    .app-shell {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .dashboard-main {
+        padding: 20px;
+    }
+}
+
+is only for mobile/small screens. Leave it exactly as it is.
+
+What you need to find
+
+Go above this @media section and find:
+
 .app-sidebar {
-display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+
+    width: 250px;
+    ...
 }
+
+In your current file, this is around the .app-sidebar section shown in the code you provided.
+
+You should see:
+
+.app-sidebar {
+    position: fixed;
+    ...
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Main content */
 .app-shell {
-margin-left: 0;
+Add the missing code HERE
+
+So it becomes:
+
+.app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
+
+    background: var(--bg-dark);
+    color: #dbe7ff;
+
+    z-index: 50;
+
+    display: flex;
+    flex-direction: column;
+
+    border-right: 1px solid var(--border-dark);
+
+    overflow-y: auto;
+    overflow-x: hidden;
 }
-.landing-topbar {
-padding: 0 20px;
+
+
+/* >>> ADD THE SIDEBAR CODE HERE <<< */
+
+.sidebar-section-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin: 22px 18px 8px;
 }
-.landing-step {
-display: none;
+
+.sidebar-nav {
+    padding: 0 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
-.kpi-grid {
-grid-template-columns: 1fr 1fr;
+
+.sidebar-item {
+    border: 0;
+    background: transparent;
+    color: #8ea8cf;
+    height: 40px;
+    border-radius: 8px;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
 }
-.landing-hero-features {
-grid-template-columns: 1fr;
+
+.sidebar-item:hover {
+    background: #0e2756;
+    color: #fff;
+}
+
+.sidebar-item.active {
+    background: #113374;
+    color: #fff;
+    border-left: 3px solid var(--azure-cyan);
+}
+
+.sidebar-connection-note {
+    margin: auto 14px 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-dark);
+    background: #051024;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.connection-note-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.connection-note-text {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--accent-green);
+    box-shadow: 0 0 8px var(--accent-green);
+}
+
+
+/* Main content */
+.app-shell {
+
+The original working stylesheet has exactly these sidebar navigation rules.
+
+Important: Do not put this code inside @media (max-width: 760px).
+
+If you want, send me a screenshot of the area just above your @media (max-width: 760px), and I'll tell you exactly where to paste it.
+
+function populateRepoDropdown() {
+const datalist = document.getElementById('repoDatalist');
+datalist.innerHTML = '';
+
+const allOpt = document.createElement('option');
+allOpt.value = '-- All Repositories --';
+datalist.appendChild(allOpt);
+
+cachedRepos.forEach(r => {
+const opt = document.createElement('option');
+opt.value = r.name;
+datalist.appendChild(opt);
+});
+document.getElementById('repoSelect').value = '-- All Repositories --';
+}
+
+// Fetch the policies that actually apply to a repository branch.
+// Azure DevOps resolves repository + branch scope for this endpoint.
+async function fetchBranchPolicies(org, project, repoId, branchName, authHeader) {
+const refName = branchName.startsWith('refs/')
+? branchName
+: refs/heads/${branchName};
+
+const cacheKey = ${repoId}|${refName};
+
+if (!window.__azdoBranchPolicyCache) {
+window.__azdoBranchPolicyCache = new Map();
+}
+
+if (window.__azdoBranchPolicyCache.has(cacheKey)) {
+return window.__azdoBranchPolicyCache.get(cacheKey);
+}
+
+const request = (async () => {
+
+// =========================================================
+// PRIMARY POLICY API
+// =========================================================
+
+const gitPolicyUrl =
+  `https://dev.azure.com/${encodeURIComponent(org)}` +
+  `/${encodeURIComponent(project)}` +
+  `/_apis/git/policy/configurations` +
+  `?repositoryId=${encodeURIComponent(repoId)}` +
+  `&refName=${encodeURIComponent(refName)}` +
+  `&$top=1000` +
+  `&api-version=7.1`;
+
+try {
+  console.log(
+    `[Azure DevOps Policy] Fetching policies for ${repoId} ${refName}`
+  );
+
+  const data = await fetchAzDo(
+    gitPolicyUrl,
+    authHeader
+  );
+
+  const policies =
+    Array.isArray(data?.value)
+      ? data.value
+      : [];
+
+  console.log(
+    `[Azure DevOps Policy] ${repoId} ${refName}: ${policies.length} policy(s) found`,
+    policies
+  );
+
+  if (policies.length > 0) {
+    return policies;
+  }
+
+} catch (err) {
+
+  console.warn(
+    `[Azure DevOps Policy] Git policy API failed for ${repoId} ${refName}:`,
+    err
+  );
+
+}
+
+
+// =========================================================
+// FALLBACK POLICY API
+// =========================================================
+
+const fallbackUrl =
+  `https://dev.azure.com/${encodeURIComponent(org)}` +
+  `/${encodeURIComponent(project)}` +
+  `/_apis/policy/configurations` +
+  `?$top=1000` +
+  `&api-version=7.1-preview.1`;
+
+try {
+
+  console.log(
+    `[Azure DevOps Policy] Trying fallback policy API for ${repoId} ${refName}`
+  );
+
+  const data = await fetchAzDo(
+    fallbackUrl,
+    authHeader
+  );
+
+  const allPolicies =
+    Array.isArray(data?.value)
+      ? data.value
+      : [];
+
+  const currentRepo =
+    String(repoId).toLowerCase();
+
+  const currentRef =
+    refName.toLowerCase();
+
+
+  const applicablePolicies =
+    allPolicies.filter(policy => {
+
+      if (!policy) {
+        return false;
+      }
+
+      if (policy.isDeleted === true) {
+        return false;
+      }
+
+      if (policy.isEnabled === false) {
+        return false;
+      }
+
+
+      const scopes =
+        Array.isArray(policy.settings?.scope)
+          ? policy.settings.scope
+          : [];
+
+
+      // No scope means project-wide policy.
+      if (scopes.length === 0) {
+        return true;
+      }
+
+
+      return scopes.some(scope => {
+
+        const scopeRepo =
+          String(
+            scope.repositoryId || ''
+          ).toLowerCase();
+
+        const scopeRef =
+          String(
+            scope.refName || ''
+          ).toLowerCase();
+
+
+        // Repository-specific policy.
+        if (
+          scopeRepo &&
+          scopeRepo !== currentRepo
+        ) {
+          return false;
+        }
+
+
+        // All branches.
+        if (
+          !scopeRef ||
+          scopeRef === 'refs/heads/*' ||
+          scopeRef === '*'
+        ) {
+          return true;
+        }
+
+
+        const matchKind =
+          String(
+            scope.matchKind || 'Exact'
+          ).toLowerCase();
+
+
+        // Default branch policy.
+        if (
+          matchKind === 'defaultbranch'
+        ) {
+          return true;
+        }
+
+
+        // Prefix branch policy.
+        if (
+          matchKind === 'prefix'
+        ) {
+          return currentRef.startsWith(
+            scopeRef
+          );
+        }
+
+
+        // Exact branch policy.
+        return currentRef === scopeRef;
+
+      });
+
+    });
+
+
+  console.log(
+    `[Azure DevOps Policy] ${repoId} ${refName}: ` +
+    `${applicablePolicies.length} fallback policy(s) found`,
+    applicablePolicies
+  );
+
+
+  return applicablePolicies;
+
+
+} catch (err) {
+
+  console.error(
+    `[Azure DevOps Policy] Fallback policy API failed for ${repoId} ${refName}:`,
+    err
+  );
+
+  return [];
+
+}
+
+})();
+
+window.__azdoBranchPolicyCache.set(
+cacheKey,
+request
+);
+
+return request;
+}
+
+function parsePolicyInformation(policies) {
+
+let minReviewers = 0;
+
+const policyList = [];
+
+const POLICY_TYPES = {
+
+MIN_REVIEWERS:
+  'fa4e907d-c16b-4a4c-9dfa-4906e5d171dd',
+
+BUILD:
+  '0609b952-1397-4640-95ec-e00a01b2c241',
+
+REQUIRED_REVIEWERS:
+  'fd2167ab-b0be-447a-8ec8-39368250530e',
+
+WORK_ITEM_LINKING:
+  '40e92b44-2fe1-4dd6-b3d8-74a9c21d0c6e',
+
+COMMENT_RESOLUTION:
+  'c6a1889d-b943-4856-b76f-9e46bb6b0df2',
+
+MERGE_STRATEGY:
+  'fa4e907d-c16b-4a4c-9dfa-4916e5d171ab',
+
+STATUS_CHECK:
+  'cbdc66da-9728-4af8-aada-9a5a32e4a226'
+
+};
+
+(policies || []).forEach(policy => {
+
+if (
+  !policy ||
+  policy.isDeleted ||
+  policy.isEnabled === false
+) {
+  return;
+}
+
+
+const typeId =
+  (policy.type?.id || '')
+    .toLowerCase();
+
+
+const typeName =
+  (policy.type?.displayName || '')
+    .trim();
+
+
+const typeNameLower =
+  typeName.toLowerCase();
+
+
+const settings =
+  policy.settings || {};
+
+
+// =======================================================
+// MINIMUM REVIEWERS
+// =======================================================
+
+if (
+  typeId === POLICY_TYPES.MIN_REVIEWERS
+) {
+
+  const count =
+    Number(
+      settings.minimumApproverCount
+    ) || 1;
+
+
+  minReviewers =
+    Math.max(
+      minReviewers,
+      count
+    );
+
+
+  policyList.push(
+    `${count} Required Reviewer${count > 1 ? 's' : ''}`
+  );
+
+
+  return;
+}
+
+
+// =======================================================
+// BUILD VALIDATION
+// =======================================================
+
+if (
+  typeId === POLICY_TYPES.BUILD ||
+  typeNameLower === 'build' ||
+  typeNameLower.includes(
+    'build validation'
+  )
+) {
+
+  policyList.push(
+    settings.displayName ||
+    'Build Validation'
+  );
+
+
+  return;
+}
+
+
+// =======================================================
+// REQUIRED REVIEWERS
+// =======================================================
+
+if (
+  typeId ===
+    POLICY_TYPES.REQUIRED_REVIEWERS ||
+  typeNameLower.includes(
+    'required reviewer'
+  )
+) {
+
+  policyList.push(
+    'Required Reviewers'
+  );
+
+
+  return;
+}
+
+
+// =======================================================
+// WORK ITEM LINKING
+// =======================================================
+
+if (
+  typeId ===
+    POLICY_TYPES.WORK_ITEM_LINKING ||
+  typeNameLower.includes(
+    'work item'
+  )
+) {
+
+  policyList.push(
+    'Work Item Linking'
+  );
+
+
+  return;
+}
+
+
+// =======================================================
+// COMMENT RESOLUTION
+// =======================================================
+
+if (
+  typeId ===
+    POLICY_TYPES.COMMENT_RESOLUTION ||
+  typeNameLower.includes(
+    'comment'
+  )
+) {
+
+  policyList.push(
+    'Comment Resolution'
+  );
+
+
+  return;
+}
+
+
+// =======================================================
+// MERGE STRATEGY
+// =======================================================
+
+if (
+  typeId ===
+    POLICY_TYPES.MERGE_STRATEGY ||
+  typeNameLower.includes(
+    'merge strategy'
+  )
+) {
+
+  policyList.push(
+    'Merge Strategy'
+  );
+
+
+  return;
+}
+
+
+// =======================================================
+// STATUS CHECK
+// =======================================================
+
+if (
+  typeId ===
+    POLICY_TYPES.STATUS_CHECK ||
+  typeNameLower.includes(
+    'status'
+  )
+) {
+
+  policyList.push(
+    typeName ||
+    'Status Check'
+  );
+
+
+  return;
+}
+
+
+// =======================================================
+// UNKNOWN POLICY TYPE
+// =======================================================
+
+policyList.push(
+  typeName ||
+  'Branch Policy'
+);
+
+});
+
+return {
+
+hasPolicy:
+  policyList.length > 0,
+
+minReviewers:
+  minReviewers,
+
+policies:
+  [...new Set(policyList)]
+
+};
+
+}
+
+function clearBranchPolicyCache() {
+
+if (
+window.__azdoBranchPolicyCache
+) {
+
+window.__azdoBranchPolicyCache.clear();
+
+}
+
+}
+
+function ensurePolicyTableHeaders() {
+
+const branchTable =
+document.getElementById(
+'table-repos'
+);
+
+const prTable =
+document.getElementById(
+'table-repo-prs'
+);
+
+if (branchTable) {
+
+const headerRow =
+  branchTable.querySelector(
+    'thead tr'
+  );
+
+
+if (headerRow) {
+
+  headerRow.innerHTML = `
+    <th class="p-4">Repository</th>
+    <th class="p-4">Branch Name</th>
+    <th class="p-4">Status / Health</th>
+    <th class="p-4">Branch Policies</th>
+    <th class="p-4">Last Author</th>
+    <th class="p-4">Last Commit Date</th>
+    <th class="p-4">Commit Message</th>
+  `;
+
+}
+
+}
+
+if (prTable) {
+
+const headerRow =
+  prTable.querySelector(
+    'thead tr'
+  );
+
+
+if (headerRow) {
+
+  headerRow.innerHTML = `
+    <th class="p-4">Repository</th>
+    <th class="p-4">PR Title</th>
+    <th class="p-4">Source &rarr; Target</th>
+    <th class="p-4">Target Branch Policies</th>
+    <th class="p-4">Creator</th>
+    <th class="p-4">Status</th>
+    <th class="p-4">Created Date</th>
+  `;
+
+}
+
+}
+
+}
+
+async function fetchRepositoryData() {
+
+const org =
+extractOrgName(
+document.getElementById(
+'targetOrg'
+).value
+);
+
+const project =
+document.getElementById(
+'projectSelect'
+).value;
+
+const rawInput =
+document.getElementById(
+'repoSelect'
+).value.trim();
+
+const pat =
+document.getElementById(
+'targetPat'
+).value.trim();
+
+if (!rawInput) {
+
+return showModal(
+  'Please select or type a repository name.',
+  'repoSelect'
+);
+
+}
+
+const authHeader =
+'Basic ' +
+btoa(':' + pat);
+
+showSection(
+'repositories'
+);
+
+setStatus(
+'Fetching branches, branch policies, and PR telemetry across selected repository...',
+'info'
+);
+
+document.getElementById('statusBar')?.classList.add('fetching');
+
+ensurePolicyTableHeaders();
+
+clearBranchPolicyCache();
+
+let targetRepos =
+cachedRepos;
+
+if (
+rawInput !== '-- All Repositories --' &&
+rawInput !== 'ALL'
+) {
+
+const exactMatches =
+  cachedRepos.filter(
+    r =>
+      r.name.toLowerCase() ===
+      rawInput.toLowerCase()
+  );
+
+
+targetRepos =
+  exactMatches.length > 0
+    ? exactMatches
+    : cachedRepos.filter(
+        r =>
+          r.name
+            .toLowerCase()
+            .includes(
+              rawInput.toLowerCase()
+            )
+      );
+
+}
+
+if (
+targetRepos.length === 0
+) {
+
+setStatus(
+No repository found matching "${rawInput}".,
+'error'
+);
+
+document.getElementById('statusBar')?.classList.remove('fetching');
+
+return;
+}
+
+let repoBranchCounts = {};
+
+let allPRs = [];
+
+const now =
+new Date();
+
+try {
+
+const repoPromises =
+  targetRepos.map(
+    async r => {
+
+      const refsUrl =
+        `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/refs?filter=heads/&api-version=${API_VERSION}`;
+
+
+      const prUrl =
+        `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/pullrequests?searchCriteria.status=all&$top=100&api-version=${API_VERSION}`;
+
+
+      const [
+        refsPromise,
+        prsPromise
+      ] =
+        await Promise.allSettled([
+          fetchAzDo(
+            refsUrl,
+            authHeader
+          ),
+          fetchAzDo(
+            prUrl,
+            authHeader
+          )
+        ]);
+
+
+      let branchDetails =
+        [];
+
+
+      if (
+        refsPromise.status ===
+          'fulfilled' &&
+        refsPromise.value
+      ) {
+
+        const refs =
+          refsPromise.value.value ||
+          [];
+
+
+        repoBranchCounts[r.name] =
+          refs.length;
+
+
+        branchDetails =
+          await Promise.all(
+
+            refs.map(
+              async ref => {
+
+                const bName =
+                  ref.name.replace(
+                    /^refs\/heads\//,
+                    ''
+                  );
+
+
+                const commitUrl =
+                  `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/commits?searchCriteria.itemVersion.version=${encodeURIComponent(bName)}&searchCriteria.itemVersion.versionType=branch&$top=1&api-version=${API_VERSION}`;
+
+
+                const [
+                  commitResult,
+                  policyResult
+                ] =
+                  await Promise.allSettled([
+
+                    fetchAzDo(
+                      commitUrl,
+                      authHeader
+                    ),
+
+                    fetchBranchPolicies(
+                      org,
+                      project,
+                      r.id,
+                      bName,
+                      authHeader
+                    )
+
+                  ]);
+
+
+                const commitData =
+                  commitResult.status ===
+                    'fulfilled'
+                    ? commitResult.value
+                    : null;
+
+
+                const policies =
+                  policyResult.status ===
+                    'fulfilled'
+                    ? policyResult.value
+                    : [];
+
+
+                const policyInfo =
+                  parsePolicyInformation(
+                    policies
+                  );
+
+
+                const topCommit =
+                  (
+                    commitData?.value &&
+                    commitData.value[0]
+                  )
+                    ? commitData.value[0]
+                    : null;
+
+
+                const commitDate =
+                  topCommit?.author?.date
+                    ? new Date(
+                        topCommit.author.date
+                      )
+                    : null;
+
+
+                const isStale =
+                  commitDate
+                    ? (
+                        (now - commitDate) /
+                        (1000 * 60 * 60 * 24)
+                      ) > 90
+                    : false;
+
+
+                return {
+
+                  repo:
+                    r.name,
+
+                  branch:
+                    bName,
+
+                  author:
+                    topCommit?.author?.name ||
+                    'Unknown',
+
+                  date:
+                    commitDate
+                      ? commitDate.toLocaleString()
+                      : 'N/A',
+
+                  isStale:
+                    isStale,
+
+                  msg:
+                    topCommit?.comment ||
+                    '',
+
+                  hasPolicy:
+                    policyInfo.hasPolicy,
+
+                  minReviewers:
+                    policyInfo.minReviewers,
+
+                  policies:
+                    policyInfo.policies
+
+                };
+
+              }
+            )
+
+          );
+
+      }
+
+
+      if (
+        prsPromise.status ===
+          'fulfilled' &&
+        prsPromise.value
+      ) {
+
+        const prList =
+          prsPromise.value.value ||
+          [];
+
+
+        const prRows =
+          await Promise.all(
+
+            prList.map(
+              async pr => {
+
+                const sourceBranch =
+                  (
+                    pr.sourceRefName ||
+                    ''
+                  ).replace(
+                    /^refs\/heads\//,
+                    ''
+                  );
+
+
+                const targetBranch =
+                  (
+                    pr.targetRefName ||
+                    ''
+                  ).replace(
+                    /^refs\/heads\//,
+                    ''
+                  );
+
+
+                // Branch policies apply to
+                // the target branch.
+                const policies =
+                  await fetchBranchPolicies(
+                    org,
+                    project,
+                    r.id,
+                    targetBranch,
+                    authHeader
+                  );
+
+
+                const policyInfo =
+                  parsePolicyInformation(
+                    policies
+                  );
+
+
+                const actualReviewers =
+                  (
+                    pr.reviewers ||
+                    []
+                  ).length;
+
+
+                return {
+
+                  repo:
+                    r.name,
+
+                  title:
+                    pr.title ||
+                    'Untitled PR',
+
+                  source:
+                    sourceBranch,
+
+                  target:
+                    targetBranch,
+
+                  creator:
+                    pr.createdBy?.displayName ||
+                    'Unknown',
+
+                  status:
+                    pr.status ||
+                    'unknown',
+
+                  createdDate:
+                    pr.creationDate
+                      ? new Date(
+                          pr.creationDate
+                        ).toLocaleDateString()
+                      : 'N/A',
+
+                  reviewersCount:
+                    actualReviewers,
+
+                  minRequiredReviewers:
+                    policyInfo.minReviewers,
+
+                  targetPolicies:
+                    policyInfo.policies
+
+                };
+
+              }
+            )
+
+          );
+
+
+        allPRs.push(
+          ...prRows
+        );
+
+      }
+
+
+      return branchDetails;
+
+    }
+  );
+
+
+const results =
+  await Promise.all(
+    repoPromises
+  );
+
+
+rawStore.repos =
+  results.flat();
+
+
+rawStore.repoIndex =
+  0;
+
+
+rawStore.policyBranchesIndex =
+  0;
+
+
+rawStore.repoPrs =
+  allPRs;
+
+
+rawStore.repoPrsIndex =
+  0;
+
+
+const activePRsCount =
+  allPRs.filter(
+    p =>
+      p.status ===
+      'active'
+  ).length;
+
+
+const completedPRsCount =
+  allPRs.filter(
+    p =>
+      p.status ===
+      'completed'
+  ).length;
+
+
+document.getElementById(
+  'kpi-1-label'
+).textContent =
+  'Repository';
+
+
+document.getElementById(
+  'kpi-1-val'
+).textContent =
+  (
+    targetRepos.length > 1
+  )
+    ? `${targetRepos.length} Repos`
+    : targetRepos[0]?.name;
+
+
+document.getElementById(
+  'kpi-1-val'
+).className =
+  'text-2xl font-extrabold text-slate-800 mt-1 truncate';
+
+
+document.getElementById(
+  'kpi-2-label'
+).textContent =
+  'Branches';
+
+
+document.getElementById(
+  'kpi-2-val'
+).textContent =
+  `${rawStore.repos.length} ` +
+  `(${rawStore.repos.filter(
+    b => b.isStale
+  ).length} Stale)`;
+
+
+document.getElementById(
+  'kpi-3-label'
+).textContent =
+  'Total PRs';
+
+
+document.getElementById(
+  'kpi-3-val'
+).textContent =
+  allPRs.length;
+
+
+document.getElementById(
+  'kpi-4-label'
+).textContent =
+  'Active PRs';
+
+
+document.getElementById(
+  'kpi-4-val'
+).textContent =
+  activePRsCount;
+
+
+document.getElementById(
+  'kpi-5-label'
+).textContent =
+  'Completed PRs';
+
+
+document.getElementById(
+  'kpi-5-val'
+).textContent =
+  completedPRsCount;
+
+
+renderRepoTableBatch(
+  false
+);
+
+
+renderPolicyBranchesTableBatch(
+  false
+);
+
+
+renderRepoPrsTableBatch(
+  false
+);
+
+
+renderChart(
+  Object.keys(
+    repoBranchCounts
+  ),
+  Object.values(
+    repoBranchCounts
+  ),
+  'Branches per Repository'
+);
+
+
+const branchPolicyCount =
+  rawStore.repos.filter(
+    b => b.hasPolicy
+  ).length;
+
+
+const prPolicyCount =
+  allPRs.filter(
+    p =>
+      p.targetPolicies &&
+      p.targetPolicies.length > 0
+  ).length;
+
+setStatus(
+Loaded ${rawStore.repos.length} branches, +
+${branchPolicyCount} branches with policies, +
+${allPRs.length} pull requests, and +
+${prPolicyCount} PR target branches with policies +
+across ${targetRepos.length} repositories.,
+'success'
+);
+
+document.getElementById('statusBar')?.classList.remove('fetching');
+
+} catch (err) {
+
+setStatus(
+  `Error fetching branches and policies: ${err.message}`,
+  'error'
+);
+
+document.getElementById('statusBar')?.classList.remove('fetching');
+
+}
+
+}
+
+function renderRepoTableBatch(
+append = false
+) {
+
+ensurePolicyTableHeaders();
+
+const tbody =
+document.getElementById(
+'branchesTableBody'
+);
+
+const container =
+document.getElementById(
+'seeMoreRepoContainer'
+);
+
+const remainingEl =
+document.getElementById(
+'repoRemainingCount'
+);
+
+if (!append) {
+tbody.innerHTML = '';
+}
+
+if (
+rawStore.repos.length === 0
+) {
+
+tbody.innerHTML =
+  `<tr>
+    <td colspan="7"
+        class="p-4 text-center text-slate-400">
+      No branches found.
+    </td>
+  </tr>`;
+
+
+container.classList.add(
+  'hidden'
+);
+
+
+return;
+
+}
+
+const nextBatch =
+rawStore.repos.slice(
+rawStore.repoIndex,
+rawStore.repoIndex +
+PAGE_SIZE
+);
+
+rawStore.repoIndex +=
+nextBatch.length;
+
+const html =
+nextBatch.map(
+b => {
+
+    const policiesHtml =
+      b.hasPolicy
+
+        ? `<div class="flex flex-wrap gap-1 max-w-xs">
+
+            ${
+              b.minReviewers > 0
+
+                ? `<span
+                    class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-1.5 py-0.5 rounded">
+
+                    ${b.minReviewers}
+                    Min Reviewer${b.minReviewers > 1 ? 's' : ''}
+
+                  </span>`
+
+                : ''
+            }
+
+            ${
+              b.policies
+                .map(
+                  p =>
+                    `<span
+                      class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+
+                      ${p}
+
+                    </span>`
+                )
+                .join('')
+            }
+
+          </div>`
+
+        : `<span
+            class="text-xs text-slate-400 italic">
+
+            No Policies Set
+
+          </span>`;
+
+
+    return `
+    <tr class="hover:bg-slate-50 transition">
+
+      <td class="p-4 font-semibold text-slate-900">
+        ${b.repo}
+      </td>
+
+      <td class="p-4">
+
+        <span
+          class="font-mono text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-semibold">
+
+          ${b.branch}
+
+        </span>
+
+      </td>
+
+      <td class="p-4">
+
+        ${
+          b.isStale
+
+            ? '<span class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-semibold">Stale</span>'
+
+            : '<span class="bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded-full font-semibold">Active</span>'
+        }
+
+      </td>
+
+      <td class="p-4">
+        ${policiesHtml}
+      </td>
+
+      <td class="p-4 text-xs font-medium">
+        ${b.author}
+      </td>
+
+      <td class="p-4 text-xs text-slate-500">
+        ${b.date}
+      </td>
+
+      <td
+        class="p-4 text-xs text-slate-600 max-w-xs truncate"
+        title="${b.msg}">
+
+        ${b.msg}
+
+      </td>
+
+    </tr>
+  `;
+
+  }
+).join('');
+
+tbody.insertAdjacentHTML(
+'beforeend',
+html
+);
+
+const remaining =
+rawStore.repos.length -
+rawStore.repoIndex;
+
+if (remaining > 0) {
+
+container.classList.remove(
+  'hidden'
+);
+
+
+remainingEl.textContent =
+  remaining;
+
+} else {
+
+container.classList.add(
+  'hidden'
+);
+
+}
+
+}
+
+// ============================================================
+// BRANCHES WITH POLICIES
+// Shows only branches where at least one active policy applies.
+// ============================================================
+
+function getPolicyBranches() {
+
+if (!Array.isArray(rawStore.repos)) {
+return [];
+}
+
+return rawStore.repos.filter(
+b => b.hasPolicy === true &&
+Array.isArray(b.policies) &&
+b.policies.length > 0
+);
+}
+
+function renderPolicyBranchesTableBatch(
+append = false
+) {
+
+const tbody =
+document.getElementById(
+'policyBranchesTableBody'
+);
+
+const container =
+document.getElementById(
+'seeMorePolicyBranchesContainer'
+);
+
+const remainingEl =
+document.getElementById(
+'policyBranchesRemainingCount'
+);
+
+if (!tbody || !container || !remainingEl) {
+return;
+}
+
+const policyBranches =
+getPolicyBranches();
+
+if (!append) {
+tbody.innerHTML = '';
+rawStore.policyBranchesIndex = 0;
+}
+
+if (policyBranches.length === 0) {
+tbody.innerHTML = <tr> <td colspan="6" class="p-4 text-center text-slate-400"> No branches with policies found. </td> </tr> ;
+container.classList.add('hidden');
+remainingEl.textContent = '0';
+return;
+}
+
+const nextBatch =
+policyBranches.slice(
+rawStore.policyBranchesIndex,
+rawStore.policyBranchesIndex + PAGE_SIZE
+);
+
+rawStore.policyBranchesIndex += nextBatch.length;
+
+const html = nextBatch.map(b => {
+
+const policiesHtml =
+  `<div class="flex flex-wrap gap-1 max-w-xl">` +
+  (b.minReviewers > 0
+    ? `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-1.5 py-0.5 rounded">${b.minReviewers} Required Reviewer${b.minReviewers > 1 ? 's' : ''}</span>`
+    : '') +
+  b.policies.map(p =>
+    `<span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold px-1.5 py-0.5 rounded">${p}</span>`
+  ).join('') +
+  `</div>`;
+
+return `
+  <tr class="hover:bg-slate-50 transition">
+    <td class="p-4 font-semibold text-slate-900">${b.repo}</td>
+    <td class="p-4">
+      <span class="font-mono text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-semibold">
+        ${b.branch}
+      </span>
+    </td>
+    <td class="p-4">
+      <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2 py-1 rounded">
+        ${b.minReviewers > 0 ? b.minReviewers : '0'}
+      </span>
+    </td>
+    <td class="p-4">${policiesHtml}</td>
+    <td class="p-4 text-xs font-medium text-slate-700">${b.author || 'Unknown'}</td>
+    <td class="p-4 text-xs text-slate-500">${b.date || 'N/A'}</td>
+  </tr>
+`;
+
+}).join('');
+
+tbody.insertAdjacentHTML('beforeend', html);
+
+const remaining =
+policyBranches.length - rawStore.policyBranchesIndex;
+
+if (remaining > 0) {
+container.classList.remove('hidden');
+remainingEl.textContent = remaining;
+} else {
+container.classList.add('hidden');
+remainingEl.textContent = '0';
 }
 }
+
+function exportPolicyBranchesToXLSX() {
+
+const policyBranches =
+getPolicyBranches();
+
+if (policyBranches.length === 0) {
+if (typeof showModal === 'function') {
+showModal('No branches with policies are available to export.');
+}
+return;
+}
+
+const data = policyBranches.map(b => ({
+"Repository": b.repo,
+"Branch Name": b.branch,
+"Required Reviewers": b.minReviewers || 0,
+"Branch Policies": Array.isArray(b.policies) ? b.policies.join(', ') : 'None',
+"Last Author": b.author || 'Unknown',
+"Last Commit Date": b.date || 'N/A',
+"Commit Message": b.msg || ''
+}));
+
+exportToExcelFile(
+{ "Branches With Policies": data },
+"AzureDevOps_Branches_With_Policies"
+);
+}
+
+function renderRepoPrsTableBatch(
+append = false
+) {
+
+ensurePolicyTableHeaders();
+
+const tbody =
+document.getElementById(
+'repoPrsTableBody'
+);
+
+const container =
+document.getElementById(
+'seeMoreRepoPrsContainer'
+);
+
+const remainingEl =
+document.getElementById(
+'repoPrsRemainingCount'
+);
+
+if (!append) {
+tbody.innerHTML = '';
+}
+
+if (
+rawStore.repoPrs.length === 0
+) {
+
+tbody.innerHTML =
+  `<tr>
+    <td colspan="7"
+        class="p-4 text-center text-slate-400">
+
+      No pull requests found.
+
+    </td>
+  </tr>`;
+
+
+container.classList.add(
+  'hidden'
+);
+
+
+return;
+
+}
+
+const nextBatch =
+rawStore.repoPrs.slice(
+rawStore.repoPrsIndex,
+rawStore.repoPrsIndex +
+PAGE_SIZE
+);
+
+rawStore.repoPrsIndex +=
+nextBatch.length;
+
+const html =
+nextBatch.map(
+pr => {
+
+    let policyBadge =
+      '';
+
+
+    if (
+      pr.minRequiredReviewers > 0
+    ) {
+
+      policyBadge =
+        `<div
+          class="flex flex-wrap gap-1 max-w-xs">
+
+          <span
+            class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2 py-0.5 rounded">
+
+            ${pr.minRequiredReviewers}
+            Min Required
+            (${pr.reviewersCount} Assigned)
+
+          </span>
+
+
+          ${
+            pr.targetPolicies
+              .filter(
+                p =>
+                  !p
+                    .toLowerCase()
+                    .includes(
+                      'required reviewer'
+                    )
+              )
+              .map(
+                p =>
+                  `<span
+                    class="bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold px-2 py-0.5 rounded">
+
+                    ${p}
+
+                  </span>`
+              )
+              .join('')
+          }
+
+        </div>`;
+
+    } else if (
+      pr.targetPolicies &&
+      pr.targetPolicies.length > 0
+    ) {
+
+      policyBadge =
+        `<div
+          class="flex flex-wrap gap-1 max-w-xs">
+
+          ${
+            pr.targetPolicies
+              .map(
+                p =>
+                  `<span
+                    class="bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold px-2 py-0.5 rounded">
+
+                    ${p}
+
+                  </span>`
+              )
+              .join('')
+          }
+
+        </div>`;
+
+    } else {
+
+      policyBadge =
+        `<span
+          class="text-xs text-slate-400">
+
+          ${
+            pr.reviewersCount > 0
+              ? pr.reviewersCount +
+                ' Reviewer(s)'
+              : 'No Policies Set'
+          }
+
+        </span>`;
+
+    }
+
+
+    return `
+    <tr class="hover:bg-slate-50 transition">
+
+      <td
+        class="p-4 font-semibold text-slate-900">
+
+        ${pr.repo}
+
+      </td>
+
+
+      <td
+        class="p-4 font-medium text-slate-800 max-w-xs truncate"
+        title="${pr.title}">
+
+        ${pr.title}
+
+      </td>
+
+
+      <td
+        class="p-4 font-mono text-xs text-slate-500">
+
+        ${pr.source}
+        &rarr;
+        ${pr.target}
+
+      </td>
+
+
+      <td class="p-4">
+
+        ${policyBadge}
+
+      </td>
+
+
+      <td
+        class="p-4 text-xs font-medium text-slate-700">
+
+        ${pr.creator}
+
+      </td>
+
+
+      <td class="p-4">
+
+        <span
+          class="px-2 py-0.5 rounded-full text-xs font-semibold ${
+            pr.status === 'completed'
+              ? 'bg-emerald-100 text-emerald-700'
+              :
+            pr.status === 'active'
+              ? 'bg-blue-100 text-blue-700'
+              :
+              'bg-slate-100 text-slate-600'
+          }">
+
+          ${pr.status}
+
+        </span>
+
+      </td>
+
+
+      <td
+        class="p-4 text-xs text-slate-500">
+
+        ${pr.createdDate}
+
+      </td>
+
+    </tr>
+  `;
+
+  }
+).join('');
+
+tbody.insertAdjacentHTML(
+'beforeend',
+html
+);
+
+const remaining =
+rawStore.repoPrs.length -
+rawStore.repoPrsIndex;
+
+if (remaining > 0) {
+
+container.classList.remove(
+  'hidden'
+);
+
+
+remainingEl.textContent =
+  remaining;
+
+} else {
+
+container.classList.add(
+  'hidden'
+);
+
+}
+
+}
+
+function exportBranchesToXLSX() {
+
+if (
+!rawStore.repos ||
+rawStore.repos.length === 0
+) {
+return;
+}
+
+const data =
+rawStore.repos.map(
+b => ({
+
+    "Repository":
+      b.repo,
+
+    "Branch Name":
+      b.branch,
+
+    "Status / Health":
+      b.isStale
+        ? "Stale"
+        : "Active",
+
+    "Branch Policies":
+      b.policies
+        ? b.policies.join(', ')
+        : 'None',
+
+    "Required Reviewers":
+      b.minReviewers || 0,
+
+    "Last Author":
+      b.author,
+
+    "Last Commit Date":
+      b.date,
+
+    "Commit Message":
+      b.msg
+
+  })
+);
+
+exportToExcelFile(
+{
+"Branches & Policies":
+data
+},
+"AzureDevOps_Branches_Policies"
+);
+
+}
+
+function exportRepoPrsToXLSX() {
+
+if (
+!rawStore.repoPrs ||
+rawStore.repoPrs.length === 0
+) {
+return;
+}
+
+const data =
+rawStore.repoPrs.map(
+p => ({
+
+    "Repository":
+      p.repo,
+
+    "PR Title":
+      p.title,
+
+    "Source Branch":
+      p.source,
+
+    "Target Branch":
+      p.target,
+
+    "Target Branch Policies":
+      p.targetPolicies
+        ? p.targetPolicies.join(', ')
+        : 'None',
+
+    "Min Required Reviewers":
+      p.minRequiredReviewers || 0,
+
+    "Assigned Reviewers":
+      p.reviewersCount || 0,
+
+    "Creator":
+      p.creator,
+
+    "Status":
+      p.status,
+
+    "Created Date":
+      p.createdDate
+
+  })
+);
+
+exportToExcelFile(
+{
+"Pull Requests":
+data
+},
+"AzureDevOps_PullRequests_Policies"
+);
+
+}
+
+Close
