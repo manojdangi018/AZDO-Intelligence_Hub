@@ -326,6 +326,20 @@ transition: border-color 0.15s ease, box-shadow 0.15s ease;
   color: #ffffff !important;
 }
 
+/* Organization field: prevent browser autofill from showing white */
+#targetOrg:-webkit-autofill,
+#targetOrg:-webkit-autofill:hover,
+#targetOrg:-webkit-autofill:focus,
+#targetOrg:-webkit-autofill:active {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0 1000px #06132d inset !important;
+  box-shadow: 0 0 0 1000px #06132d inset !important;
+  background-color: #06132d !important;
+}
+
+.field-group input:focus,
+.field-group select:focus {
+
 .field-group input:focus,
 .field-group select:focus {
 border-color: var(--azure-cyan);
