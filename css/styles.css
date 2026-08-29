@@ -940,22 +940,10 @@ z-index: 1;
 #chartSection {
   position: relative;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.88);
+  background: #ffffff !important;
   border-radius: 14px !important;
   padding: 24px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-}
-
-/* Keep Activity Overview content above existing watermark */
-#chartSection > * {
-  position: relative;
-  z-index: 1;
-}
-
-/* Keep Activity Overview content above watermark */
-#chartSection > * {
-  position: relative;
-  z-index: 1;
 }
 
 /* ============================================================
