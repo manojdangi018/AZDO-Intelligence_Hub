@@ -556,11 +556,11 @@ Purpose: This is used in second page for connected button.
    Purpose: Keep header title (Azure DevOps Intelligence Hub) and subtitle clearly visible.
    ============================================================ */
 
-.app-topbar .brand-title {
+.app-topbar .app-title {
   color: #ffffff !important;
 }
 
-.app-topbar .brand-subtitle {
+.app-topbar .app-subtitle {
   color: #8ea8cf !important;
 }
 
