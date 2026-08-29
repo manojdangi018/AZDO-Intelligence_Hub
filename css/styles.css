@@ -946,6 +946,25 @@ z-index: 1;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
 
+/* Existing watermark — faintly visible inside Activity Overview */
+#chartSection::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background: url("../devops-new-watermark.png") center/contain no-repeat;
+
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Keep Activity Overview content above the watermark */
+#chartSection > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* ============================================================
    STEP 11 — BACKGROUND WATERMARKS
    Purpose: Decorative DevOps logo behind both application pages.
