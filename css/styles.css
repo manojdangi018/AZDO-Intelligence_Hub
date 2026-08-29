@@ -1,6 +1,6 @@
 /* ============================================================
- AZURE DEVOPS INTELLIGENCE HUB — COMPLETE PRODUCTION STYLESHEET
- ============================================================ */
+AZURE DEVOPS INTELLIGENCE HUB — COMPLETE PRODUCTION STYLESHEET
+============================================================ */
 
 :root {
 --bg-deep: #030d22;
@@ -47,9 +47,9 @@ font: inherit;
 }
 
 /* ============================================================
- SHARED TOPBAR & HEADER BRANDING
- Purpose: Top header, branding, logo, and shared navigation styling.
- ============================================================ */
+SHARED TOPBAR & HEADER BRANDING
+Purpose: Top header, branding, logo, and shared navigation styling.
+============================================================ */
 .landing-topbar,
 .app-topbar {
 height: 76px;
@@ -118,9 +118,9 @@ gap: 14px;
 }
 
 /* ============================================================
- PAGE 1: LANDING & CONNECTION EXPERIENCE
- Purpose: Azure DevOps connection/landing page layout and controls.
- ============================================================ */
+PAGE 1: LANDING & CONNECTION EXPERIENCE
+Purpose: Azure DevOps connection/landing page layout and controls.
+============================================================ */
 .connection-page {
 min-height: 100vh;
 background: radial-gradient(circle at 10% 20%, #0c2044 0%, var(--bg-deep) 70%);
@@ -322,8 +322,8 @@ transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 #targetOrg {
-  background: #06132d !important;
-  color: #ffffff !important;
+background: #06132d !important;
+color: #ffffff !important;
 }
 
 .field-group input:focus,
@@ -400,50 +400,47 @@ accent-color: var(--azure-bright);
 }
 
 /* ============================================================
- PAGE 2: WORKSPACE & METRIC DASHBOARD
- Purpose: This is used in second page for connected button.
- ============================================================ */
+PAGE 2: WORKSPACE & METRIC DASHBOARD
+Purpose: This is used in second page for connected button.
+============================================================ */
 
 /* Page 2- Azure DevOps Intelligence Hub filed*/
-.brand-title {
-  color: #8ea8cf !important;
-}
-
-.brand-subtitle {
-  color: #8ea8cf !important;
+::selection {
+  background: #1b386e !important;
+  color: #06132d !important;
 }
 
 * Page 2- connted button fuction*/
 .connection-badge.connected {
-  display: inline-flex !important;
-  align-items: center;
-  gap: 6px;
+display: inline-flex !important;
+align-items: center;
+gap: 6px;
 
-  background: transparent !important;
-  border: 1px solid #0b9f72 !important;
-  color: #0b9f72 !important;
+background: transparent !important;
+border: 1px solid #0b9f72 !important;
+color: #0b9f72 !important;
 
-  border-radius: 6px !important;
-  padding: 0 12px !important;
-  height: 30px !important;
-  box-sizing: border-box;
+border-radius: 6px !important;
+padding: 0 12px !important;
+height: 30px !important;
+box-sizing: border-box;
 
-  font-size: 11px !important;
-  font-weight: 700 !important;
+font-size: 11px !important;
+font-weight: 700 !important;
 }
 
 .connection-badge.connected .status-dot {
-  width: 8px !important;
-  height: 8px !important;
-  border-radius: 50%;
-  background: #0b9f72 !important;
-  box-shadow: 0 0 7px rgba(11, 159, 114, 0.45) !important;
+width: 8px !important;
+height: 8px !important;
+border-radius: 50%;
+background: #0b9f72 !important;
+box-shadow: 0 0 7px rgba(11, 159, 114, 0.45) !important;
 }
 
 /* ============================================================
- PAGE 2 — PROJECT SELECTION
- Purpose: Controls the Project label, dropdown, spacing, and requirement message.
- ============================================================ */
+PAGE 2 — PROJECT SELECTION
+Purpose: Controls the Project label, dropdown, spacing, and requirement message.
+============================================================ */
 .workspace-project-field {
 display: flex;
 flex-direction: column;
@@ -573,9 +570,9 @@ padding: 24px 32px 50px;
 }
 
 /* ============================================================
- PAGE 2 — WORKSPACE CONTROL CARD
- Purpose: Main dark card containing project selection and service controls.
- ============================================================ */
+PAGE 2 — WORKSPACE CONTROL CARD
+Purpose: Main dark card containing project selection and service controls.
+============================================================ */
 /* Workspace controls: project selection area at the top of Page 2. */
 .workspace-controls {
 background: var(--bg-card-dark);
@@ -639,8 +636,8 @@ width: 100%;
 }
 
 .workspace-project-field select option {
-  color: #ffffff !important;
-  background: #06132d;
+color: #ffffff !important;
+background: #06132d;
 }
 
 .active-path-row {
@@ -662,17 +659,17 @@ text-decoration: none;
 }
 
 /* ============================================================
- PAGE 2 — REPOSITORY SELECTION
- Purpose: Adds clear spacing between the repository label and selector controls.
- ============================================================ */
+PAGE 2 — REPOSITORY SELECTION
+Purpose: Adds clear spacing between the repository label and selector controls.
+============================================================ */
 #substepRepo > div:first-child > label {
 margin-bottom: 8px !important;
 }
 
 /* ============================================================
- PAGE 2 — DASHBOARD KPI CARDS
- Purpose: Styles the five summary cards showing repository, branch, and PR metrics.
- ============================================================ */
+PAGE 2 — DASHBOARD KPI CARDS
+Purpose: Styles the five summary cards showing repository, branch, and PR metrics.
+============================================================ */
 .overview-heading h2 {
 font-size: 18px;
 font-weight: 800;
@@ -690,7 +687,7 @@ margin-bottom: 24px;
 
 /* Service Connections & Agents: align 3 KPI cards evenly */
 .serviceagents-kpi-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 }
 
 .kpi-grid > div {
@@ -721,9 +718,9 @@ margin: 4px 0 0 !important;
 }
 
 /* ============================================================
-  PAGE 2 — REPOSITORY KPI VALUE COLORS
-  Purpose: Gives each repository KPI value a distinct color.
-  ============================================================ */
+ PAGE 2 — REPOSITORY KPI VALUE COLORS
+ Purpose: Gives each repository KPI value a distinct color.
+ ============================================================ */
 
 #kpi-1-val {
 color: #2563eb !important;
@@ -746,9 +743,9 @@ color: #059669 !important;
 }
 
 /* ============================================================
- PAGE 2 — KPI VALUE COLORS
- Purpose: Gives each summary card value a different color.
- ============================================================ */
+PAGE 2 — KPI VALUE COLORS
+Purpose: Gives each summary card value a different color.
+============================================================ */
 #kpi-1-val { color: #2563eb !important; }
 #kpi-2-val { color: #7c3aed !important; }
 #kpi-3-val { color: #0891b2 !important; }
@@ -756,44 +753,44 @@ color: #059669 !important;
 #kpi-5-val { color: #059669 !important; }
 
 /* ============================================================
-   SELECTED PROJECT NAME
-   Purpose: Display the selected project name such as XYZ..clearly above the Repository KPI cards.
-   ============================================================ */
+  SELECTED PROJECT NAME
+  Purpose: Display the selected project name such as XYZ..clearly above the Repository KPI cards.
+  ============================================================ */
 .overview-heading {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-start !important;
-  justify-content: flex-start !important;
-  gap: 4px !important;
-  margin-bottom: 16px !important;
+display: flex !important;
+flex-direction: column !important;
+align-items: flex-start !important;
+justify-content: flex-start !important;
+gap: 4px !important;
+margin-bottom: 16px !important;
 }
 
 .overview-heading > div {
-  display: block !important;
+display: block !important;
 }
 
 #overviewProjectBadge {
-  display: block !important;
+display: block !important;
 
-  position: static !important;
+position: static !important;
 
-  width: auto !important;
-  height: auto !important;
+width: auto !important;
+height: auto !important;
 
-  margin: 0 0 0 0 !important;
-  padding: 0 !important;
+margin: 0 0 0 0 !important;
+padding: 0 !important;
 
-  background: transparent !important;
-  border: none !important;
+background: transparent !important;
+border: none !important;
 
-  color: #8ea8cf !important;
+color: #8ea8cf !important;
 
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  line-height: 1.4 !important;
+font-size: 14px !important;
+font-weight: 600 !important;
+line-height: 1.4 !important;
 
-  opacity: 1 !important;
-  visibility: visible !important;
+opacity: 1 !important;
+visibility: visible !important;
 }
 
 #chartSection > * {
@@ -812,9 +809,9 @@ box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
 }
 
 /* ============================================================
- BACKGROUND DECORATIVE WATERMARKS
- Purpose: Background watermark positioning and appearance for both pages.
- ============================================================ */
+BACKGROUND DECORATIVE WATERMARKS
+Purpose: Background watermark positioning and appearance for both pages.
+============================================================ */
 /* Page 1 watermark: decorative background logo on the connection screen. */
 .connection-page::before {
 content: "";
@@ -848,9 +845,9 @@ opacity: 0.12;
 }
 
 /* ============================================================
- RESPONSIVE BREAKPOINTS
- Purpose: Adjust layout and controls for smaller screen sizes.
- ============================================================ */
+RESPONSIVE BREAKPOINTS
+Purpose: Adjust layout and controls for smaller screen sizes.
+============================================================ */
 @media (max-width: 1150px) {
 .connection-main {
 grid-template-columns: 1fr;
