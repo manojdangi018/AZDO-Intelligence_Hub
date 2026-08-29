@@ -7,7 +7,7 @@ let activeViewSection = 'view-repositories';
 let activeCategory = 'repositories';
 const PAGE_SIZE = 10;
 const PIPELINE_PAGE_SIZE = 25;
-const AZDO_STABLE_API_VERSION = '7.1';
+const API_VERSION = '7.1';
 
 let rawStore = {
   repos: [], repoIndex: 0,
@@ -272,8 +272,14 @@ async function loadProjectsList() {
     enableDropdown('projectSelect');
     updateProjectRequirementUI();
     document.getElementById('step5Container').classList.add('hidden');
+    // Save Page 2 session so browser refresh can restore it.
+    sessionStorage.setItem('azdo_workspace_active', 'true');
+    sessionStorage.setItem('azdo_session_org', org);
+    sessionStorage.setItem('azdo_session_pat', pat);
+    
     setConnectionBadge(true);
     showWorkspacePage();
+    
     setStatus(`Loaded ${projects.length} projects successfully! Please choose a project.`, 'success');
   } catch (err) {
     setStatus(`Error loading projects: ${err.message}`, 'error');
@@ -348,6 +354,9 @@ async function handleProjectSelection() {
   if (typeof updateServiceAgentsScopeText === 'function') updateServiceAgentsScopeText();
   const projectBadge = document.getElementById('overviewProjectBadge');
   if (projectBadge) projectBadge.textContent = project || '—';
+  
+  // Save selected project so browser refresh restores the same project.
+  sessionStorage.setItem('azdo_session_project', project);
 
   const authHeader = 'Basic ' + btoa(':' + pat);
   try {
@@ -410,6 +419,10 @@ function selectExplore(category) {
   }
 
   activeCategory = category;
+  
+  // Save selected workspace so browser refresh restores the same workspace.
+  sessionStorage.setItem('azdo_session_category', category);
+  
   updateProjectRequirementUI();
   const categorySelect = document.getElementById('categorySelect');
   if (categorySelect) categorySelect.value = category;
@@ -506,6 +519,14 @@ function disconnectSession() {
 
   renderChart([], [], 'Overview');
   setConnectionBadge(false);
+  
+  // Clear the Page 2 refresh session when the user disconnects.
+  sessionStorage.removeItem('azdo_workspace_active');
+  sessionStorage.removeItem('azdo_session_org');
+  sessionStorage.removeItem('azdo_session_pat');
+  sessionStorage.removeItem('azdo_session_project');
+  sessionStorage.removeItem('azdo_session_category');
+  
   showConnectionPage();
   setStatus('Disconnected from Azure DevOps. Enter credentials to connect again.', 'info');
 }
@@ -693,7 +714,61 @@ function renderChart(labels, data, datasetLabel) {
   });
 }
 
-document.addEventListener('DOMContentLoaded', function(){ 
-  initCredentials(); 
-  selectExplore('repositories'); 
+document.addEventListener('DOMContentLoaded', async function () {
+
+  // Load saved organization/PAT from browser storage.
+  initCredentials();
+
+  // Check whether the user was already working on Page 2.
+  const workspaceActive = sessionStorage.getItem('azdo_workspace_active');
+
+  if (workspaceActive === 'true') {
+
+    const savedOrg = sessionStorage.getItem('azdo_session_org');
+    const savedPat = sessionStorage.getItem('azdo_session_pat');
+    const savedProject = sessionStorage.getItem('azdo_session_project');
+    const savedCategory = sessionStorage.getItem('azdo_session_category');
+
+    // Restore saved organization and PAT.
+    if (savedOrg) {
+      document.getElementById('targetOrg').value = savedOrg;
+    }
+
+    if (savedPat) {
+      document.getElementById('targetPat').value = savedPat;
+    }
+
+    // Restore the Page 2 workspace.
+    if (savedCategory) {
+      activeCategory = savedCategory;
+    }
+
+    // Load projects again so the project dropdown is available.
+    if (savedOrg && savedPat) {
+      await loadProjectsList();
+
+      // Restore the previously selected project.
+      if (savedProject) {
+        const projectSelect = document.getElementById('projectSelect');
+
+        if (projectSelect) {
+          projectSelect.value = savedProject;
+        }
+
+        await handleProjectSelection();
+      }
+
+      // Restore the previously selected workspace.
+      if (savedCategory) {
+        selectExplore(savedCategory);
+      }
+    }
+
+  } else {
+
+    // First visit: start with Repositories as the default workspace.
+    selectExplore('repositories');
+
+  }
+
 });
