@@ -99,7 +99,7 @@ justify-content: space-between;
 .sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 18x;
+  gap: 18px;
   padding-top: 10px;
 }
 .brand-mark {
