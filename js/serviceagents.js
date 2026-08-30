@@ -244,7 +244,7 @@ async function fetchServiceConnectionAgentData() {
 
   updateServiceAgentsScopeText();
   const scopeText = scopeProject ? `project ${scopeProject}` : 'organization-wide';
-  setStatus(`Fetching ${scopeText} service connections, agent pools and agents...`, 'info');
+  startFetching(`Fetching ${scopeText} service connections, agent pools and agents...`);
 
   try {
     let serviceConnections = [];
@@ -282,8 +282,14 @@ async function fetchServiceConnectionAgentData() {
 
     const realAgentCount = rawStore.agents.filter(a => !a.isSyntheticHosted && a.name !== 'Unable to read agents').length;
     const hostedPoolCount = pools.filter(p => p.isHosted === true).length;
+    stopFetching();
+
+
     setStatus(`Loaded ${serviceConnections.length} service connections, ${pools.length} ${projectScoped ? 'project-connected' : 'organization'} agent pools, ${realAgentCount} self-hosted agents and ${hostedPoolCount} Microsoft-hosted pools (${scopeText}).`, 'success');
-  } catch (error) {
+
+    } catch (error) {
+
+      stopFetching();
     if (serviceBody) serviceBody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`;
     if (agentsBody) agentsBody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`;
     setStatus(`Error fetching service connections and agents: ${error.message}`, 'error');

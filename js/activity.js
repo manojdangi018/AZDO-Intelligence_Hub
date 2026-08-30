@@ -9,7 +9,7 @@ async function fetchUserActivityData() {
 
   const authHeader = 'Basic ' + btoa(':' + pat);
   showSection('activity');
-  setStatus(`Scanning all repositories, branches & commits for "${userQuery}"...`, 'info');
+  startFetching(`Scanning all repositories, branches & commits for "${userQuery}"...`);
 
   let reposToScan = cachedRepos;
   if (!reposToScan || reposToScan.length === 0) {
@@ -155,8 +155,14 @@ async function fetchUserActivityData() {
     const repoCommitMap = {};
     userCommits.forEach(c => repoCommitMap[c.repo] = (repoCommitMap[c.repo] || 0) + 1);
     renderChart(Object.keys(repoCommitMap), Object.values(repoCommitMap), `Commits by ${userQuery}`);
+    stopFetching();
+
+
     setStatus(`Found ${userCommits.length} commits and ${userPRs.length} PRs for "${userQuery}".`, 'success');
-  } catch (err) {
+
+    } catch (err) {
+
+      stopFetching();
     setStatus(`Error fetching user activity: ${err.message}`, 'error');
   }
 }

@@ -6,7 +6,7 @@ async function fetchWorkItemsData() {
 
   const authHeader = 'Basic ' + btoa(':' + pat);
   showSection('workitems');
-  setStatus(targetUser ? `Querying work items assigned to "${targetUser}"...` : `Querying all active work items and sprint status...`, 'info');
+  startFetching(targetUser ? `Querying work items assigned to "${targetUser}"...` : `Querying all active work items and sprint status...`);
 
   try {
     let wiql = `SELECT [System.Id], [System.Title], [System.WorkItemType], [System.State], [System.AssignedTo], [System.IterationPath], [System.CreatedDate] FROM workitems WHERE [System.TeamProject] = @project`;
@@ -113,8 +113,17 @@ async function fetchWorkItemsData() {
     const chartData = Object.values(stateCounts);
     renderChart(chartLabels, chartData, 'Work Items by State');
 
+    stopFetching();
+
+
+
     setStatus(`Loaded ${rawStore.workitems.length} work items successfully.`, 'success');
-  } catch (err) {
+
+
+    } catch (err) {
+
+
+      stopFetching();
     setStatus(`Error fetching work items: ${err.message}`, 'error');
   }
 }

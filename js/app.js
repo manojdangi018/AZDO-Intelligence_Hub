@@ -170,6 +170,19 @@ function setStatus(msg, type = 'info') {
   el.textContent = msg;
 }
 
+/* ============================================================
+   SHARED WORKSPACE FETCHING STATE
+   Purpose: Reuse the same blinking status + spinner for every workspace.
+   ============================================================ */
+function startFetching(message) {
+  setStatus(message, 'info');
+  document.getElementById('statusBar')?.classList.add('fetching');
+}
+
+function stopFetching() {
+  document.getElementById('statusBar')?.classList.remove('fetching');
+}
+
 function showWorkspacePage() {
   document.getElementById('connectionPage')?.classList.add('hidden');
   document.getElementById('workspacePage')?.classList.remove('hidden');

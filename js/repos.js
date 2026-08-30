@@ -561,12 +561,9 @@ async function fetchRepositoryData() {
     'repositories'
   );
 
-  setStatus(
-    'Fetching branches, branch policies, and PR telemetry across selected repository...',
-    'info'
+  startFetching(
+    'Fetching branches, branch policies, and PR telemetry across selected repository...'
   );
-
-  document.getElementById('statusBar')?.classList.add('fetching');
   
   ensurePolicyTableHeaders();
 
@@ -609,7 +606,7 @@ async function fetchRepositoryData() {
     'error'
   );
   
-  document.getElementById('statusBar')?.classList.remove('fetching');
+  stopFetching();
   
   return;
   }
@@ -1034,7 +1031,7 @@ async function fetchRepositoryData() {
     'success'
   );
   
-  document.getElementById('statusBar')?.classList.remove('fetching');
+  stopFetching();
 
   } catch (err) {
 
@@ -1043,7 +1040,7 @@ async function fetchRepositoryData() {
       'error'
     );
 
-    document.getElementById('statusBar')?.classList.remove('fetching');
+    stopFetching();
   }
 
 }

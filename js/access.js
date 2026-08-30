@@ -6,7 +6,7 @@ async function fetchUserAccessData() {
 
   const authHeader = 'Basic ' + btoa(':' + pat);
   showSection('access');
-  setStatus(userQuery ? `Scanning groups and teams for "${userQuery}"...` : `Fetching all project security groups, teams, and members...`, 'info');
+  startFetching(userQuery ? `Scanning groups and teams for "${userQuery}"...` : `Fetching all project security groups, teams, and members...`);
 
   let accessRows = [];
   let groupMemberCounts = {};
@@ -170,8 +170,14 @@ async function fetchUserAccessData() {
 
     renderAccessTableBatch(false);
     renderChart(Object.keys(groupMemberCounts), Object.values(groupMemberCounts), 'Members per Group / Team');
+    stopFetching();
+
+
     setStatus(`Loaded ${accessRows.length} member assignments across all ${Object.keys(groupMemberCounts).length} groups & teams.`, 'success');
-  } catch (err) {
+
+    } catch (err) {
+
+      stopFetching();
     setStatus(`Error querying security access: ${err.message}`, 'error');
   }
 }
