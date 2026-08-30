@@ -937,17 +937,14 @@ z-index: 1;
 }
 
 /* Activity chart section: contains the dashboard activity visualization. */
-/* Activity chart section: translucent/transparent style matching tables */
+/* Activity chart section: matches the exact same appearance as table cards */
 #chartSection {
-  position: relative;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.88) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.8) !important;
-  border-radius: 14px !important;
-  padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  border-radius: 0.75rem;
+}
+
+#chartSection canvas {
+  display: block;
+  width: 100% !important;
 }
 
 /* ============================================================
