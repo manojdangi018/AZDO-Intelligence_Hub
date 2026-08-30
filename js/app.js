@@ -732,12 +732,13 @@ function renderChart(labels, data, datasetLabel) {
       scales: isPie ? {} : {
         y: { 
           beginAtZero: true, 
-          grid: { color: '#f1f5f9' },
-          ticks: { precision: 0 }
+          grid: { color: 'rgba(241, 245, 249, 0.6)' },
+          ticks: { precision: 0, color: '#334155' }
         },
         x: { 
           grid: { display: false },
           ticks: {
+            color: '#334155',
             autoSkip: false,
             maxRotation: 45,
             minRotation: 20
