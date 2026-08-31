@@ -1,20 +1,17 @@
 async function fetchUserActivityData() {
-  const org = extractOrgName(document.getElementById('targetOrg').value);
   const project = document.getElementById('projectSelect').value;
-  const pat = document.getElementById('targetPat').value.trim();
   const userQuery = document.getElementById('targetUserQuery').value.trim();
   const timeframeDays = parseInt(document.getElementById('userTimeframeDays').value, 10);
 
   if (!userQuery) return showModal('Please enter a User Email or Name to search.', 'targetUserQuery');
 
-  const authHeader = 'Basic ' + btoa(':' + pat);
   showSection('activity');
   startFetching(`Scanning all repositories, branches & commits for "${userQuery}"...`);
 
   let reposToScan = cachedRepos;
   if (!reposToScan || reposToScan.length === 0) {
     try {
-      const repoData = await fetchAzDo(`https://dev.azure.com/${org}/${project}/_apis/git/repositories?api-version=${API_VERSION}`, authHeader);
+      const repoData = await fetchAzDo(`${project}/_apis/git/repositories?api-version=${API_VERSION}`);
       reposToScan = repoData.value || [];
       cachedRepos = reposToScan;
     } catch(e) {}
@@ -42,8 +39,8 @@ async function fetchUserActivityData() {
       await Promise.all(batch.map(async (r) => {
         let branches = ['main'];
         try {
-          const refsUrl = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/refs?filter=heads/&api-version=${API_VERSION}`;
-          const refsData = await fetchAzDo(refsUrl, authHeader);
+          const refsUrl = `${project}/_apis/git/repositories/${r.id}/refs?filter=heads/&api-version=${API_VERSION}`;
+          const refsData = await fetchAzDo(refsUrl);
           if (refsData?.value && refsData.value.length > 0) {
             branches = refsData.value.map(ref => ref.name.replace(/^refs\/heads\//, ''));
           }
@@ -51,8 +48,8 @@ async function fetchUserActivityData() {
 
         const commitsPromise = (async () => {
           try {
-            const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/commits?$top=1000${fromDateStr}&api-version=${API_VERSION}`;
-            const res = await fetchAzDo(url, authHeader);
+            const url = `${project}/_apis/git/repositories/${r.id}/commits?$top=1000${fromDateStr}&api-version=${API_VERSION}`;
+            const res = await fetchAzDo(url);
             
             (res.value || []).forEach(c => {
               const authorEmail = (c.author?.email || '').toLowerCase();
@@ -84,8 +81,8 @@ async function fetchUserActivityData() {
 
         const prsPromise = (async () => {
           try {
-            const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/pullrequests?searchCriteria.status=all&$top=200&api-version=${API_VERSION}`;
-            const res = await fetchAzDo(url, authHeader);
+            const url = `${project}/_apis/git/repositories/${r.id}/pullrequests?searchCriteria.status=all&$top=200&api-version=${API_VERSION}`;
+            const res = await fetchAzDo(url);
             (res.value || []).forEach(pr => {
               const creatorEmail = (pr.createdBy?.uniqueName || '').toLowerCase();
               const creatorName = (pr.createdBy?.displayName || '').toLowerCase();
@@ -157,12 +154,9 @@ async function fetchUserActivityData() {
     renderChart(Object.keys(repoCommitMap), Object.values(repoCommitMap), `Commits by ${userQuery}`);
     stopFetching();
 
-
     setStatus(`Found ${userCommits.length} commits and ${userPRs.length} PRs for "${userQuery}".`, 'success');
-
-    } catch (err) {
-
-      stopFetching();
+  } catch (err) {
+    stopFetching();
     setStatus(`Error fetching user activity: ${err.message}`, 'error');
   }
 }

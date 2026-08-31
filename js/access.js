@@ -1,10 +1,7 @@
 async function fetchUserAccessData() {
-  const org = extractOrgName(document.getElementById('targetOrg').value);
   const project = document.getElementById('projectSelect').value;
-  const pat = document.getElementById('targetPat').value.trim();
   const userQuery = document.getElementById('targetAccessUserQuery').value.trim().toLowerCase();
 
-  const authHeader = 'Basic ' + btoa(':' + pat);
   showSection('access');
   startFetching(userQuery ? `Scanning groups and teams for "${userQuery}"...` : `Fetching all project security groups, teams, and members...`);
 
@@ -17,8 +14,8 @@ async function fetchUserAccessData() {
     if (resolvedDescriptors.has(descriptor)) return resolvedDescriptors.get(descriptor);
 
     try {
-      const userUrl = `https://vssps.dev.azure.com/${org}/_apis/graph/users/${descriptor}?api-version=${API_VERSION}`;
-      const res = await fetchAzDo(userUrl, authHeader);
+      const userUrl = `https://vssps.dev.azure.com/org/_apis/graph/users/${descriptor}?api-version=${API_VERSION}`;
+      const res = await fetchAzDo(userUrl);
       if (res) {
         const data = {
           name: res.displayName || 'Unknown',
@@ -29,8 +26,8 @@ async function fetchUserAccessData() {
       }
     } catch (e) {
       try {
-        const idUrl = `https://vssps.dev.azure.com/${org}/_apis/identities?subjectDescriptors=${encodeURIComponent(descriptor)}&api-version=${API_VERSION}`;
-        const idRes = await fetchAzDo(idUrl, authHeader);
+        const idUrl = `https://vssps.dev.azure.com/org/_apis/identities?subjectDescriptors=${encodeURIComponent(descriptor)}&api-version=${API_VERSION}`;
+        const idRes = await fetchAzDo(idUrl);
         const val = idRes?.value?.[0];
         if (val) {
           const data = {
@@ -48,11 +45,11 @@ async function fetchUserAccessData() {
   try {
     let projectDescriptor = '';
     try {
-      const projInfoUrl = `https://dev.azure.com/${org}/_apis/projects/${project}?api-version=${API_VERSION}`;
-      const projInfo = await fetchAzDo(projInfoUrl, authHeader);
+      const projInfoUrl = `_apis/projects/${project}?api-version=${API_VERSION}`;
+      const projInfo = await fetchAzDo(projInfoUrl);
       if (projInfo && projInfo.id) {
-        const descUrl = `https://vssps.dev.azure.com/${org}/_apis/graph/descriptors/${projInfo.id}?api-version=${API_VERSION}`;
-        const descData = await fetchAzDo(descUrl, authHeader);
+        const descUrl = `https://vssps.dev.azure.com/org/_apis/graph/descriptors/${projInfo.id}?api-version=${API_VERSION}`;
+        const descData = await fetchAzDo(descUrl);
         projectDescriptor = descData?.value || '';
       }
     } catch (e) {
@@ -65,9 +62,9 @@ async function fetchUserAccessData() {
       do {
         const tokenParam = contToken ? `&continuationToken=${encodeURIComponent(contToken)}` : '';
         const scopeParam = projectDescriptor ? `&scopeDescriptor=${encodeURIComponent(projectDescriptor)}` : '';
-        const gUrl = `https://vssps.dev.azure.com/${org}/_apis/graph/groups?api-version=${API_VERSION}${scopeParam}${tokenParam}`;
+        const gUrl = `https://vssps.dev.azure.com/org/_apis/graph/groups?api-version=${API_VERSION}${scopeParam}${tokenParam}`;
         
-        const gData = await fetchAzDo(gUrl, authHeader);
+        const gData = await fetchAzDo(gUrl);
         const list = gData?.value || [];
         graphGroups.push(...list);
         contToken = gData?.continuationToken || '';
@@ -78,8 +75,8 @@ async function fetchUserAccessData() {
 
     let teams = [];
     try {
-      const teamsUrl = `https://dev.azure.com/${org}/_apis/projects/${project}/teams?$expandIdentity=true&$top=500&api-version=${API_VERSION}`;
-      const tData = await fetchAzDo(teamsUrl, authHeader);
+      const teamsUrl = `_apis/projects/${project}/teams?$expandIdentity=true&$top=500&api-version=${API_VERSION}`;
+      const tData = await fetchAzDo(teamsUrl);
       teams = tData?.value || [];
     } catch (e) {
       console.warn('Teams query fallback:', e);
@@ -99,8 +96,8 @@ async function fetchUserAccessData() {
     const groupTasks = graphGroups.map(async (g) => {
       const groupName = (g.displayName || '').replace(`[${project}]\\`, '');
       try {
-        const memUrl = `https://vssps.dev.azure.com/${org}/_apis/graph/Memberships/${g.descriptor}?direction=Down&api-version=${API_VERSION}`;
-        const memData = await fetchAzDo(memUrl, authHeader);
+        const memUrl = `https://vssps.dev.azure.com/org/_apis/graph/Memberships/${g.descriptor}?direction=Down&api-version=${API_VERSION}`;
+        const memData = await fetchAzDo(memUrl);
         const members = memData?.value || [];
 
         await Promise.all(members.map(async (m) => {
@@ -122,8 +119,8 @@ async function fetchUserAccessData() {
 
     const teamTasks = teams.map(async (t) => {
       try {
-        const mUrl = `https://dev.azure.com/${org}/_apis/projects/${project}/teams/${t.id}/members?$top=500&api-version=${API_VERSION}`;
-        const mData = await fetchAzDo(mUrl, authHeader);
+        const mUrl = `_apis/projects/${project}/teams/${t.id}/members?$top=500&api-version=${API_VERSION}`;
+        const mData = await fetchAzDo(mUrl);
         const members = mData?.value || [];
 
         members.forEach(m => {
@@ -172,12 +169,9 @@ async function fetchUserAccessData() {
     renderChart(Object.keys(groupMemberCounts), Object.values(groupMemberCounts), 'Members per Group / Team');
     stopFetching();
 
-
     setStatus(`Loaded ${accessRows.length} member assignments across all ${Object.keys(groupMemberCounts).length} groups & teams.`, 'success');
-
-    } catch (err) {
-
-      stopFetching();
+  } catch (err) {
+    stopFetching();
     setStatus(`Error querying security access: ${err.message}`, 'error');
   }
 }
