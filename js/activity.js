@@ -178,6 +178,12 @@ async function fetchUserActivityData() {
     userPRs.sort((a, b) => b.rawDate - a.rawDate);
 
     rawStore.commits = userCommits;
+
+    // Always show the user's most recent commits first.
+    // rawDate is kept as the machine-readable Date value specifically for
+    // deterministic newest-first ordering; the displayed date remains unchanged.
+    sortByLatestDate(rawStore.commits, ['rawDate']);
+
     rawStore.commitsIndex = 0;
     rawStore.repoPrs = userPRs;
 

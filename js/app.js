@@ -74,7 +74,11 @@ function sortByLatestDate(items, dateKeys = []) {
     return null;
   };
 
-  return items
+  // IMPORTANT: mutate the supplied array in-place.
+  // Existing callers intentionally invoke this helper without assigning
+  // the return value, so returning a new array alone would not change the
+  // order actually used by the table/pagination renderers.
+  const sorted = items
     .map((item, originalIndex) => ({ item, originalIndex, timestamp: getTimestamp(item) }))
     .sort((a, b) => {
       const aHasDate = a.timestamp !== null;
@@ -90,6 +94,9 @@ function sortByLatestDate(items, dateKeys = []) {
       return a.originalIndex - b.originalIndex;
     })
     .map(entry => entry.item);
+
+  items.splice(0, items.length, ...sorted);
+  return items;
 }
 
 // Expose the helper to feature modules loaded after app.js.
