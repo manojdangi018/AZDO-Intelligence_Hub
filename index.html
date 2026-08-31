@@ -68,6 +68,15 @@
         <!-- Project Load / Connection Section -->
         <div class="connection-fields">
           <div class="field-group">
+            <label>Organization <span>*</span></label>
+            <input type="text" id="targetOrg" placeholder="e.g. MyOrgName">
+          </div>
+
+          <div class="field-group">
+            <label>Personal Access Token <span>*</span></label>
+            <input type="password" id="targetPat" placeholder="Enter PAT token">
+          </div>
+          <div class="field-group">
             <label>Organization (Optional Override)</label>
             <input type="text" id="targetOrg" autocomplete="off" oninput="handleOrgChange()" placeholder="Default configured in Cloudflare">
             <small>Leave empty to use the default organization configured in Cloudflare environment variables.</small>

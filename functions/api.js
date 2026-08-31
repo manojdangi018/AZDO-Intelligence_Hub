@@ -5,21 +5,25 @@ export async function onRequest(context) {
   const subPath = Array.isArray(params.path) ? params.path.join('/') : (params.path || '');
   const searchParams = url.search;
 
-  if (!env.AZDO_PAT || !env.AZDO_ORG) {
+  // 1. Read org and token from custom headers (or fallback to env variables)
+  const targetOrg = request.headers.get('X-AzDo-Org') || env.AZDO_ORG;
+  const targetPat = request.headers.get('X-AzDo-Token') || env.AZDO_PAT;
+
+  if (!targetOrg || !targetPat) {
     return new Response(JSON.stringify({ 
-      error: "Azure DevOps credentials (AZDO_PAT and AZDO_ORG) are missing in Cloudflare settings." 
+      error: "Missing Azure DevOps Organization or Personal Access Token (PAT)." 
     }), {
-      status: 500,
+      status: 400,
       headers: { "Content-Type": "application/json" }
     });
   }
 
-  // Check if request is targeted at VSSPS (Graph / Identity APIs)
+  // 2. Check if request is targeted at VSSPS (Identity/Graph APIs)
   const isVssps = request.headers.get('X-AzDo-Service') === 'vssps';
   const baseDomain = isVssps ? 'vssps.dev.azure.com' : 'dev.azure.com';
 
-  const targetUrl = `https://${baseDomain}/${env.AZDO_ORG}/${subPath}${searchParams}`;
-  const authHeader = btoa(`:${env.AZDO_PAT}`);
+  const targetUrl = `https://${baseDomain}/${encodeURIComponent(targetOrg)}/${subPath}${searchParams}`;
+  const authHeader = btoa(`:${targetPat}`);
 
   try {
     const azdoResponse = await fetch(targetUrl, {
