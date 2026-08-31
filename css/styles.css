@@ -1135,8 +1135,8 @@ body.data-detail-open {
 .data-detail-panel {
   position: relative;
   z-index: 1;
-  width: min(860px, 76vw);
-  min-width: 620px;
+  width: min(780px, 72vw);
+  min-width: 560px;
   height: 100%;
   background: #fff;
   border-left: 1px solid #cbd5e1;

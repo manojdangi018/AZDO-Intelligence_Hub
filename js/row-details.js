@@ -110,7 +110,7 @@
 
   function statusClass(value) {
     const v = String(value || '').toLowerCase();
-    if (['active', 'online', 'succeeded', 'completed', 'protected with policies', 'yes', 'enabled'].includes(v)) {
+    if (['active', 'active branch', 'online', 'succeeded', 'completed', 'protected with policies', 'yes', 'enabled'].includes(v)) {
       return 'detail-status detail-status-success';
     }
     if (['failed', 'inactive', 'offline', 'no', 'disabled', 'stale'].includes(v)) {
@@ -129,7 +129,7 @@
 
     if (
       ['status', 'result', 'healthstatus', 'policyenforcement', 'isready', 'enabled', 'hosted', 'isshared'].includes(lowerKey) ||
-      ['active', 'inactive', 'online', 'offline', 'succeeded', 'failed', 'stale', 'protected with policies'].includes(lowerText)
+      ['active', 'active branch', 'inactive', 'online', 'offline', 'succeeded', 'failed', 'stale', 'protected with policies'].includes(lowerText)
     ) {
       return `<span class="${statusClass(text)}">${esc(text)}</span>`;
     }
