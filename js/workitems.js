@@ -1,7 +1,10 @@
 async function fetchWorkItemsData() {
+  const org = extractOrgName(document.getElementById('targetOrg').value);
   const project = document.getElementById('projectSelect').value;
+  const pat = document.getElementById('targetPat').value.trim();
   const targetUser = document.getElementById('targetWorkItemUser').value.trim();
 
+  const authHeader = 'Basic ' + btoa(':' + pat);
   showSection('workitems');
   startFetching(targetUser ? `Querying work items assigned to "${targetUser}"...` : `Querying all active work items and sprint status...`);
 
@@ -13,16 +16,16 @@ async function fetchWorkItemsData() {
     }
     wiql += ` ORDER BY [System.ChangedDate] DESC`;
 
-    const queryUrl = `${encodeURIComponent(project)}/_apis/wit/wiql?api-version=7.0`;
+    const queryUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/wit/wiql?api-version=7.0`;
     let queryRes;
     try {
-      queryRes = await fetchAzDo(queryUrl, {
+      queryRes = await fetchAzDo(queryUrl, authHeader, {
         method: 'POST',
         body: JSON.stringify({ query: wiql })
       });
     } catch (e) {
       const fallbackWiql = `SELECT [System.Id] FROM workitems WHERE [System.TeamProject] = '${project.replace(/'/g, "''")}' ORDER BY [System.ChangedDate] DESC`;
-      queryRes = await fetchAzDo(`_apis/wit/wiql?api-version=7.0`, {
+      queryRes = await fetchAzDo(`https://dev.azure.com/${org}/_apis/wit/wiql?api-version=7.0`, authHeader, {
         method: 'POST',
         body: JSON.stringify({ query: fallbackWiql })
       });
@@ -33,15 +36,15 @@ async function fetchWorkItemsData() {
 
     if (wiIds.length === 0) {
       document.getElementById('workItemsTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No work items found in project "${project}".</td></tr>`;
-      document.getElementById('seeMoreWorkItemsContainer')?.classList.add('hidden');
+      document.getElementById('seeMoreWorkItemsContainer').classList.add('hidden');
       renderChart([], [], 'Work Item States');
       setStatus(`No work items found matching criteria.`, 'info');
       return;
     }
 
     const fields = 'System.Id,System.Title,System.WorkItemType,System.State,System.AssignedTo,System.IterationPath,System.CreatedDate';
-    const detailsUrl = `${encodeURIComponent(project)}/_apis/wit/workitems?ids=${wiIds.join(',')}&fields=${fields}&api-version=7.0`;
-    const detailsData = await fetchAzDo(detailsUrl);
+    const detailsUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/wit/workitems?ids=${wiIds.join(',')}&fields=${fields}&api-version=7.0`;
+    const detailsData = await fetchAzDo(detailsUrl, authHeader);
     const workItems = detailsData.value || [];
 
     let stateCounts = {};
@@ -111,9 +114,16 @@ async function fetchWorkItemsData() {
     renderChart(chartLabels, chartData, 'Work Items by State');
 
     stopFetching();
+
+
+
     setStatus(`Loaded ${rawStore.workitems.length} work items successfully.`, 'success');
-  } catch (err) {
-    stopFetching();
+
+
+    } catch (err) {
+
+
+      stopFetching();
     setStatus(`Error fetching work items: ${err.message}`, 'error');
   }
 }
@@ -127,7 +137,7 @@ function renderWorkItemsTableBatch(append = false) {
 
   if (rawStore.workitems.length === 0) {
     tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No work items found.</td></tr>`;
-    container?.classList.add('hidden');
+    container.classList.add('hidden');
     return;
   }
 
@@ -156,9 +166,9 @@ function renderWorkItemsTableBatch(append = false) {
 
   const remaining = rawStore.workitems.length - rawStore.workitemsIndex;
   if (remaining > 0) {
-    container?.classList.remove('hidden');
-    if (remainingEl) remainingEl.textContent = remaining;
+    container.classList.remove('hidden');
+    remainingEl.textContent = remaining;
   } else {
-    container?.classList.add('hidden');
+    container.classList.add('hidden');
   }
 }

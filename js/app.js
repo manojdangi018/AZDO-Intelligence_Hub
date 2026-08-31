@@ -1,3 +1,9 @@
+/* ============================================================
+   PAGE RESTORE — PREVENT CONNECTION PAGE FLASH
+   Purpose: If Page 2 was active before refresh, hide Page 1
+   immediately so the user never sees the connection screen.
+   ============================================================ */
+
 (function () {
   if (sessionStorage.getItem('azdo_workspace_active') === 'true') {
     document.documentElement.classList.add('restore-workspace-page');
@@ -27,6 +33,11 @@ let rawStore = {
   agents: [], agentsIndex: 0
 };
 
+/* ============================================================
+   WORKSPACE DISPLAY STATE
+   Purpose: Keep each workspace's loaded KPI/chart display separate.
+   This does NOT clear or refetch rawStore data when switching.
+   ============================================================ */
 let workspaceDisplayStore = {};
 
 function workspaceHasData(category) {
@@ -127,7 +138,7 @@ function restoreWorkspaceDisplayState(category) {
 }
 
 function extractOrgName(input) {
-  let cleaned = (input || '').trim().replace(/^https?:\/\//, '').replace(/^dev\.azure\.com\//, '');
+  let cleaned = input.trim().replace(/^https?:\/\//, '').replace(/^dev\.azure\.com\//, '');
   return cleaned.split('/')[0] || '';
 }
 
@@ -159,6 +170,10 @@ function setStatus(msg, type = 'info') {
   el.textContent = msg;
 }
 
+/* ============================================================
+   SHARED WORKSPACE FETCHING STATE
+   Purpose: Reuse the same blinking status + spinner for every workspace.
+   ============================================================ */
 function startFetching(message) {
   setStatus(message, 'info');
   document.getElementById('statusBar')?.classList.add('fetching');
@@ -184,54 +199,57 @@ function updatePathPreview(org = '', project = '') {
   if (org) url += org;
   if (org && project) url += `/${project}`;
 
-  if (linkEl) {
-    linkEl.textContent = url;
-    linkEl.href = url;
-    if (org) {
-      linkEl.className = 'text-blue-600 font-mono underline hover:text-blue-800 cursor-pointer';
-      linkEl.target = '_blank';
-    } else {
-      linkEl.className = 'text-slate-400 font-mono underline cursor-default';
-      linkEl.removeAttribute('target');
-    }
-  }
+  linkEl.textContent = url;
+  linkEl.href = url;
   const activePath = document.getElementById('activePathLink');
   if (activePath) { activePath.textContent = url; activePath.href = url; }
+  if (org) {
+    linkEl.className = 'text-blue-600 font-mono underline hover:text-blue-800 cursor-pointer';
+    linkEl.target = '_blank';
+  } else {
+    linkEl.className = 'text-slate-400 font-mono underline cursor-default';
+    linkEl.removeAttribute('target');
+  }
 }
 
 function initCredentials() {
   const savedOrg = localStorage.getItem('azdo_org');
-  if (savedOrg && document.getElementById('targetOrg')) {
-    document.getElementById('targetOrg').value = savedOrg;
+  const savedPat = localStorage.getItem('azdo_pat');
+  if (savedOrg) document.getElementById('targetOrg').value = savedOrg;
+  if (savedPat) {
+    document.getElementById('targetPat').value = savedPat;
+    document.getElementById('chkRememberCreds').checked = true;
   }
   handleOrgChange();
 }
 
 function toggleRememberCreds() {
-  const isChecked = document.getElementById('chkRememberCreds')?.checked;
+  const isChecked = document.getElementById('chkRememberCreds').checked;
   if (isChecked) {
-    localStorage.setItem('azdo_org', document.getElementById('targetOrg')?.value.trim() || '');
+    localStorage.setItem('azdo_org', document.getElementById('targetOrg').value.trim());
+    localStorage.setItem('azdo_pat', document.getElementById('targetPat').value.trim());
   } else {
     localStorage.removeItem('azdo_org');
+    localStorage.removeItem('azdo_pat');
   }
 }
 
 function handleOrgChange() {
-  const org = extractOrgName(document.getElementById('targetOrg')?.value || '');
+  const org = extractOrgName(document.getElementById('targetOrg').value);
   updatePathPreview(org);
   const projectBadge = document.getElementById('overviewProjectBadge');
   if (projectBadge) projectBadge.textContent = '—';
-  resetDropdown('projectSelect', '-- Select a Project --');
+  resetDropdown('projectSelect', '-- Load PAT first --');
   if (typeof resetServiceAgentsScope === 'function') resetServiceAgentsScope();
-  document.getElementById('step5Container')?.classList.add('hidden');
-  if (document.getElementById('chkRememberCreds')?.checked) {
-    localStorage.setItem('azdo_org', org);
+  document.getElementById('step5Container').classList.add('hidden');
+  if (document.getElementById('chkRememberCreds').checked) {
+    localStorage.setItem('azdo_org', document.getElementById('targetOrg').value.trim());
   }
+  setConnectionBadge(false);
 }
 
 function resetDropdown(id, placeholder) {
   const el = document.getElementById(id);
-  if (!el) return;
   el.innerHTML = `<option value="">${placeholder}</option>`;
   el.disabled = true;
   el.classList.add('bg-slate-100', 'cursor-not-allowed');
@@ -240,56 +258,66 @@ function resetDropdown(id, placeholder) {
 
 function enableDropdown(id) {
   const el = document.getElementById(id);
-  if (!el) return;
   el.disabled = false;
   el.classList.remove('bg-slate-100', 'cursor-not-allowed');
   el.classList.add('bg-white');
+  el.classList.remove('bg-white');
 }
 
 async function loadProjectsList() {
-  const loadBtn = document.getElementById('btnLoadProjects');
-  if (loadBtn) {
-    loadBtn.disabled = true;
-    loadBtn.textContent = 'Loading projects...';
-    loadBtn.classList.add('loading');
+  const org = extractOrgName(document.getElementById('targetOrg').value);
+  const pat = document.getElementById('targetPat').value.trim();
+
+  if (!org) return showModal('Please enter the Organization Name or URL first.', 'targetOrg');
+  if (!pat) return showModal('Please enter your Personal Access Token (PAT).', 'targetPat');
+
+   // Show loading state while projects are being fetched.
+   const loadBtn = document.getElementById('btnLoadProjects');
+   
+   if (loadBtn) {
+     loadBtn.disabled = true;
+     loadBtn.textContent = 'Loading projects...';
+     loadBtn.classList.add('loading');
+   }
+
+  if (document.getElementById('chkRememberCreds').checked) {
+    localStorage.setItem('azdo_org', org);
+    localStorage.setItem('azdo_pat', pat);
   }
 
-  setStatus(`Connecting to backend and fetching projects...`, 'info');
+  const authHeader = 'Basic ' + btoa(':' + pat);
+  setStatus(`Loading projects from https://dev.azure.com/${org}...`, 'info');
 
   try {
-    const url = `_apis/projects?api-version=${API_VERSION}&$top=500`;
-    const data = await fetchAzDo(url);
+    const url = `https://dev.azure.com/${org}/_apis/projects?api-version=${API_VERSION}&$top=500`;
+    const data = await fetchAzDo(url, authHeader);
     const projects = data.value || [];
 
     const projDropdown = document.getElementById('projectSelect');
-    if (projDropdown) {
-      projDropdown.innerHTML = '<option value="">-- Select a Project --</option>';
-      projects.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.name;
-        opt.textContent = p.name;
-        projDropdown.appendChild(opt);
-      });
-    }
+    projDropdown.innerHTML = '<option value="">-- Select a Project --</option>';
+
+    projects.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.name;
+      opt.textContent = p.name;
+      projDropdown.appendChild(opt);
+    });
 
     enableDropdown('projectSelect');
     updateProjectRequirementUI();
-    document.getElementById('step5Container')?.classList.add('hidden');
-
+    document.getElementById('step5Container').classList.add('hidden');
+    // Save Page 2 session so browser refresh can restore it.
     sessionStorage.setItem('azdo_workspace_active', 'true');
+    sessionStorage.setItem('azdo_session_org', org);
+    sessionStorage.setItem('azdo_session_pat', pat);
     
     setConnectionBadge(true);
     showWorkspacePage();
-    setStatus(`Loaded ${projects.length} projects successfully!`, 'success');
+    
+    setStatus(`Loaded ${projects.length} projects successfully! Please choose a project.`, 'success');
   } catch (err) {
     setStatus(`Error loading projects: ${err.message}`, 'error');
     setConnectionBadge(false);
-  } finally {
-    if (loadBtn) {
-      loadBtn.disabled = false;
-      loadBtn.textContent = 'Connect & Load';
-      loadBtn.classList.remove('loading');
-    }
   }
 }
 
@@ -312,12 +340,16 @@ function switchToOrganizationServiceAgents() {
   const projectSelect = document.getElementById('projectSelect');
   if (projectSelect) projectSelect.value = '';
 
+  // Always return to the first page (Azure DevOps Connection).
+  // Do not select or navigate to Service Connections & Agents here.
+  // The user can reconnect and then choose the desired workspace view.
   activeCategory = 'repositories';
   activeViewSection = 'view-repositories';
 
   const categorySelect = document.getElementById('categorySelect');
   if (categorySelect) categorySelect.value = 'repositories';
 
+  // Reset workspace state so the next connection starts cleanly.
   if (typeof resetServiceAgentsScope === 'function') resetServiceAgentsScope();
   if (typeof showSection === 'function') showSection('repositories');
   if (typeof configureServiceAgentsOverview === 'function') configureServiceAgentsOverview(false);
@@ -329,13 +361,15 @@ function switchToOrganizationServiceAgents() {
   const projectBadge = document.getElementById('overviewProjectBadge');
   if (projectBadge) projectBadge.textContent = '—';
 
+  // Credentials are intentionally preserved.
   showConnectionPage();
   setStatus('Returned to Azure DevOps Connection.', 'info');
 }
 
 async function handleProjectSelection() {
-  const org = extractOrgName(document.getElementById('targetOrg')?.value || '');
-  const project = document.getElementById('projectSelect')?.value || '';
+  const org = extractOrgName(document.getElementById('targetOrg').value);
+  const project = document.getElementById('projectSelect').value;
+  const pat = document.getElementById('targetPat').value.trim();
   updateProjectRequirementUI();
 
   if (!project) {
@@ -344,7 +378,7 @@ async function handleProjectSelection() {
       if (typeof updateServiceAgentsScopeText === 'function') updateServiceAgentsScopeText();
       renderActiveSubstep();
     } else {
-      document.getElementById('step5Container')?.classList.add('hidden');
+      document.getElementById('step5Container').classList.add('hidden');
       updatePathPreview(org);
     }
     return;
@@ -355,11 +389,13 @@ async function handleProjectSelection() {
   const projectBadge = document.getElementById('overviewProjectBadge');
   if (projectBadge) projectBadge.textContent = project || '—';
   
+  // Save selected project so browser refresh restores the same project.
   sessionStorage.setItem('azdo_session_project', project);
 
+  const authHeader = 'Basic ' + btoa(':' + pat);
   try {
-    const url = `${project}/_apis/git/repositories?api-version=${API_VERSION}`;
-    const data = await fetchAzDo(url);
+    const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories?api-version=${API_VERSION}`;
+    const data = await fetchAzDo(url, authHeader);
     cachedRepos = data.value || [];
   } catch (e) {
     console.warn('Could not prefetch repos:', e);
@@ -370,7 +406,7 @@ async function handleProjectSelection() {
 
 function renderActiveSubstep() {
   updateProjectRequirementUI();
-  const project = document.getElementById('projectSelect')?.value;
+  const project = document.getElementById('projectSelect').value;
   const step5 = document.getElementById('step5Container');
   const subRepo = document.getElementById('substepRepo');
   const subAccess = document.getElementById('substepAccess');
@@ -380,42 +416,45 @@ function renderActiveSubstep() {
   const subServiceAgents = document.getElementById('substepServiceAgents');
 
   if (!project && activeCategory !== 'service_agents') {
-    step5?.classList.add('hidden');
+    step5.classList.add('hidden');
     return;
   }
 
-  step5?.classList.remove('hidden');
-  [subRepo, subAccess, subActivity, subPipelines, subWorkItems, subServiceAgents].forEach(el => el?.classList.add('hidden'));
+  step5.classList.remove('hidden');
+  [subRepo, subAccess, subActivity, subPipelines, subWorkItems, subServiceAgents].forEach(el => el.classList.add('hidden'));
 
   if (activeCategory === 'repositories') {
-    subRepo?.classList.remove('hidden');
+    subRepo.classList.remove('hidden');
     populateRepoDropdown();
   } else if (activeCategory === 'user_access') {
-    subAccess?.classList.remove('hidden');
+    subAccess.classList.remove('hidden');
   } else if (activeCategory === 'user_activity') {
-    subActivity?.classList.remove('hidden');
+    subActivity.classList.remove('hidden');
   } else if (activeCategory === 'pipelines') {
-    subPipelines?.classList.remove('hidden');
+    subPipelines.classList.remove('hidden');
   } else if (activeCategory === 'service_agents') {
-    subServiceAgents?.classList.remove('hidden');
+    subServiceAgents.classList.remove('hidden');
   } else if (activeCategory === 'work_items') {
-    subWorkItems?.classList.remove('hidden');
+    subWorkItems.classList.remove('hidden');
   }
 }
 
 function showSection(viewId) {
   activeViewSection = `view-${viewId}`;
   ['repositories', 'access', 'activity', 'pipelines', 'serviceagents', 'workitems'].forEach(v => {
-    document.getElementById(`view-${v}`)?.classList.toggle('hidden', v !== viewId);
+    document.getElementById(`view-${v}`).classList.toggle('hidden', v !== viewId);
   });
 }
 
 function selectExplore(category) {
+  /* Save only the workspace that is actually loaded. */
   if (activeCategory && workspaceHasData(activeCategory)) {
     saveWorkspaceDisplayState(activeCategory);
   }
 
   activeCategory = category;
+  
+  // Save selected workspace so browser refresh restores the same workspace.
   sessionStorage.setItem('azdo_session_category', category);
   
   updateProjectRequirementUI();
@@ -436,11 +475,14 @@ function selectExplore(category) {
     btn.classList.toggle('active', btn.dataset.view === viewId);
   });
 
-  showSection(viewId);
+  if (typeof showSection === 'function') showSection(viewId);
   if (typeof configureServiceAgentsOverview === 'function') {
     configureServiceAgentsOverview(viewId === 'serviceagents');
   }
   renderActiveSubstep();
+
+  /* Restore this workspace's own KPI/chart display.
+     The rawStore data and tables are left untouched. */
   restoreWorkspaceDisplayState(category);
 }
 
@@ -473,24 +515,58 @@ function disconnectSession() {
   cachedRepos = [];
   workspaceDisplayStore = {};
 
-  resetDropdown('projectSelect', '-- Connect first --');
+  document.getElementById('targetPat').value = '';
+  resetDropdown('projectSelect', '-- Load PAT first --');
   if (typeof resetServiceAgentsScope === 'function') resetServiceAgentsScope();
-  document.getElementById('step5Container')?.classList.add('hidden');
-  const projectBadge = document.getElementById('overviewProjectBadge');
-  if (projectBadge) projectBadge.textContent = '—';
+  document.getElementById('step5Container').classList.add('hidden');
+  document.getElementById('overviewProjectBadge').textContent = '—';
 
+  document.getElementById('kpi-1-label').textContent = 'Repository';
+  document.getElementById('kpi-1-val').textContent = '-';
+  document.getElementById('kpi-1-val').className = 'text-2xl font-extrabold text-slate-800 mt-1 truncate';
+  document.getElementById('kpi-2-label').textContent = 'Branches';
+  document.getElementById('kpi-2-val').textContent = '0';
+  document.getElementById('kpi-3-label').textContent = 'Total PRs';
+  document.getElementById('kpi-3-val').textContent = '0';
+  document.getElementById('kpi-4-label').textContent = 'Active PRs';
+  document.getElementById('kpi-4-val').textContent = '0';
+  document.getElementById('kpi-5-label').textContent = 'Completed PRs';
+  document.getElementById('kpi-5-val').textContent = '0';
+
+  document.getElementById('branchesTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`;
+  document.getElementById('repoPrsTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`;
+  document.getElementById('accessTableBody').innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Enter a User ID or click "Fetch User Access" to load access permissions.</td></tr>`;
+  document.getElementById('userCommitsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">Enter a user email/ID and click search.</td></tr>`;
+  document.getElementById('userPrTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No pull request activity loaded.</td></tr>`;
+  document.getElementById('pipelineSummaryTableBody').innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">Click "Fetch Pipeline Runs" to scan pipeline definitions.</td></tr>`;
+  document.getElementById('pipelineTableBody').innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No build runs loaded.</td></tr>`;
+  document.getElementById('workItemsTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Query work items to view backlog.</td></tr>`;
+  const serviceConnectionsBody = document.getElementById('serviceConnectionsTableBody');
+  if (serviceConnectionsBody) serviceConnectionsBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load service connections.</td></tr>`;
+  const agentsBody = document.getElementById('agentsTableBody');
+  if (agentsBody) agentsBody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load agent pools and agents.</td></tr>`;
+
+  ['seeMoreRepoContainer', 'seeMoreRepoPrsContainer', 'seeMoreAccessContainer', 'seeMoreCommitsContainer', 'seeMorePipelineSummaryContainer', 'seeMorePipelinesContainer', 'seeMoreWorkItemsContainer', 'seeMoreServiceConnectionsContainer', 'seeMoreAgentsContainer'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+
+  renderChart([], [], 'Overview');
   setConnectionBadge(false);
   
+  // Clear the Page 2 refresh session when the user disconnects.
   sessionStorage.removeItem('azdo_workspace_active');
+  sessionStorage.removeItem('azdo_session_org');
+  sessionStorage.removeItem('azdo_session_pat');
   sessionStorage.removeItem('azdo_session_project');
   sessionStorage.removeItem('azdo_session_category');
   
   showConnectionPage();
-  setStatus('Disconnected from Azure DevOps.', 'info');
+  setStatus('Disconnected from Azure DevOps. Enter credentials to connect again.', 'info');
 }
 
 function filterActiveTable() {
-  const query = document.getElementById('tableFilterInput')?.value.toLowerCase() || '';
+  const query = document.getElementById('tableFilterInput').value.toLowerCase();
   const activeSection = document.getElementById(activeViewSection);
   if (!activeSection) return;
 
@@ -574,11 +650,9 @@ function exportCurrentTableToXLSX() {
     exportToExcelFile({ "Pipelines": pipelineData }, "AzureDevOps_Pipelines");
   } 
   else if (activeViewSection === 'view-serviceagents') {
-    if (typeof exportServiceConnectionsAndAgentsToXLSX === 'function') {
-      exportServiceConnectionsAndAgentsToXLSX();
-    }
+    exportServiceConnectionsAndAgentsToXLSX();
   }
-  else if (activeViewSection === 'view-workitems') {
+    else if (activeViewSection === 'view-workitems') {
     const wiData = (rawStore.workitems || []).map(w => ({
       "ID": w.id,
       "Work Item Type": w.type,
@@ -591,6 +665,8 @@ function exportCurrentTableToXLSX() {
   }
 }
 
+
+
 function changeChartType(type) {
   currentChartType = type.toLowerCase() === 'pie' ? 'pie' : type;
   renderChart(currentChartData.labels, currentChartData.values, currentChartData.label);
@@ -598,9 +674,7 @@ function changeChartType(type) {
 
 function renderChart(labels, data, datasetLabel) {
   currentChartData = { labels, values: data, label: datasetLabel };
-  const canvas = document.getElementById('analyticsChart');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
+  const ctx = document.getElementById('analyticsChart').getContext('2d');
   if (chartInstance) chartInstance.destroy();
 
   const palette = ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16', '#f43f5e', '#a855f7'];
@@ -630,48 +704,105 @@ function renderChart(labels, data, datasetLabel) {
       responsive: true,
       maintainAspectRatio: false,
       layout: {
-        padding: { top: isPie ? 10 : 25, bottom: 10 }
+        padding: {
+          top: isPie ? 10 : 25,
+          bottom: 10
+        }
       },
       plugins: {
-        legend: { display: isPie, position: 'right' },
+        legend: { 
+          display: isPie,
+          position: 'right'
+        },
         datalabels: {
           display: true,
           color: isPie ? '#ffffff' : '#1e293b',
-          font: { weight: 'bold', size: 11 },
+          font: {
+            weight: 'bold',
+            size: 11
+          },
           anchor: isPie ? 'center' : 'end',
           align: isPie ? 'center' : 'top',
           offset: isPie ? 0 : 2,
-          formatter: value => (value > 0 ? value : (isPie ? '' : '0'))
+          formatter: function(value) {
+            return value > 0 ? value : (isPie ? '' : '0');
+          }
         }
       },
       scales: isPie ? {} : {
-        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { precision: 0 } },
-        x: { grid: { display: false }, ticks: { autoSkip: false, maxRotation: 45, minRotation: 20 } }
+        y: { 
+          beginAtZero: true, 
+          grid: { color: '#f1f5f9' },
+          ticks: { precision: 0 }
+        },
+        x: { 
+          grid: { display: false },
+          ticks: {
+            autoSkip: false,
+            maxRotation: 45,
+            minRotation: 20
+          }
+        }
       }
     }
   });
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
+
+  // Load saved organization/PAT from browser storage.
   initCredentials();
 
+  // Check whether the user was already working on Page 2.
   const workspaceActive = sessionStorage.getItem('azdo_workspace_active');
+
   if (workspaceActive === 'true') {
+
+    const savedOrg = sessionStorage.getItem('azdo_session_org');
+    const savedPat = sessionStorage.getItem('azdo_session_pat');
     const savedProject = sessionStorage.getItem('azdo_session_project');
     const savedCategory = sessionStorage.getItem('azdo_session_category');
 
-    if (savedCategory) activeCategory = savedCategory;
-
-    await loadProjectsList();
-
-    if (savedProject) {
-      const projectSelect = document.getElementById('projectSelect');
-      if (projectSelect) projectSelect.value = savedProject;
-      await handleProjectSelection();
+    // Restore saved organization and PAT.
+    if (savedOrg) {
+      document.getElementById('targetOrg').value = savedOrg;
     }
 
-    if (savedCategory) selectExplore(savedCategory);
+    if (savedPat) {
+      document.getElementById('targetPat').value = savedPat;
+    }
+
+    // Restore the Page 2 workspace.
+    if (savedCategory) {
+      activeCategory = savedCategory;
+    }
+
+    // Load projects again so the project dropdown is available.
+    if (savedOrg && savedPat) {
+      await loadProjectsList();
+
+      // Restore the previously selected project.
+      if (savedProject) {
+        const projectSelect = document.getElementById('projectSelect');
+
+        if (projectSelect) {
+          projectSelect.value = savedProject;
+        }
+
+        await handleProjectSelection();
+      }
+
+      // Restore the previously selected workspace.
+      if (savedCategory) {
+        selectExplore(savedCategory);
+      }
+    }
+
   } else {
+
+    // First visit: start with Repositories as the default workspace.
     selectExplore('repositories');
+
   }
+
 });
