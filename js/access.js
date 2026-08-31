@@ -198,8 +198,10 @@ function renderAccessTableBatch(append = false) {
   const nextBatch = rawStore.access.slice(rawStore.accessIndex, rawStore.accessIndex + PAGE_SIZE);
   rawStore.accessIndex += nextBatch.length;
 
-  const html = nextBatch.map(a => `
-    <tr class="hover:bg-slate-50 transition">
+  const batchStartIndex = rawStore.accessIndex - nextBatch.length;
+
+  const html = nextBatch.map((a, rowIndex) => `
+    <tr class="hover:bg-slate-50 transition" data-detail-type="access" data-detail-index="${batchStartIndex + rowIndex}">
       <td class="p-4 font-semibold text-slate-900">${a.team}</td>
       <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-semibold ${a.type === 'Security Group' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">${a.type}</span></td>
       <td class="p-4 font-medium">${a.name}</td>

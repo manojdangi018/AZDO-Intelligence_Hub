@@ -307,8 +307,10 @@ function renderServiceConnectionsTableBatch(loadMore = false) {
   const end = Math.min(start + PAGE_SIZE, data.length);
   if (!loadMore) body.innerHTML = '';
 
-  data.slice(start, end).forEach(s => {
+  data.slice(start, end).forEach((s, rowOffset) => {
     const row = document.createElement('tr');
+    row.dataset.detailType = 'service-connection';
+    row.dataset.detailIndex = String(start + rowOffset);
     row.innerHTML = `
       <td class="p-4 font-medium text-slate-800">${escapeHtml(s.name)}</td>
       <td class="p-4">${escapeHtml(s.type)}</td>
@@ -337,8 +339,10 @@ function renderAgentsTableBatch(loadMore = false) {
   const end = Math.min(start + PAGE_SIZE, data.length);
   if (!loadMore) body.innerHTML = '';
 
-  data.slice(start, end).forEach(a => {
+  data.slice(start, end).forEach((a, rowOffset) => {
     const row = document.createElement('tr');
+    row.dataset.detailType = 'agent';
+    row.dataset.detailIndex = String(start + rowOffset);
     row.innerHTML = `
       <td class="p-4 font-medium text-slate-800">${escapeHtml(a.poolName)}</td>
       <td class="p-4">${escapeHtml(a.isHosted)}</td>

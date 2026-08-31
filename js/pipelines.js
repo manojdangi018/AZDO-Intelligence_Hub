@@ -380,6 +380,7 @@ async function fetchPipelineData() {
               : new Date(0);
 
             allRuns.push({
+              id: b.id || '',
               name: pipe.name,
               buildNumber: b.buildNumber || b.id,
               branch: branch,
@@ -493,12 +494,13 @@ function renderPipelineSummaryTableBatch(append = false) {
   }
 
   const nextBatch = rawStore.pipelineSummaries.slice(rawStore.pipelineSummariesIndex, rawStore.pipelineSummariesIndex + PIPELINE_PAGE_SIZE);
+  const batchStartIndex = rawStore.pipelineSummariesIndex;
   rawStore.pipelineSummariesIndex += nextBatch.length;
 
-  const html = nextBatch.map(p => {
+  const html = nextBatch.map((p, rowIndex) => {
     const rate = p.total > 0 ? Math.round((p.succeeded / p.total) * 100) : 0;
     return `
-      <tr class="hover:bg-slate-50 transition">
+      <tr class="hover:bg-slate-50 transition" data-detail-type="pipeline-summary" data-detail-index="${batchStartIndex + rowIndex}">
         <td class="p-4 font-semibold text-slate-900">${p.name}</td>
         <td class="p-4 font-mono font-medium">${p.total}</td>
         <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">${p.succeeded}</span></td>
@@ -537,10 +539,11 @@ function renderPipelineTableBatch(append = false) {
   }
 
   const nextBatch = rawStore.pipelines.slice(rawStore.pipelineIndex, rawStore.pipelineIndex + PAGE_SIZE);
+  const batchStartIndex = rawStore.pipelineIndex;
   rawStore.pipelineIndex += nextBatch.length;
 
-  const html = nextBatch.map(r => `
-    <tr class="hover:bg-slate-50 transition">
+  const html = nextBatch.map((r, rowIndex) => `
+    <tr class="hover:bg-slate-50 transition" data-detail-type="pipeline-run" data-detail-index="${batchStartIndex + rowIndex}">
       <td class="p-4 font-semibold text-slate-900">${r.name}</td>
       <td class="p-4 font-mono text-xs text-blue-600 font-bold">#${r.buildNumber}</td>
       <td class="p-4 text-xs font-mono text-slate-700 font-semibold">${r.branch}</td>

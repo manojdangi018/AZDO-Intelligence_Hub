@@ -142,10 +142,11 @@ function renderWorkItemsTableBatch(append = false) {
   }
 
   const nextBatch = rawStore.workitems.slice(rawStore.workitemsIndex, rawStore.workitemsIndex + PAGE_SIZE);
+  const batchStartIndex = rawStore.workitemsIndex;
   rawStore.workitemsIndex += nextBatch.length;
 
-  const html = nextBatch.map(r => `
-    <tr class="hover:bg-slate-50 transition">
+  const html = nextBatch.map((r, rowIndex) => `
+    <tr class="hover:bg-slate-50 transition" data-detail-type="work-item" data-detail-index="${batchStartIndex + rowIndex}">
       <td class="p-4 font-mono text-xs font-bold text-blue-600">#${r.id}</td>
       <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700">${r.type}</span></td>
       <td class="p-4 font-medium text-slate-900 max-w-sm truncate" title="${r.title}">${r.title}</td>

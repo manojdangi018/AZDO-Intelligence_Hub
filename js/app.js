@@ -35,10 +35,14 @@ let rawStore = {
 
 /* ============================================================
    WORKSPACE DISPLAY STATE
-   Purpose: Keep each workspace's loaded KPI/chart display separate.
+   Purpose: Keep each workspace's loaded KPI/chart/status separate.
    This does NOT clear or refetch rawStore data when switching.
    ============================================================ */
 let workspaceDisplayStore = {};
+
+// Read-only bridge for optional UI modules. Keeps the internal rawStore private
+// while allowing the fetched-row detail panel to read the current data.
+window.__getAzdoRawStore = () => rawStore;
 
 function workspaceHasData(category) {
   switch (category) {
@@ -77,8 +81,12 @@ function saveWorkspaceDisplayState(category) {
     }
   }
 
+  const statusBarEl = document.getElementById('statusBar');
+  const statusMsg = statusBarEl && !statusBarEl.classList.contains('hidden') ? statusBarEl.textContent : '';
+
   workspaceDisplayStore[category] = {
     kpis,
+    statusMsg,
     chart: {
       labels: Array.isArray(currentChartData?.labels) ? [...currentChartData.labels] : [],
       values: Array.isArray(currentChartData?.values) ? [...currentChartData.values] : [],
@@ -113,8 +121,13 @@ function setWorkspaceDefaultKpis(category) {
 
 function restoreWorkspaceDisplayState(category) {
   const state = workspaceDisplayStore[category];
+  
   if (!state) {
     setWorkspaceDefaultKpis(category);
+    setStatus('');
+    if (typeof renderChart === 'function') {
+      renderChart([], [], 'Overview');
+    }
     return;
   }
 
@@ -129,10 +142,20 @@ function restoreWorkspaceDisplayState(category) {
     }
   }
 
+  if (state.statusMsg) {
+    setStatus(state.statusMsg, 'success');
+  } else {
+    setStatus('');
+  }
+
   if (state.chart) {
     currentChartType = state.chart.type || 'bar';
     if (typeof renderChart === 'function') {
       renderChart(state.chart.labels || [], state.chart.values || [], state.chart.label || 'Overview');
+    }
+  } else {
+    if (typeof renderChart === 'function') {
+      renderChart([], [], 'Overview');
     }
   }
 }
@@ -163,6 +186,11 @@ function closeModal() {
 function setStatus(msg, type = 'info') {
   const el = document.getElementById('statusBar') || document.getElementById('landingStatusBar');
   if (!el) return;
+  if (!msg) {
+    el.classList.add('hidden');
+    el.textContent = '';
+    return;
+  }
   el.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'bg-green-50', 'text-green-700', 'bg-blue-50', 'text-blue-700');
   if (type === 'error') el.classList.add('bg-red-50', 'text-red-700');
   else if (type === 'success') el.classList.add('bg-green-50', 'text-green-700');
@@ -261,7 +289,6 @@ function enableDropdown(id) {
   el.disabled = false;
   el.classList.remove('bg-slate-100', 'cursor-not-allowed');
   el.classList.add('bg-white');
-  el.classList.remove('bg-white');
 }
 
 async function loadProjectsList() {
@@ -271,14 +298,12 @@ async function loadProjectsList() {
   if (!org) return showModal('Please enter the Organization Name or URL first.', 'targetOrg');
   if (!pat) return showModal('Please enter your Personal Access Token (PAT).', 'targetPat');
 
-   // Show loading state while projects are being fetched.
-   const loadBtn = document.getElementById('btnLoadProjects');
-   
-   if (loadBtn) {
-     loadBtn.disabled = true;
-     loadBtn.textContent = 'Loading projects...';
-     loadBtn.classList.add('loading');
-   }
+  const loadBtn = document.getElementById('btnLoadProjects');
+  if (loadBtn) {
+    loadBtn.disabled = true;
+    loadBtn.textContent = 'Loading projects...';
+    loadBtn.classList.add('loading');
+  }
 
   if (document.getElementById('chkRememberCreds').checked) {
     localStorage.setItem('azdo_org', org);
@@ -306,18 +331,36 @@ async function loadProjectsList() {
     enableDropdown('projectSelect');
     updateProjectRequirementUI();
     document.getElementById('step5Container').classList.add('hidden');
-    // Save Page 2 session so browser refresh can restore it.
+    
     sessionStorage.setItem('azdo_workspace_active', 'true');
     sessionStorage.setItem('azdo_session_org', org);
     sessionStorage.setItem('azdo_session_pat', pat);
     
     setConnectionBadge(true);
     showWorkspacePage();
-    
-    setStatus(`Loaded ${projects.length} projects successfully! Please choose a project.`, 'success');
+
+    // 1. Show the project message under "Select Project" dropdown
+    const projStatus = document.getElementById('projectStatusMsg');
+    if (projStatus) {
+      projStatus.textContent = `Loaded ${projects.length} projects successfully! Please choose a project.`;
+      projStatus.classList.remove('hidden');
+    }
+
+    // 2. Hide workspace status bar until an Inspect/Fetch button is clicked
+    const statusBar = document.getElementById('statusBar');
+    if (statusBar) {
+      statusBar.classList.add('hidden');
+      statusBar.textContent = '';
+    }
   } catch (err) {
     setStatus(`Error loading projects: ${err.message}`, 'error');
     setConnectionBadge(false);
+  } finally {
+    if (loadBtn) {
+      loadBtn.disabled = false;
+      loadBtn.textContent = 'Load projects';
+      loadBtn.classList.remove('loading');
+    }
   }
 }
 
@@ -340,16 +383,12 @@ function switchToOrganizationServiceAgents() {
   const projectSelect = document.getElementById('projectSelect');
   if (projectSelect) projectSelect.value = '';
 
-  // Always return to the first page (Azure DevOps Connection).
-  // Do not select or navigate to Service Connections & Agents here.
-  // The user can reconnect and then choose the desired workspace view.
   activeCategory = 'repositories';
   activeViewSection = 'view-repositories';
 
   const categorySelect = document.getElementById('categorySelect');
   if (categorySelect) categorySelect.value = 'repositories';
 
-  // Reset workspace state so the next connection starts cleanly.
   if (typeof resetServiceAgentsScope === 'function') resetServiceAgentsScope();
   if (typeof showSection === 'function') showSection('repositories');
   if (typeof configureServiceAgentsOverview === 'function') configureServiceAgentsOverview(false);
@@ -361,7 +400,6 @@ function switchToOrganizationServiceAgents() {
   const projectBadge = document.getElementById('overviewProjectBadge');
   if (projectBadge) projectBadge.textContent = '—';
 
-  // Credentials are intentionally preserved.
   showConnectionPage();
   setStatus('Returned to Azure DevOps Connection.', 'info');
 }
@@ -371,6 +409,9 @@ async function handleProjectSelection() {
   const project = document.getElementById('projectSelect').value;
   const pat = document.getElementById('targetPat').value.trim();
   updateProjectRequirementUI();
+
+  // Clear workspace status message when project is selected
+  setStatus('');
 
   if (!project) {
     if (activeCategory === 'service_agents') {
@@ -389,7 +430,6 @@ async function handleProjectSelection() {
   const projectBadge = document.getElementById('overviewProjectBadge');
   if (projectBadge) projectBadge.textContent = project || '—';
   
-  // Save selected project so browser refresh restores the same project.
   sessionStorage.setItem('azdo_session_project', project);
 
   const authHeader = 'Basic ' + btoa(':' + pat);
@@ -447,14 +487,11 @@ function showSection(viewId) {
 }
 
 function selectExplore(category) {
-  /* Save only the workspace that is actually loaded. */
   if (activeCategory && workspaceHasData(activeCategory)) {
     saveWorkspaceDisplayState(activeCategory);
   }
 
   activeCategory = category;
-  
-  // Save selected workspace so browser refresh restores the same workspace.
   sessionStorage.setItem('azdo_session_category', category);
   
   updateProjectRequirementUI();
@@ -481,8 +518,6 @@ function selectExplore(category) {
   }
   renderActiveSubstep();
 
-  /* Restore this workspace's own KPI/chart display.
-     The rawStore data and tables are left untouched. */
   restoreWorkspaceDisplayState(category);
 }
 
@@ -521,6 +556,13 @@ function disconnectSession() {
   document.getElementById('step5Container').classList.add('hidden');
   document.getElementById('overviewProjectBadge').textContent = '—';
 
+  // Clear Project Step 4 status message
+  const projStatus = document.getElementById('projectStatusMsg');
+  if (projStatus) {
+    projStatus.textContent = '';
+    projStatus.classList.add('hidden');
+  }
+
   document.getElementById('kpi-1-label').textContent = 'Repository';
   document.getElementById('kpi-1-val').textContent = '-';
   document.getElementById('kpi-1-val').className = 'text-2xl font-extrabold text-slate-800 mt-1 truncate';
@@ -533,8 +575,9 @@ function disconnectSession() {
   document.getElementById('kpi-5-label').textContent = 'Completed PRs';
   document.getElementById('kpi-5-val').textContent = '0';
 
-  document.getElementById('branchesTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`;
-  document.getElementById('repoPrsTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`;
+  document.getElementById('branchesTableBody').innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`;
+  document.getElementById('policyBranchesTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`;
+  document.getElementById('repoPrsTableBody').innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`;
   document.getElementById('accessTableBody').innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Enter a User ID or click "Fetch User Access" to load access permissions.</td></tr>`;
   document.getElementById('userCommitsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">Enter a user email/ID and click search.</td></tr>`;
   document.getElementById('userPrTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No pull request activity loaded.</td></tr>`;
@@ -546,7 +589,7 @@ function disconnectSession() {
   const agentsBody = document.getElementById('agentsTableBody');
   if (agentsBody) agentsBody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load agent pools and agents.</td></tr>`;
 
-  ['seeMoreRepoContainer', 'seeMoreRepoPrsContainer', 'seeMoreAccessContainer', 'seeMoreCommitsContainer', 'seeMorePipelineSummaryContainer', 'seeMorePipelinesContainer', 'seeMoreWorkItemsContainer', 'seeMoreServiceConnectionsContainer', 'seeMoreAgentsContainer'].forEach(id => {
+  ['seeMoreRepoContainer', 'seeMorePolicyBranchesContainer', 'seeMoreRepoPrsContainer', 'seeMoreAccessContainer', 'seeMoreCommitsContainer', 'seeMorePipelineSummaryContainer', 'seeMorePipelinesContainer', 'seeMoreWorkItemsContainer', 'seeMoreServiceConnectionsContainer', 'seeMoreAgentsContainer'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
   });
@@ -554,12 +597,22 @@ function disconnectSession() {
   renderChart([], [], 'Overview');
   setConnectionBadge(false);
   
-  // Clear the Page 2 refresh session when the user disconnects.
   sessionStorage.removeItem('azdo_workspace_active');
   sessionStorage.removeItem('azdo_session_org');
   sessionStorage.removeItem('azdo_session_pat');
   sessionStorage.removeItem('azdo_session_project');
   sessionStorage.removeItem('azdo_session_category');
+
+  // Reset Load Projects button state
+  const loadBtn = document.getElementById('btnLoadProjects');
+  if (loadBtn) {
+    loadBtn.disabled = false;
+    loadBtn.textContent = 'Load projects';
+    loadBtn.classList.remove('loading');
+  }
+
+  // Remove the HTML page-restore class so Page 1 displays cleanly
+  document.documentElement.classList.remove('restore-workspace-page');
   
   showConnectionPage();
   setStatus('Disconnected from Azure DevOps. Enter credentials to connect again.', 'info');
@@ -567,13 +620,23 @@ function disconnectSession() {
 
 function filterActiveTable() {
   const query = document.getElementById('tableFilterInput').value.toLowerCase();
+  const scope = document.getElementById('tableFilterScope')?.value || 'all';
   const activeSection = document.getElementById(activeViewSection);
   if (!activeSection) return;
 
-  const rows = activeSection.querySelectorAll('tbody tr');
-  rows.forEach(r => {
-    const text = r.textContent.toLowerCase();
-    r.style.display = text.includes(query) ? '' : 'none';
+  const tables = activeSection.querySelectorAll('table');
+  tables.forEach(table => {
+    const isTarget = scope === 'all' || table.id === scope;
+    const rows = table.querySelectorAll('tbody tr');
+
+    rows.forEach(r => {
+      if (!isTarget) {
+        r.style.display = '';
+      } else {
+        const text = r.textContent.toLowerCase();
+        r.style.display = text.includes(query) ? '' : 'none';
+      }
+    });
   });
 }
 
@@ -598,31 +661,76 @@ function exportToExcelFile(sheetsData, baseFileName) {
 }
 
 function exportCurrentTableToXLSX() {
+  const scope = document.getElementById('tableFilterScope')?.value || 'all';
+
   if (activeViewSection === 'view-repositories') {
-    const branchData = (rawStore.repos || []).map(b => ({
-      "Repository": b.repo,
-      "Branch Name": b.branch,
-      "Status / Health": b.isStale ? "Stale" : "Active",
-      "Last Author": b.author,
-      "Last Commit Date": b.date,
-      "Commit Message": b.msg
-    }));
+    const sheetsToExport = {};
+    let exportFileName = "AzureDevOps_Repositories_Full_Telemetry";
 
-    const prData = (rawStore.repoPrs || []).map(p => ({
-      "Repository": p.repo,
-      "PR Title": p.title,
-      "Source Branch": p.source,
-      "Target Branch": p.target,
-      "Creator": p.creator,
-      "Status": p.status,
-      "Created Date": p.createdDate
-    }));
+    // 1. Repositories & Active Branch Matrix
+    if (scope === 'all' || scope === 'table-repositories') {
+      const branchData = (rawStore.repos || []).map(b => ({
+        "Repository": b.repo,
+        "Branch Name": b.branch,
+        "Status / Health": b.isStale ? "Stale" : "Active",
+        "Branch Policies": b.policies && b.policies.length ? b.policies.join(', ') : "None",
+        "Required Reviewers": b.minReviewers || 0,
+        "Last Author": b.author,
+        "Last Commit Date": b.date,
+        "Commit Message": b.msg
+      }));
+      sheetsToExport["All Branches"] = branchData;
+      if (scope === 'table-repositories') {
+        exportFileName = "AzureDevOps_Repositories_Active_Branches";
+      }
+    }
 
-    exportToExcelFile({ "Branches": branchData, "Pull Requests": prData }, "AzureDevOps_Repositories_Telemetry");
+    // 2. Branches With Policies Only
+    if (scope === 'all' || scope === 'table-policy-branches') {
+      const policyBranches = (rawStore.repos || []).filter(
+        b => b.hasPolicy === true && Array.isArray(b.policies) && b.policies.length > 0
+      );
+      const policyBranchData = policyBranches.map(b => ({
+        "Repository": b.repo,
+        "Branch Name": b.branch,
+        "Required Reviewers": b.minReviewers || 0,
+        "Branch Policies": b.policies.join(', '),
+        "Last Author": b.author || "Unknown",
+        "Last Commit Date": b.date || "N/A",
+        "Commit Message": b.msg || ""
+      }));
+      sheetsToExport["Branches With Policies"] = policyBranchData;
+      if (scope === 'table-policy-branches') {
+        exportFileName = "AzureDevOps_Branches_With_Policies";
+      }
+    }
+
+    // 3. Pull Requests (Active & Completed)
+    if (scope === 'all' || scope === 'table-repo-prs') {
+      const prData = (rawStore.repoPrs || []).map(p => ({
+        "Repository": p.repo,
+        "PR Title": p.title,
+        "Source Branch": p.source,
+        "Target Branch": p.target,
+        "Target Branch Policies": p.targetPolicies && p.targetPolicies.length ? p.targetPolicies.join(', ') : "None",
+        "Min Required Reviewers": p.minRequiredReviewers || 0,
+        "Assigned Reviewers": p.reviewersCount || 0,
+        "Creator": p.creator,
+        "Status": p.status,
+        "Created Date": p.createdDate
+      }));
+      sheetsToExport["Pull Requests"] = prData;
+      if (scope === 'table-repo-prs') {
+        exportFileName = "AzureDevOps_Pull_Requests";
+      }
+    }
+
+    exportToExcelFile(sheetsToExport, exportFileName);
   } 
   else if (activeViewSection === 'view-access') {
     const accessData = (rawStore.access || []).map(a => ({
       "Team / Group Name": a.team,
+      "Type / Scope": a.type,
       "User Display Name": a.name,
       "User Principal / Email": a.email
     }));
@@ -636,23 +744,23 @@ function exportCurrentTableToXLSX() {
       "Commit Date": c.date,
       "Message": c.comment
     }));
-    exportToExcelFile({ "User Commits": commitData }, "AzureDevOps_User_Activity");
+    const prData = (rawStore.repoPrs || []).map(p => ({
+      "Repository": p.repo,
+      "PR Title": p.title,
+      "Source": p.source,
+      "Target": p.target,
+      "Status": p.status,
+      "Created Date": p.createdDate
+    }));
+    exportToExcelFile({ "User Commits": commitData, "User PRs": prData }, "AzureDevOps_User_Activity");
   } 
   else if (activeViewSection === 'view-pipelines') {
-    const pipelineData = (rawStore.pipelines || []).map(r => ({
-      "Pipeline Name": r.name,
-      "Build Number": r.buildNumber,
-      "Branch": r.branch,
-      "Triggered By": r.author,
-      "Result": r.result,
-      "Finish Time": r.finishTime
-    }));
-    exportToExcelFile({ "Pipelines": pipelineData }, "AzureDevOps_Pipelines");
+    exportPipelinesToXLSX();
   } 
   else if (activeViewSection === 'view-serviceagents') {
     exportServiceConnectionsAndAgentsToXLSX();
   }
-    else if (activeViewSection === 'view-workitems') {
+  else if (activeViewSection === 'view-workitems') {
     const wiData = (rawStore.workitems || []).map(w => ({
       "ID": w.id,
       "Work Item Type": w.type,
@@ -664,8 +772,6 @@ function exportCurrentTableToXLSX() {
     exportToExcelFile({ "Work Items": wiData }, "AzureDevOps_WorkItems");
   }
 }
-
-
 
 function changeChartType(type) {
   currentChartType = type.toLowerCase() === 'pie' ? 'pie' : type;
@@ -749,21 +855,16 @@ function renderChart(labels, data, datasetLabel) {
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
-
-  // Load saved organization/PAT from browser storage.
   initCredentials();
 
-  // Check whether the user was already working on Page 2.
   const workspaceActive = sessionStorage.getItem('azdo_workspace_active');
 
   if (workspaceActive === 'true') {
-
     const savedOrg = sessionStorage.getItem('azdo_session_org');
     const savedPat = sessionStorage.getItem('azdo_session_pat');
     const savedProject = sessionStorage.getItem('azdo_session_project');
     const savedCategory = sessionStorage.getItem('azdo_session_category');
 
-    // Restore saved organization and PAT.
     if (savedOrg) {
       document.getElementById('targetOrg').value = savedOrg;
     }
@@ -772,37 +873,26 @@ document.addEventListener('DOMContentLoaded', async function () {
       document.getElementById('targetPat').value = savedPat;
     }
 
-    // Restore the Page 2 workspace.
     if (savedCategory) {
       activeCategory = savedCategory;
     }
 
-    // Load projects again so the project dropdown is available.
     if (savedOrg && savedPat) {
       await loadProjectsList();
 
-      // Restore the previously selected project.
       if (savedProject) {
         const projectSelect = document.getElementById('projectSelect');
-
         if (projectSelect) {
           projectSelect.value = savedProject;
         }
-
         await handleProjectSelection();
       }
 
-      // Restore the previously selected workspace.
       if (savedCategory) {
         selectExplore(savedCategory);
       }
     }
-
   } else {
-
-    // First visit: start with Repositories as the default workspace.
     selectExplore('repositories');
-
   }
-
 });

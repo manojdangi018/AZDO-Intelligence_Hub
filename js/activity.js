@@ -1,135 +1,191 @@
 async function fetchUserActivityData() {
   const org = extractOrgName(document.getElementById('targetOrg').value);
-  const project = document.getElementById('projectSelect').value;
+  const selectedProject = document.getElementById('projectSelect').value;
   const pat = document.getElementById('targetPat').value.trim();
-  const userQuery = document.getElementById('targetUserQuery').value.trim();
-  const timeframeDays = parseInt(document.getElementById('userTimeframeDays').value, 10);
+  const rawQuery = document.getElementById('targetUserQuery').value.trim();
+  const rawTimeframe = document.getElementById('userTimeframeDays')?.value;
+  const timeframeDays = rawTimeframe !== undefined && rawTimeframe !== '' ? parseInt(rawTimeframe, 10) : 0;
 
-  if (!userQuery) return showModal('Please enter a User Email or Name to search.', 'targetUserQuery');
+  if (!selectedProject) {
+    return showModal('Please select a project first.', 'projectSelect');
+  }
+
+  if (!rawQuery) {
+    return showModal('Please enter a User Email or Name to search.', 'targetUserQuery');
+  }
 
   const authHeader = 'Basic ' + btoa(':' + pat);
   showSection('activity');
-  startFetching(`Scanning all repositories, branches & commits for "${userQuery}"...`);
+  startFetching(`Searching activity in project "${selectedProject}" for "${rawQuery}"...`);
 
-  let reposToScan = cachedRepos;
-  if (!reposToScan || reposToScan.length === 0) {
-    try {
-      const repoData = await fetchAzDo(`https://dev.azure.com/${org}/${project}/_apis/git/repositories?api-version=${API_VERSION}`, authHeader);
-      reposToScan = repoData.value || [];
-      cachedRepos = reposToScan;
-    } catch(e) {}
+  // Parse search terms and query aliases
+  const queryLower = rawQuery.toLowerCase();
+  const emailPrefix = queryLower.includes('@') ? queryLower.split('@')[0] : queryLower;
+  const nameParts = emailPrefix.split(/[\._\-\s]+/).filter(p => p.length >= 2);
+  const formattedName = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+
+  // Direct search parameters for Azure DevOps native filter
+  const searchAuthors = Array.from(new Set([rawQuery, emailPrefix, formattedName, formattedName.toLowerCase()].filter(Boolean)));
+
+  function matchesUser(authorName, authorEmail, committerName, committerEmail) {
+    const aName = (authorName || '').toLowerCase();
+    const aEmail = (authorEmail || '').toLowerCase();
+    const cName = (committerName || '').toLowerCase();
+    const cEmail = (committerEmail || '').toLowerCase();
+
+    // 1. Direct match on query or email prefix
+    if (aEmail.includes(queryLower) || cEmail.includes(queryLower) ||
+        aName.includes(queryLower) || cName.includes(queryLower) ||
+        aEmail.includes(emailPrefix) || cEmail.includes(emailPrefix) ||
+        aName.includes(emailPrefix) || cName.includes(emailPrefix)) {
+      return true;
+    }
+
+    // 2. Tokenized match (e.g. "hitesh" and "bawane")
+    if (nameParts.length > 0) {
+      const allInAuthor = nameParts.every(p => aName.includes(p) || aEmail.includes(p));
+      const allInCommitter = nameParts.every(p => cName.includes(p) || cEmail.includes(p));
+      if (allInAuthor || allInCommitter) return true;
+    }
+
+    return false;
   }
 
-  const queryLower = userQuery.toLowerCase();
-  const queryNamePart = queryLower.includes('@') ? queryLower.split('@')[0].replace(/[\._\-]/g, ' ') : queryLower;
-  
-  let userCommits = [];
-  let userPRs = [];
-  let reposTouched = new Set();
-
-  let fromDateStr = '';
+  let cutoffDate = null;
+  let fromDateIso = null;
   if (timeframeDays > 0) {
     const d = new Date();
     d.setDate(d.getDate() - timeframeDays);
-    fromDateStr = `&searchCriteria.fromDate=${encodeURIComponent(d.toISOString())}`;
+    cutoffDate = d;
+    fromDateIso = d.toISOString();
   }
 
+  let userCommits = [];
+  let userPRs = [];
+  const reposTouched = new Set();
+  let foundDisplayName = '';
+
   try {
-    const BATCH_SIZE = 6;
-    for (let i = 0; i < reposToScan.length; i += BATCH_SIZE) {
-      const batch = reposToScan.slice(i, i + BATCH_SIZE);
+    // 1. Fetch repositories STRICTLY for the selected project
+    const projReposUrl = `https://dev.azure.com/${org}/${encodeURIComponent(selectedProject)}/_apis/git/repositories?api-version=${API_VERSION}`;
+    const projReposRes = await fetchAzDo(projReposUrl, authHeader);
+    const repos = projReposRes?.value || [];
+
+    if (!repos || repos.length === 0) {
+      throw new Error(`No Git repositories found in project "${selectedProject}".`);
+    }
+
+    // 2. Scan repositories concurrently within the selected project
+    const BATCH_SIZE = 4;
+    for (let i = 0; i < repos.length; i += BATCH_SIZE) {
+      const batch = repos.slice(i, i + BATCH_SIZE);
 
       await Promise.all(batch.map(async (r) => {
-        let branches = ['main'];
-        try {
-          const refsUrl = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/refs?filter=heads/&api-version=${API_VERSION}`;
-          const refsData = await fetchAzDo(refsUrl, authHeader);
-          if (refsData?.value && refsData.value.length > 0) {
-            branches = refsData.value.map(ref => ref.name.replace(/^refs\/heads\//, ''));
-          }
-        } catch(e){}
-
+        // --- FETCH COMMITS STRICTLY WITHIN SELECTED PROJECT ---
         const commitsPromise = (async () => {
-          try {
-            const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/commits?$top=1000${fromDateStr}&api-version=${API_VERSION}`;
-            const res = await fetchAzDo(url, authHeader);
-            
-            (res.value || []).forEach(c => {
-              const authorEmail = (c.author?.email || '').toLowerCase();
-              const authorName = (c.author?.name || '').toLowerCase();
-              const committerEmail = (c.committer?.email || '').toLowerCase();
-              const committerName = (c.committer?.name || '').toLowerCase();
-
-              const isMatch = authorEmail.includes(queryLower) || 
-                              authorName.includes(queryLower) || 
-                              committerEmail.includes(queryLower) || 
-                              committerName.includes(queryLower) ||
-                              (queryNamePart && (authorName.includes(queryNamePart) || committerName.includes(queryNamePart)));
-
-              if (isMatch) {
-                reposTouched.add(r.name);
-                userCommits.push({
-                  repo: r.name,
-                  branch: (r.defaultBranch ? r.defaultBranch.replace(/^refs\/heads\//, '') : (branches[0] || 'main')),
-                  commitId: (c.commitId || '').substring(0, 8),
-                  date: c.author?.date ? new Date(c.author.date).toLocaleString() : 'N/A',
-                  comment: c.comment || ''
-                });
+          for (const authorParam of searchAuthors) {
+            try {
+              let url = `https://dev.azure.com/${org}/${encodeURIComponent(selectedProject)}/_apis/git/repositories/${r.id}/commits?searchCriteria.author=${encodeURIComponent(authorParam)}&$top=1000&api-version=${API_VERSION}`;
+              if (fromDateIso) {
+                url += `&searchCriteria.fromDate=${encodeURIComponent(fromDateIso)}`;
               }
-            });
-          } catch (e) {
-            console.warn(`Commits fetch failed for repo ${r.name}:`, e);
+
+              const res = await fetchAzDo(url, authHeader);
+              const commits = res?.value || [];
+
+              commits.forEach((c) => {
+                if (matchesUser(c.author?.name, c.author?.email, c.committer?.name, c.committer?.email)) {
+                  const commitDate = new Date(c.author?.date || c.committer?.date);
+                  if (!cutoffDate || commitDate >= cutoffDate) {
+                    reposTouched.add(r.name);
+                    if (!foundDisplayName && c.author?.name) {
+                      foundDisplayName = c.author.name;
+                    }
+                    userCommits.push({
+                      repo: r.name,
+                      branch: r.defaultBranch ? r.defaultBranch.replace(/^refs\/heads\//, '') : 'main',
+                      commitId: (c.commitId || '').substring(0, 8),
+                      rawDate: commitDate,
+                      date: isNaN(commitDate.getTime()) ? 'N/A' : commitDate.toLocaleDateString(),
+                      comment: c.comment || 'No commit message'
+                    });
+                  }
+                }
+              });
+
+              if (commits.length > 0) break; // Found commits using this author variant
+            } catch (err) {
+              // Ignore branch or permission errors on individual repos
+            }
           }
         })();
 
+        // --- FETCH PULL REQUESTS STRICTLY WITHIN SELECTED PROJECT ---
         const prsPromise = (async () => {
           try {
-            const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories/${r.id}/pullrequests?searchCriteria.status=all&$top=200&api-version=${API_VERSION}`;
-            const res = await fetchAzDo(url, authHeader);
-            (res.value || []).forEach(pr => {
-              const creatorEmail = (pr.createdBy?.uniqueName || '').toLowerCase();
-              const creatorName = (pr.createdBy?.displayName || '').toLowerCase();
-              
-              const isMatch = creatorEmail.includes(queryLower) || 
-                              creatorName.includes(queryLower) ||
-                              (queryNamePart && creatorName.includes(queryNamePart));
+            const prUrl = `https://dev.azure.com/${org}/${encodeURIComponent(selectedProject)}/_apis/git/repositories/${r.id}/pullrequests?searchCriteria.status=all&$top=500&api-version=${API_VERSION}`;
+            const prRes = await fetchAzDo(prUrl, authHeader);
+            const prList = prRes?.value || [];
 
-              if (isMatch) {
-                reposTouched.add(r.name);
-                userPRs.push({
-                  repo: r.name,
-                  title: pr.title || 'Untitled PR',
-                  source: (pr.sourceRefName || '').replace('refs/heads/', ''),
-                  target: (pr.targetRefName || '').replace('refs/heads/', ''),
-                  status: pr.status || 'unknown',
-                  createdDate: pr.creationDate ? new Date(pr.creationDate).toLocaleDateString() : 'N/A'
-                });
+            prList.forEach((pr) => {
+              const creatorEmail = pr.createdBy?.uniqueName || '';
+              const creatorName = pr.createdBy?.displayName || '';
+
+              if (matchesUser(creatorName, creatorEmail, null, null)) {
+                const prDate = new Date(pr.creationDate);
+                if (!cutoffDate || prDate >= cutoffDate) {
+                  reposTouched.add(r.name);
+                  userPRs.push({
+                    id: pr.pullRequestId || pr.id || '',
+                    repo: r.name,
+                    title: pr.title || 'Untitled PR',
+                    source: (pr.sourceRefName || '').replace('refs/heads/', ''),
+                    target: (pr.targetRefName || '').replace('refs/heads/', ''),
+                    status: pr.status || 'unknown',
+                    createdDate: isNaN(prDate.getTime()) ? 'N/A' : prDate.toLocaleDateString(),
+                    rawDate: prDate
+                  });
+                }
               }
             });
-          } catch (e) {
-            console.warn(`PRs fetch failed for repo ${r.name}:`, e);
-          }
+          } catch (err) {}
         })();
 
         return Promise.all([commitsPromise, prsPromise]);
       }));
     }
 
-    const seenCommits = new Set();
-    userCommits = userCommits.filter(c => {
-      const k = `${c.repo}_${c.commitId}`;
-      if (seenCommits.has(k)) return false;
-      seenCommits.add(k);
+    // Deduplicate commits
+    const seen = new Set();
+    userCommits = userCommits.filter((c) => {
+      const key = `${c.repo}_${c.commitId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
 
+    // Deduplicate PRs
+    const seenPrs = new Set();
+    userPRs = userPRs.filter((p) => {
+      const key = `${p.repo}_${p.title}_${p.createdDate}`;
+      if (seenPrs.has(key)) return false;
+      seenPrs.add(key);
+      return true;
+    });
+
+    // Chronological Sort: Newest to Oldest
+    userCommits.sort((a, b) => b.rawDate - a.rawDate);
+    userPRs.sort((a, b) => b.rawDate - a.rawDate);
+
     rawStore.commits = userCommits;
     rawStore.commitsIndex = 0;
+    rawStore.repoPrs = userPRs;
 
+    // Update Project Overview KPIs
     document.getElementById('kpi-1-label').textContent = 'Active Scope';
-    document.getElementById('kpi-1-val').textContent = userQuery;
+    document.getElementById('kpi-1-val').textContent = foundDisplayName || rawQuery;
     document.getElementById('kpi-1-val').className = 'text-2xl font-extrabold text-slate-800 mt-1 truncate';
-    document.getElementById('kpi-2-label').textContent = 'Active Repos';
+    document.getElementById('kpi-2-label').textContent = 'Project Repos Touched';
     document.getElementById('kpi-2-val').textContent = reposTouched.size;
     document.getElementById('kpi-3-label').textContent = 'Commits Made';
     document.getElementById('kpi-3-val').textContent = userCommits.length;
@@ -140,29 +196,43 @@ async function fetchUserActivityData() {
 
     renderCommitsTableBatch(false);
 
-    document.getElementById('userPrTableBody').innerHTML = userPRs.length === 0
-      ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">No pull requests found for "${userQuery}".</td></tr>`
-      : userPRs.map(pr => `
-          <tr class="hover:bg-slate-50 transition">
+    document.getElementById('userPrTableBody').innerHTML =
+      userPRs.length === 0
+        ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">No pull requests found for "${rawQuery}" in project ${selectedProject}.</td></tr>`
+        : userPRs
+            .map(
+              (pr, rowIndex) => `
+          <tr class="hover:bg-slate-50 transition" data-detail-type="user-pr" data-detail-index="${rowIndex}">
             <td class="p-4 font-semibold text-slate-900">${pr.repo}</td>
             <td class="p-4 font-medium text-slate-800">${pr.title}</td>
             <td class="p-4 font-mono text-xs text-slate-500">${pr.source} &rarr; ${pr.target}</td>
-            <td class="p-4"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${pr.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">${pr.status}</span></td>
+            <td class="p-4"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${
+              pr.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+            }">${pr.status}</span></td>
             <td class="p-4 text-xs text-slate-500">${pr.createdDate}</td>
           </tr>
-        `).join('');
+        `
+            )
+            .join('');
 
     const repoCommitMap = {};
-    userCommits.forEach(c => repoCommitMap[c.repo] = (repoCommitMap[c.repo] || 0) + 1);
-    renderChart(Object.keys(repoCommitMap), Object.values(repoCommitMap), `Commits by ${userQuery}`);
+    userCommits.forEach((c) => {
+      repoCommitMap[c.repo] = (repoCommitMap[c.repo] || 0) + 1;
+    });
+
+    renderChart(
+      Object.keys(repoCommitMap),
+      Object.values(repoCommitMap),
+      `Commits in ${selectedProject} by ${foundDisplayName || rawQuery}`
+    );
+
     stopFetching();
-
-
-    setStatus(`Found ${userCommits.length} commits and ${userPRs.length} PRs for "${userQuery}".`, 'success');
-
-    } catch (err) {
-
-      stopFetching();
+    setStatus(
+      `Found ${userCommits.length} commits and ${userPRs.length} PRs in project "${selectedProject}" for "${rawQuery}".`,
+      'success'
+    );
+  } catch (err) {
+    stopFetching();
     setStatus(`Error fetching user activity: ${err.message}`, 'error');
   }
 }
@@ -175,31 +245,40 @@ function renderCommitsTableBatch(append = false) {
   if (!append) tbody.innerHTML = '';
 
   if (rawStore.commits.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No commits found for selected timeframe.</td></tr>`;
-    container.classList.add('hidden');
+    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No commits found in this project for the selected timeframe.</td></tr>`;
+    if (container) container.classList.add('hidden');
     return;
   }
 
-  const nextBatch = rawStore.commits.slice(rawStore.commitsIndex, rawStore.commitsIndex + PAGE_SIZE);
+  const nextBatch = rawStore.commits.slice(
+    rawStore.commitsIndex,
+    rawStore.commitsIndex + PAGE_SIZE
+  );
   rawStore.commitsIndex += nextBatch.length;
 
-  const html = nextBatch.map(c => `
-    <tr class="hover:bg-slate-50 transition">
+  const batchStartIndex = rawStore.commitsIndex - nextBatch.length;
+
+  const html = nextBatch
+    .map(
+      (c, rowIndex) => `
+    <tr class="hover:bg-slate-50 transition" data-detail-type="user-commit" data-detail-index="${batchStartIndex + rowIndex}">
       <td class="p-4 font-semibold text-slate-900">${c.repo}</td>
       <td class="p-4"><span class="font-mono text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-semibold">${c.branch}</span></td>
       <td class="p-4 font-mono text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-semibold">${c.commitId}</td>
       <td class="p-4 text-xs text-slate-500">${c.date}</td>
       <td class="p-4 text-xs text-slate-700">${c.comment}</td>
     </tr>
-  `).join('');
+  `
+    )
+    .join('');
 
   tbody.insertAdjacentHTML('beforeend', html);
 
   const remaining = rawStore.commits.length - rawStore.commitsIndex;
   if (remaining > 0) {
-    container.classList.remove('hidden');
-    remainingEl.textContent = remaining;
+    if (container) container.classList.remove('hidden');
+    if (remainingEl) remainingEl.textContent = remaining;
   } else {
-    container.classList.add('hidden');
+    if (container) container.classList.add('hidden');
   }
 }

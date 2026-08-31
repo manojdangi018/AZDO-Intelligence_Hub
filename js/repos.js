@@ -837,6 +837,11 @@ async function fetchRepositoryData() {
 
                     return {
 
+                      id:
+                        pr.pullRequestId ||
+                        pr.id ||
+                        '',
+
                       repo:
                         r.name,
 
@@ -1100,9 +1105,11 @@ function renderRepoTableBatch(
   rawStore.repoIndex +=
     nextBatch.length;
 
+  const batchStartIndex = rawStore.repoIndex - nextBatch.length;
+
   const html =
     nextBatch.map(
-      b => {
+      (b, rowIndex) => {
 
         const policiesHtml =
           b.hasPolicy
@@ -1147,7 +1154,7 @@ function renderRepoTableBatch(
               </span>`;
 
         return `
-        <tr class="hover:bg-slate-50 transition">
+        <tr class="hover:bg-slate-50 transition" data-detail-type="repository-branch" data-detail-index="${batchStartIndex + rowIndex}">
 
           <td class="p-4 font-semibold text-slate-900">
             ${b.repo}
@@ -1300,7 +1307,9 @@ function renderPolicyBranchesTableBatch(
 
   rawStore.policyBranchesIndex += nextBatch.length;
 
-  const html = nextBatch.map(b => {
+  const batchStartIndex = rawStore.policyBranchesIndex - nextBatch.length;
+
+  const html = nextBatch.map((b, rowIndex) => {
 
     const policiesHtml =
       `<div class="flex flex-wrap gap-1 max-w-xl">` +
@@ -1313,7 +1322,7 @@ function renderPolicyBranchesTableBatch(
       `</div>`;
 
     return `
-      <tr class="hover:bg-slate-50 transition">
+      <tr class="hover:bg-slate-50 transition" data-detail-type="policy-branch" data-detail-index="${rawStore.repos.indexOf(b)}">
         <td class="p-4 font-semibold text-slate-900">${b.repo}</td>
         <td class="p-4">
           <span class="font-mono text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-semibold">
@@ -1431,9 +1440,11 @@ function renderRepoPrsTableBatch(
   rawStore.repoPrsIndex +=
     nextBatch.length;
 
+  const batchStartIndex = rawStore.repoPrsIndex - nextBatch.length;
+
   const html =
     nextBatch.map(
-      pr => {
+      (pr, rowIndex) => {
 
         let policyBadge =
           '';
@@ -1522,7 +1533,7 @@ function renderRepoPrsTableBatch(
         }
 
         return `
-        <tr class="hover:bg-slate-50 transition">
+        <tr class="hover:bg-slate-50 transition" data-detail-type="repository-pr" data-detail-index="${batchStartIndex + rowIndex}">
 
           <td
             class="p-4 font-semibold text-slate-900">
