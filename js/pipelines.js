@@ -239,7 +239,8 @@ async function fetchPipelineData() {
         succeeded: 0,
         failed: 0,
         autoTriggers: 0,
-        manualTriggers: 0
+        manualTriggers: 0,
+        latestRunTimestamp: null
       };
     });
 
@@ -379,6 +380,11 @@ async function fetchPipelineData() {
               ? new Date(rawTime)
               : new Date(0);
 
+            summaryMap[pipe.name].latestRunTimestamp = Math.max(
+              summaryMap[pipe.name].latestRunTimestamp || 0,
+              parsedDate.getTime() || 0
+            );
+
             allRuns.push({
               id: b.id || '',
               name: pipe.name,
@@ -405,6 +411,9 @@ async function fetchPipelineData() {
     allRuns.sort((a, b) => b.rawTimestamp - a.rawTimestamp);
 
     rawStore.pipelineSummaries = Object.values(summaryMap);
+
+    // Put pipelines with the most recently executed run first.
+    sortByLatestDate(rawStore.pipelineSummaries, ['latestRunTimestamp']);
     rawStore.pipelineSummariesIndex = 0;
     rawStore.pipelines = allRuns;
     rawStore.pipelineIndex = 0;

@@ -9,7 +9,7 @@ async function fetchWorkItemsData() {
   startFetching(targetUser ? `Querying work items assigned to "${targetUser}"...` : `Querying all active work items and sprint status...`);
 
   try {
-    let wiql = `SELECT [System.Id], [System.Title], [System.WorkItemType], [System.State], [System.AssignedTo], [System.IterationPath], [System.CreatedDate] FROM workitems WHERE [System.TeamProject] = @project`;
+    let wiql = `SELECT [System.Id], [System.Title], [System.WorkItemType], [System.State], [System.AssignedTo], [System.IterationPath], [System.CreatedDate], [System.ChangedDate] FROM workitems WHERE [System.TeamProject] = @project`;
     
     if (targetUser) {
       wiql += ` AND [System.AssignedTo] CONTAINS '${targetUser.replace(/'/g, "''")}'`;
@@ -42,7 +42,7 @@ async function fetchWorkItemsData() {
       return;
     }
 
-    const fields = 'System.Id,System.Title,System.WorkItemType,System.State,System.AssignedTo,System.IterationPath,System.CreatedDate';
+    const fields = 'System.Id,System.Title,System.WorkItemType,System.State,System.AssignedTo,System.IterationPath,System.CreatedDate,System.ChangedDate';
     const detailsUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/wit/workitems?ids=${wiIds.join(',')}&fields=${fields}&api-version=7.0`;
     const detailsData = await fetchAzDo(detailsUrl, authHeader);
     const workItems = detailsData.value || [];
@@ -85,9 +85,16 @@ async function fetchWorkItemsData() {
         title: fields['System.Title'] || 'Untitled',
         assignedTo: assignedName,
         state: state,
-        createdDate: fields['System.CreatedDate'] ? new Date(fields['System.CreatedDate']).toLocaleDateString() : 'N/A'
+        createdDate: fields['System.CreatedDate'] ? new Date(fields['System.CreatedDate']).toLocaleDateString() : 'N/A',
+        changedDate: fields['System.ChangedDate'] ? new Date(fields['System.ChangedDate']).toLocaleString() : 'N/A',
+        rawChangedTimestamp: fields['System.ChangedDate'] ? new Date(fields['System.ChangedDate']).getTime() : null
       };
     });
+
+    // WIQL already requests ChangedDate DESC; sort again after details are
+    // returned so the UI remains newest-first even if the details endpoint
+    // changes response ordering.
+    sortByLatestDate(rawStore.workitems, ['rawChangedTimestamp', 'createdDate']);
 
     rawStore.workitemsIndex = 0;
 

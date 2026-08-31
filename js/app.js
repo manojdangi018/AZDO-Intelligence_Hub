@@ -44,6 +44,57 @@ let workspaceDisplayStore = {};
 // while allowing the fetched-row detail panel to read the current data.
 window.__getAzdoRawStore = () => rawStore;
 
+
+// ------------------------------------------------------------
+// Shared data-ordering helper
+// ------------------------------------------------------------
+// Keeps every workspace consistent: newest records first, while
+// records without a valid timestamp remain at the bottom. The sort
+// mutates only the fetched in-memory arrays; API/fetch behaviour is
+// unchanged.
+function sortByLatestDate(items, dateKeys = []) {
+  if (!Array.isArray(items) || items.length < 2) return items;
+
+  const keys = Array.isArray(dateKeys) ? dateKeys : [dateKeys];
+
+  const getTimestamp = (item) => {
+    if (!item || typeof item !== 'object') return null;
+
+    for (const key of keys) {
+      const value = item[key];
+      if (value === undefined || value === null || value === '' || value === '—' || value === 'N/A') continue;
+
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+
+      const date = value instanceof Date ? value : new Date(value);
+      const time = date.getTime();
+      if (Number.isFinite(time)) return time;
+    }
+
+    return null;
+  };
+
+  return items
+    .map((item, originalIndex) => ({ item, originalIndex, timestamp: getTimestamp(item) }))
+    .sort((a, b) => {
+      const aHasDate = a.timestamp !== null;
+      const bHasDate = b.timestamp !== null;
+
+      if (aHasDate && bHasDate) {
+        const diff = b.timestamp - a.timestamp;
+        return diff !== 0 ? diff : a.originalIndex - b.originalIndex;
+      }
+
+      if (aHasDate) return -1;
+      if (bHasDate) return 1;
+      return a.originalIndex - b.originalIndex;
+    })
+    .map(entry => entry.item);
+}
+
+// Expose the helper to feature modules loaded after app.js.
+window.sortByLatestDate = sortByLatestDate;
+
 function workspaceHasData(category) {
   switch (category) {
     case 'repositories':

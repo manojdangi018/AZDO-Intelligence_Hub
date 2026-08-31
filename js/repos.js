@@ -754,6 +754,12 @@ async function fetchRepositoryData() {
                           ? commitDate.toLocaleString()
                           : 'N/A',
 
+                      // Keep the machine-readable value for reliable newest-first sorting.
+                      rawCommitTimestamp:
+                        commitDate && !isNaN(commitDate.getTime())
+                          ? commitDate.getTime()
+                          : null,
+
                       isStale:
                         isStale,
 
@@ -870,6 +876,11 @@ async function fetchRepositoryData() {
                             ).toLocaleDateString()
                           : 'N/A',
 
+                      rawCreatedTimestamp:
+                        pr.creationDate
+                          ? new Date(pr.creationDate).getTime()
+                          : null,
+
                       reviewersCount:
                         actualReviewers,
 
@@ -905,6 +916,11 @@ async function fetchRepositoryData() {
     rawStore.repos =
       results.flat();
 
+    // Newest branch commit first across all repositories.
+    // This is done before pagination so the first page always contains
+    // the latest branches, not simply the first API results returned.
+    sortByLatestDate(rawStore.repos, ['rawCommitTimestamp']);
+
     rawStore.repoIndex =
       0;
 
@@ -913,6 +929,9 @@ async function fetchRepositoryData() {
 
     rawStore.repoPrs =
       allPRs;
+
+    // Newest PRs first, before pagination.
+    sortByLatestDate(rawStore.repoPrs, ['rawCreatedTimestamp']);
 
     rawStore.repoPrsIndex =
       0;

@@ -83,7 +83,8 @@ function mapServiceConnection(endpoint, projectName = '') {
     isReady: endpoint.isReady === true ? 'Yes' : endpoint.isReady === false ? 'No' : '—',
     isShared: endpoint.isShared ? 'Yes' : 'No',
     createdBy: displayIdentity(endpoint.createdBy),
-    projectName: projectName || endpoint.serviceEndpointProjectReferences?.[0]?.projectReference?.name || '—'
+    projectName: projectName || endpoint.serviceEndpointProjectReferences?.[0]?.projectReference?.name || '—',
+    rawCreatedTimestamp: endpoint.creationDate ? new Date(endpoint.creationDate).getTime() : null
   };
 }
 
@@ -136,6 +137,7 @@ async function fetchAgentsForPools(org, authHeader, pools, options = {}) {
         os: agent.osDescription || '—',
         version: agent.version || '—',
         createdOn: agent.createdOn ? new Date(agent.createdOn).toLocaleString() : '—',
+        rawCreatedTimestamp: agent.createdOn ? new Date(agent.createdOn).getTime() : null,
         projectScoped
       }));
     } catch (error) {
@@ -147,7 +149,7 @@ async function fetchAgentsForPools(org, authHeader, pools, options = {}) {
         poolType: pool.poolType || '—',
         name: 'Unable to read agents',
         status: error.message || 'Access denied',
-        enabled: '—', os: '—', version: '—', createdOn: '—', projectScoped
+        enabled: '—', os: '—', version: '—', createdOn: '—', rawCreatedTimestamp: null, projectScoped
       });
     }
   }
@@ -271,9 +273,11 @@ async function fetchServiceConnectionAgentData() {
     }
 
     rawStore.serviceConnections = serviceConnections;
+    sortByLatestDate(rawStore.serviceConnections, ['rawCreatedTimestamp']);
     rawStore.serviceConnectionsIndex = 0;
     rawStore.agentPools = pools;
     rawStore.agents = await fetchAgentsForPools(org, authHeader, pools, { projectScoped });
+    sortByLatestDate(rawStore.agents, ['rawCreatedTimestamp']);
     rawStore.agentsIndex = 0;
 
     renderServiceConnectionsTableBatch(false);
