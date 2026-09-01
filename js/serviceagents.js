@@ -107,6 +107,7 @@ async function fetchAgentsForPools(org, authHeader, pools, options = {}) {
     if (pool.isHosted === true) {
       rows.push({
         poolId: pool.id,
+        queueId: pool.queueId ?? null,
         poolName: pool.name || `Pool ${pool.id}`,
         isHosted: 'Yes',
         poolType: pool.poolType || '—',
@@ -178,6 +179,7 @@ async function getProjectAgentPools(org, project, authHeader) {
     if (pool.id !== undefined && pool.id !== null) {
       poolRefs.set(String(pool.id), {
         id: Number(pool.id),
+        queueId: queue.id ?? null,
         name: pool.name || queue.name || `Pool ${pool.id}`,
         isHosted: pool.isHosted === true,
         poolType: pool.poolType || '—'
@@ -198,6 +200,7 @@ async function getProjectAgentPools(org, project, authHeader) {
     return {
       ...pool,
       id: Number(id),
+      queueId: ref.queueId ?? pool.queueId ?? null,
       name: pool.name || ref.name || `Pool ${id}`,
       isHosted: pool.isHosted === true || ref.isHosted === true,
       poolType: pool.poolType || ref.poolType || '—',

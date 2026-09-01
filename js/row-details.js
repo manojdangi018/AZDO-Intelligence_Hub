@@ -256,7 +256,7 @@
 
   function buildAgentRunsTable(runs) {
     if (!runs.length) {
-      return `<div class="agent-run-empty">No pipeline run history was returned for this agent.</div>`;
+      return `<div class="agent-run-empty">No pipeline run history was returned for this agent/pool.</div>`;
     }
     const rows = runs.map(run => `
       <tr>
@@ -269,7 +269,7 @@
     return `
       <div class="agent-run-summary">
         <span class="agent-run-count">${runs.length}</span>
-        <span>Pipeline run${runs.length === 1 ? '' : 's'} shown</span>
+        <span>Recent pipeline run${runs.length === 1 ? '' : 's'} shown</span>
       </div>
       <div class="agent-run-table-wrap">
         <table class="agent-run-table">
@@ -282,26 +282,75 @@
 
   async function fetchAgentPipelineRuns(agentRow) {
     const context = getAzDoAuthContext();
-    if (!context || !agentRow?.poolId || !agentRow?.agentId) {
-      return { runs: [], error: 'Agent history is unavailable because the agent identifier or Azure DevOps connection is missing.' };
+    if (!context || !agentRow?.poolId) {
+      return { runs: [], error: 'Agent history is unavailable because the Azure DevOps connection or agent pool is missing.' };
     }
 
     const apiVersion = typeof AZDO_STABLE_API_VERSION !== 'undefined' ? AZDO_STABLE_API_VERSION : '7.1';
+    const project = document.getElementById('projectSelect')?.value?.trim() || '';
+
+    // Microsoft-hosted pools do not have a persistent agentId. A hosted VM is
+    // created per job and disappears afterwards, so agent/job-request history
+    // cannot be queried by agentId. Instead, correlate Build history to the
+    // project's build queue that belongs to this hosted pool.
+    if (agentRow.isSyntheticHosted || agentRow.isHosted === 'Yes') {
+      try {
+        if (!project) {
+          return { runs: [], error: 'Select a project to view Microsoft-hosted pipeline run history.' };
+        }
+
+        let queueId = agentRow.queueId ?? null;
+        if (!queueId) {
+          // Recover the project queue id if an older/raw pool record did not
+          // carry it. The queue response maps project queue -> agent pool.
+          const queueUrl = `https://dev.azure.com/${encodeURIComponent(context.org)}/${encodeURIComponent(project)}/_apis/distributedtask/queues?$top=1000&api-version=${apiVersion}`;
+          const queueData = await fetchAzDo(queueUrl, context.authHeader);
+          const queue = (queueData?.value || []).find(q => Number(q?.pool?.id) === Number(agentRow.poolId));
+          queueId = queue?.id ?? null;
+        }
+
+        if (!queueId) {
+          return { runs: [], error: 'The Microsoft-hosted pool is not mapped to a build queue in the selected project.' };
+        }
+
+        const buildUrl = `https://dev.azure.com/${encodeURIComponent(context.org)}/${encodeURIComponent(project)}/_apis/build/builds?queues=${encodeURIComponent(queueId)}&$top=25&queryOrder=finishTimeDescending&api-version=7.1`;
+        const buildData = await fetchAzDo(buildUrl, context.authHeader);
+        const builds = Array.isArray(buildData?.value) ? buildData.value : [];
+
+        const runs = builds.map(build => {
+          const dateValue = build.finishTime || build.startTime || build.queueTime || build.buildNumber;
+          return {
+            pipelineName: build.definition?.name || build.definition?.path || 'Unknown pipeline',
+            buildId: build.id || '—',
+            triggeredBy: build.requestedBy?.displayName || build.requestedFor?.displayName || '—',
+            dateTime: formatRunDateTime(dateValue),
+            timestamp: dateValue ? new Date(dateValue).getTime() || 0 : 0,
+            status: build.result || build.status || '—'
+          };
+        }).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        return { runs };
+      } catch (error) {
+        console.warn(`Could not fetch pipeline history for Microsoft-hosted pool ${agentRow.poolId}:`, error);
+        return { runs: [], error: error.message || 'Unable to load Microsoft-hosted pipeline run history.' };
+      }
+    }
+
+    // Self-hosted agents have a persistent agentId, so retain the existing
+    // job-request based implementation for them.
+    if (!agentRow.agentId) {
+      return { runs: [], error: 'Agent history is unavailable because the self-hosted agent identifier is missing.' };
+    }
+
     const url = `https://dev.azure.com/${encodeURIComponent(context.org)}/_apis/distributedtask/pools/${encodeURIComponent(agentRow.poolId)}/jobrequests?agentId=${encodeURIComponent(agentRow.agentId)}&completedRequestCount=25&api-version=${apiVersion}`;
 
     try {
-      // The jobrequests endpoint exposes recent jobs assigned to a specific agent.
-      // It is used only when the user opens an Agent row, so existing fetch volume
-      // and the main Agent workspace behaviour remain unchanged.
       const data = await fetchAzDo(url, context.authHeader);
       const requests = Array.isArray(data?.value) ? data.value : [];
 
-      const project = document.getElementById('projectSelect')?.value?.trim() || '';
       const buildIds = [...new Set(requests.map(getNestedBuildId).filter(Boolean))];
       let buildsById = new Map();
 
-      // Build details provide the authoritative pipeline name, requested/triggering
-      // identity and final run time. The Build List API supports multiple build IDs.
       if (project && buildIds.length) {
         try {
           const buildUrl = `https://dev.azure.com/${encodeURIComponent(context.org)}/${encodeURIComponent(project)}/_apis/build/builds?buildIds=${buildIds.join(',')}&api-version=7.1`;
@@ -328,7 +377,6 @@
         };
       }).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
-      // Remove exact duplicate requests/builds while retaining the newest record.
       const seen = new Set();
       const uniqueRuns = runs.filter(run => {
         const key = `${run.buildId}|${run.pipelineName}|${run.dateTime}`;
@@ -475,7 +523,7 @@
         <div class="detail-section-card agent-runs-card">
           <div class="detail-section-heading"><span class="detail-section-icon">⌁</span> Pipeline Run History</div>
           <div id="agentPipelineRunsContent" class="agent-runs-content">
-            <div class="agent-run-loading"><span class="agent-run-spinner"></span> Loading recent pipeline runs for this agent...</div>
+            <div class="agent-run-loading"><span class="agent-run-spinner"></span> Loading recent pipeline runs for this agent/pool...</div>
           </div>
         </div>
       `;

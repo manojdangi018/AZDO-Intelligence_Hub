@@ -1513,3 +1513,6 @@ table tbody tr.data-detail-row:focus {
   animation: agentRunSpin .8s linear infinite;
 }
 @keyframes agentRunSpin { to { transform: rotate(360deg); } }
+
+/* Microsoft-hosted agent history uses project build-queue correlation. */
+.agent-hosted-note { margin: 0 0 12px; color: #64748b; font-size: 12px; }
