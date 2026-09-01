@@ -1,0 +1,10 @@
+api.js -> assets/m_api_27c45b08488f.js
+app.js -> assets/m_app_bcda98897a02.js
+serviceagents.js -> assets/m_serviceagents_42f59c6605f0.js
+repos.js -> assets/m_repos_26a86ebfd170.js
+access.js -> assets/m_access_f04a57aa2b1d.js
+activity.js -> assets/m_activity_e84bc76db74d.js
+pipelines.js -> assets/m_pipelines_64478996a506.js
+workitems.js -> assets/m_workitems_e41ff1d6fc10.js
+users.js -> assets/m_users_a63a2805e83e.js
+row-details.js -> assets/m_row-details_56b0ffa20217.js
