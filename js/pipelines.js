@@ -164,50 +164,12 @@ async function fetchPipelineData() {
       return 'Automated System';
     }
 
-    // Get the authoritative Build object. The Build API documents
-    // sourceBranch, requestedBy and requestedFor on the Build response.
-    // This is intentionally called for every returned build because the
-    // list response in some Azure DevOps configurations does not contain
-    // all identity/repository fields needed by the UI.
-    async function getBuildDetails(buildId) {
-      if (!buildId) return null;
-    
-      const url =
-        `https://dev.azure.com/${org}/${project}` +
-        `/_apis/build/builds/${encodeURIComponent(buildId)}` +
-        `?api-version=7.1`;
-    
-      try {
-    
-        const result = await fetchAzDo(
-          url,
-          authHeader
-        );
-    
-        console.log("========================================");
-        console.log("AZURE DEVOPS BUILD DETAIL");
-        console.log("Build ID:", buildId);
-        console.log("Full Response:", result);
-        console.log("sourceBranch:", result?.sourceBranch);
-        console.log("requestedBy:", result?.requestedBy);
-        console.log("requestedFor:", result?.requestedFor);
-        console.log("repository:", result?.repository);
-        console.log("reason:", result?.reason);
-        console.log("========================================");
-    
-        return result;
-    
-      } catch (err) {
-    
-        console.error(
-          `[Azure DevOps Pipeline] Unable to get build details for ${buildId}:`,
-          err
-        );
-    
-        return null;
-    
-      }
-    }
+    // Build list responses already contain the fields needed by the
+    // inventory and run-history UI in normal Azure DevOps responses.
+    // Do NOT call /_apis/build/builds/{id} for every run here: that creates
+    // an N+1 request pattern and makes large projects unnecessarily slow.
+    // Individual build details remain available to the row-details popup
+    // when a user explicitly opens a record.
 
     // Get the individual YAML Pipeline Run. The Run API provides repository
     // refName even when the list response is incomplete.
@@ -265,39 +227,11 @@ async function fetchPipelineData() {
           const bData = await fetchAzDo(bUrl, authHeader);
           runsObtained = bData?.value || [];
 
-          // Build list is the preferred source because it contains
-          // sourceBranch, requestedBy and requestedFor.
-          if (runsObtained.length > 0) {
-            const detailedRuns = await Promise.all(
-              runsObtained.map(async (build) => {
-                const detail = await getBuildDetails(build.id);
-
-                if (!detail) {
-                  return build;
-                }
-
-                return {
-                  ...build,
-                  ...detail,
-                  sourceBranch: detail.sourceBranch || build.sourceBranch,
-                  requestedBy: detail.requestedBy || build.requestedBy,
-                  requestedFor: detail.requestedFor || build.requestedFor,
-                  triggerInfo: detail.triggerInfo || build.triggerInfo,
-                  repository: detail.repository || build.repository,
-                  variables: detail.variables || build.variables,
-                  reason: detail.reason || build.reason,
-                  result: detail.result || build.result,
-                  status: detail.status || build.status,
-                  finishTime: detail.finishTime || build.finishTime,
-                  startTime: detail.startTime || build.startTime,
-                  queueTime: detail.queueTime || build.queueTime,
-                  createdDate: detail.queueTime || build.createdDate
-                };
-              })
-            );
-
-            runsObtained = detailedRuns;
-          }
+          // The list response is the fast path. It already exposes the
+          // build number, branch, reason, identities, queue time and result
+          // for the fields rendered by this workspace.
+          // Keeping these objects intact avoids one extra HTTP request per
+          // build and is the main performance optimization for this view.
 
           // Fallback for pipeline definitions where the Build list does not
           // return runs. The Pipeline Runs API exposes repository refName.
@@ -311,40 +245,35 @@ async function fetchPipelineData() {
             const rData = await fetchAzDo(rUrl, authHeader);
             const rawYamlRuns = (rData?.value || []).slice(0, perPipelineRuns);
 
-            runsObtained = await Promise.all(
-              rawYamlRuns.map(async (yr) => {
-                const detail = await getPipelineRunDetails(pipe.id, yr.id);
-                const run = detail || yr;
-
+            // The Pipeline Runs list is also used directly. The per-run
+            // detail endpoint is intentionally deferred until row-details
+            // is opened by the user.
+            runsObtained = rawYamlRuns.map(run => ({
+              id: run.id,
+              buildNumber: run.name || `#${run.id}`,
+              sourceBranch: (() => {
                 const selfRepo =
                   run?.resources?.repositories?.self ||
                   Object.values(run?.resources?.repositories || {})[0] ||
                   null;
-
-                return {
-                  id: run.id,
-                  buildNumber: run.name || `#${run.id}`,
-                  sourceBranch:
-                    selfRepo?.refName ||
-                    selfRepo?.version ||
-                    run.variables?.['Build.SourceBranch']?.value ||
-                    run.variables?.['Build.SourceBranchName']?.value,
-                  reason:
-                    run.variables?.['Build.Reason']?.value ||
-                    run.reason ||
-                    'manual',
-                  createdBy: run.createdBy,
-                  requestedFor: run.requestedFor,
-                  requestedBy: run.requestedBy,
-                  triggerInfo: run.triggerInfo,
-                  variables: run.variables,
-                  result: run.result || run.state || 'unknown',
-                  finishTime: run.finishedDate || run.createdDate,
-                  startTime: run.startedDate,
-                  queueTime: run.createdDate
-                };
-              })
-            );
+                return selfRepo?.refName || selfRepo?.version ||
+                  run.variables?.['Build.SourceBranch']?.value ||
+                  run.variables?.['Build.SourceBranchName']?.value;
+              })(),
+              reason:
+                run.variables?.['Build.Reason']?.value ||
+                run.reason ||
+                'manual',
+              createdBy: run.createdBy,
+              requestedFor: run.requestedFor,
+              requestedBy: run.requestedBy,
+              triggerInfo: run.triggerInfo,
+              variables: run.variables,
+              result: run.result || run.state || 'unknown',
+              finishTime: run.finishedDate || run.createdDate,
+              startTime: run.startedDate,
+              queueTime: run.createdDate
+            }));
           }
 
           // Process each normalized run.
