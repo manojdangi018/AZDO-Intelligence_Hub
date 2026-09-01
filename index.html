@@ -9,6 +9,16 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="assets/s_c55696c73322.css" />
+
+<style id="phase4-ux-styles">
+.phase4-insight-card{border:1px solid #e2e8f0;border-radius:.75rem;padding:.75rem 1rem;background:linear-gradient(135deg,#f8fafc,#fff);min-height:76px;display:flex;flex-direction:column;justify-content:center}
+.phase4-insight-card span{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8}
+.phase4-insight-card strong{font-size:20px;font-weight:800;color:#0f172a;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phase4-sortable{cursor:pointer;user-select:none;position:relative}
+.phase4-sortable:hover{background:#f1f5f9}
+.phase4-sort-indicator{font-size:9px;margin-left:4px;color:#64748b}
+.phase4-filtered-out{display:none!important}
+</style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
 
@@ -438,24 +448,73 @@ Got it
 </div>
 </div>
 
-<!-- Universal Table Controls -->
-<div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-3">
-<div class="flex items-center gap-2 flex-grow max-w-xl">
-<select id="tableFilterScope" onchange="filterActiveTable()" class="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium">
-  <option value="all">Filter: All Tables</option>
-  <option value="table-repositories">Filter: Repositories &amp; Active Branch</option>
-  <option value="table-policy-branches">Filter: Branches With Policies</option>
-  <option value="table-repo-prs">Filter: Pull Requests</option>
-  <option value="table-users">Filter: Organization &amp; Project Users</option>
-</select>
-
-<input type="text" id="tableFilterInput" oninput="filterActiveTable()" placeholder="Quick filter displayed rows..." class="w-full text-xs border border-slate-300 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+<!-- Universal Table Controls / Phase 4 UX -->
+<div id="tableUxControls" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex flex-wrap items-center gap-2 flex-1">
+      <select id="tableFilterScope" onchange="filterActiveTable(); updateTableUxOptions();" class="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium">
+        <option value="all">Filter: All Tables</option>
+        <option value="table-repositories">Repositories &amp; Active Branch</option>
+        <option value="table-policy-branches">Branches With Policies</option>
+        <option value="table-repo-prs">Pull Requests</option>
+        <option value="table-access">Security Access</option>
+        <option value="table-user-commits">User Commits</option>
+        <option value="table-user-prs">User Pull Requests</option>
+        <option value="table-pipeline-summary">Pipeline Inventory</option>
+        <option value="table-pipelines">Build Runs</option>
+        <option value="table-service-connections">Service Connections</option>
+        <option value="table-agents">Agents</option>
+        <option value="table-users">Organization &amp; Project Users</option>
+        <option value="table-workitems">Work Items</option>
+      </select>
+      <input type="text" id="tableFilterInput" oninput="filterActiveTable()" placeholder="Search all columns..." class="flex-1 min-w-[220px] text-xs border border-slate-300 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+      <select id="tableFilterValue" onchange="filterActiveTable()" class="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium">
+        <option value="">All statuses / values</option>
+      </select>
+    </div>
+    <button type="button" onclick="clearTableUxFilters()" class="text-xs border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold px-3 py-1.5 rounded-md">Clear Filters</button>
+    <button onclick="exportCurrentTableToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition flex items-center gap-2 shadow-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+      Export Full Telemetry (.xlsx)
+    </button>
+  </div>
+  <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+    <span class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Date range</span>
+    <input type="date" id="tableDateFrom" onchange="filterActiveTable()" class="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 text-slate-700" title="Show rows on or after this date" />
+    <span class="text-xs text-slate-400">to</span>
+    <input type="date" id="tableDateTo" onchange="filterActiveTable()" class="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 text-slate-700" title="Show rows on or before this date" />
+    <span class="ml-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Sort</span>
+    <select id="tableSortColumn" onchange="sortActiveTable()" class="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700 min-w-[160px]">
+      <option value="">Select column...</option>
+    </select>
+    <select id="tableSortDirection" onchange="sortActiveTable()" class="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700">
+      <option value="asc">A → Z / Low → High</option>
+      <option value="desc">Z → A / High → Low</option>
+    </select>
+    <span id="tableUxResultCount" class="ml-auto text-xs font-semibold text-slate-500">0 rows shown</span>
+  </div>
 </div>
 
-<button onclick="exportCurrentTableToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition flex items-center gap-2 shadow-sm">
-<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-Export Full Telemetry (.xlsx)
-</button>
+<!-- Advanced Dashboard Insights -->
+<div id="advancedDashboard" class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <div>
+      <h3 class="font-bold text-slate-900 text-sm">Dashboard Insights</h3>
+      <p id="advancedDashboardSubtitle" class="text-xs text-slate-400">Live summary of the active workspace data.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Chart Top</span>
+      <select id="chartTopN" onchange="changeChartTopN(this.value)" class="text-xs border border-slate-300 rounded-md px-2 py-1.5 bg-white text-slate-700">
+        <option value="5">5</option><option value="10" selected>10</option><option value="15">15</option><option value="25">25</option>
+      </select>
+    </div>
+  </div>
+  <div id="advancedDashboardCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="phase4-insight-card"><span>Records Loaded</span><strong id="insight-records">0</strong></div>
+    <div class="phase4-insight-card"><span>Visible After Filter</span><strong id="insight-visible">0</strong></div>
+    <div class="phase4-insight-card"><span>Latest Record</span><strong id="insight-latest">—</strong></div>
+    <div class="phase4-insight-card"><span>Health / Success</span><strong id="insight-health">—</strong></div>
+  </div>
 </div>
 
 <!-- VIEW 1: Repositories, Branches & Pull Requests -->
