@@ -212,6 +212,138 @@
     `).join('');
   }
 
+  function getAzDoAuthContext() {
+    const orgValue = document.getElementById('targetOrg')?.value || '';
+    const pat = document.getElementById('targetPat')?.value?.trim() || '';
+    const org = typeof extractOrgName === 'function' ? extractOrgName(orgValue) : '';
+    if (!org || !pat || typeof fetchAzDo !== 'function') return null;
+    return { org, pat, authHeader: 'Basic ' + btoa(':' + pat) };
+  }
+
+  function getNestedBuildId(request) {
+    if (!request || typeof request !== 'object') return null;
+    const directCandidates = [
+      request.buildId,
+      request.buildID,
+      request.owner?.id,
+      request.definition?.id,
+      request.data?.buildId,
+      request.data?.buildID,
+      request.data?.BuildId,
+      request.data?.build?.id,
+      request.data?.build?.buildId
+    ];
+    for (const candidate of directCandidates) {
+      const n = Number(candidate);
+      if (Number.isInteger(n) && n > 0) return n;
+    }
+    return null;
+  }
+
+  function getRequestPipelineName(request) {
+    return request?.definition?.name || request?.owner?.name || request?.definition?.displayName || request?.owner?.displayName || 'Unknown pipeline';
+  }
+
+  function getRequestTriggerFallback(request) {
+    return request?.requestedBy?.displayName || request?.requestedFor?.displayName || request?.data?.requestedBy || request?.data?.requestedFor || '—';
+  }
+
+  function formatRunDateTime(value) {
+    if (!value) return '—';
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date.toLocaleString() : String(value);
+  }
+
+  function buildAgentRunsTable(runs) {
+    if (!runs.length) {
+      return `<div class="agent-run-empty">No pipeline run history was returned for this agent.</div>`;
+    }
+    const rows = runs.map(run => `
+      <tr>
+        <td>${esc(run.pipelineName)}</td>
+        <td>${esc(run.buildId)}</td>
+        <td>${esc(run.triggeredBy)}</td>
+        <td>${esc(run.dateTime)}</td>
+      </tr>
+    `).join('');
+    return `
+      <div class="agent-run-summary">
+        <span class="agent-run-count">${runs.length}</span>
+        <span>Pipeline run${runs.length === 1 ? '' : 's'} shown</span>
+      </div>
+      <div class="agent-run-table-wrap">
+        <table class="agent-run-table">
+          <thead><tr><th>Pipeline Name</th><th>Build ID</th><th>Triggered By</th><th>Date &amp; Time</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  async function fetchAgentPipelineRuns(agentRow) {
+    const context = getAzDoAuthContext();
+    if (!context || !agentRow?.poolId || !agentRow?.agentId) {
+      return { runs: [], error: 'Agent history is unavailable because the agent identifier or Azure DevOps connection is missing.' };
+    }
+
+    const apiVersion = typeof AZDO_STABLE_API_VERSION !== 'undefined' ? AZDO_STABLE_API_VERSION : '7.1';
+    const url = `https://dev.azure.com/${encodeURIComponent(context.org)}/_apis/distributedtask/pools/${encodeURIComponent(agentRow.poolId)}/jobrequests?agentId=${encodeURIComponent(agentRow.agentId)}&completedRequestCount=25&api-version=${apiVersion}`;
+
+    try {
+      // The jobrequests endpoint exposes recent jobs assigned to a specific agent.
+      // It is used only when the user opens an Agent row, so existing fetch volume
+      // and the main Agent workspace behaviour remain unchanged.
+      const data = await fetchAzDo(url, context.authHeader);
+      const requests = Array.isArray(data?.value) ? data.value : [];
+
+      const project = document.getElementById('projectSelect')?.value?.trim() || '';
+      const buildIds = [...new Set(requests.map(getNestedBuildId).filter(Boolean))];
+      let buildsById = new Map();
+
+      // Build details provide the authoritative pipeline name, requested/triggering
+      // identity and final run time. The Build List API supports multiple build IDs.
+      if (project && buildIds.length) {
+        try {
+          const buildUrl = `https://dev.azure.com/${encodeURIComponent(context.org)}/${encodeURIComponent(project)}/_apis/build/builds?buildIds=${buildIds.join(',')}&api-version=7.1`;
+          const buildData = await fetchAzDo(buildUrl, context.authHeader);
+          buildsById = new Map((buildData?.value || []).map(build => [Number(build.id), build]));
+        } catch (buildError) {
+          console.warn('Could not enrich agent job requests with build details:', buildError);
+        }
+      }
+
+      const runs = requests.map(request => {
+        const buildId = getNestedBuildId(request);
+        const build = buildId ? buildsById.get(buildId) : null;
+        const pipelineName = build?.definition?.name || getRequestPipelineName(request);
+        const triggeredBy = build?.requestedBy?.displayName || build?.requestedFor?.displayName || getRequestTriggerFallback(request);
+        const dateValue = build?.finishTime || build?.startTime || request.finishTime || request.assignTime || request.queueTime;
+        return {
+          pipelineName,
+          buildId: buildId || '—',
+          triggeredBy,
+          dateTime: formatRunDateTime(dateValue),
+          timestamp: dateValue ? new Date(dateValue).getTime() : 0,
+          status: build?.result || request.result || request.statusMessage || '—'
+        };
+      }).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      // Remove exact duplicate requests/builds while retaining the newest record.
+      const seen = new Set();
+      const uniqueRuns = runs.filter(run => {
+        const key = `${run.buildId}|${run.pipelineName}|${run.dateTime}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      return { runs: uniqueRuns };
+    } catch (error) {
+      console.warn(`Could not fetch pipeline history for agent ${agentRow.name}:`, error);
+      return { runs: [], error: error.message || 'Unable to load pipeline run history.' };
+    }
+  }
+
   function getAzDoUrl(type, row) {
     const org = typeof extractOrgName === 'function'
       ? extractOrgName(document.getElementById('targetOrg')?.value || '')
@@ -299,7 +431,7 @@
 
   let currentDetail = null;
 
-  function openDataDetail(type, index) {
+  async function openDataDetail(type, index) {
     ensureModal();
     const store = typeof window.__getAzdoRawStore === 'function' ? window.__getAzdoRawStore() : null;
     const row = store?.[detailStoreKey(type)]?.[Number(index)];
@@ -338,12 +470,23 @@
       </div>
     `;
 
-    document.getElementById('dataDetailDetails').innerHTML = `
-      <div class="detail-section-card">
-        <div class="detail-section-heading"><span class="detail-section-icon">⌁</span> Additional Details</div>
-        <div class="detail-grid">${fieldGrid(fields.secondary.length ? fields.secondary : [['Record Type', typeLabel]])}</div>
-      </div>
-    `;
+    if (type === 'agent') {
+      document.getElementById('dataDetailDetails').innerHTML = `
+        <div class="detail-section-card agent-runs-card">
+          <div class="detail-section-heading"><span class="detail-section-icon">⌁</span> Pipeline Run History</div>
+          <div id="agentPipelineRunsContent" class="agent-runs-content">
+            <div class="agent-run-loading"><span class="agent-run-spinner"></span> Loading recent pipeline runs for this agent...</div>
+          </div>
+        </div>
+      `;
+    } else {
+      document.getElementById('dataDetailDetails').innerHTML = `
+        <div class="detail-section-card">
+          <div class="detail-section-heading"><span class="detail-section-icon">⌁</span> Additional Details</div>
+          <div class="detail-grid">${fieldGrid(fields.secondary.length ? fields.secondary : [['Record Type', typeLabel]])}</div>
+        </div>
+      `;
+    }
 
     document.getElementById('dataDetailJsonPre').textContent = JSON.stringify(row, null, 2);
     switchDataDetailTab('overview');
@@ -352,6 +495,18 @@
     modal.classList.remove('hidden');
     requestAnimationFrame(() => modal.classList.add('is-open'));
     document.body.classList.add('data-detail-open');
+
+    if (type === 'agent') {
+      const detailSnapshot = currentDetail;
+      const result = await fetchAgentPipelineRuns(row);
+      // Do not update a closed/replaced popup with stale asynchronous results.
+      if (currentDetail !== detailSnapshot) return;
+      const target = document.getElementById('agentPipelineRunsContent');
+      if (!target) return;
+      target.innerHTML = result.error
+        ? `<div class="agent-run-error">${esc(result.error)}</div>`
+        : buildAgentRunsTable(result.runs);
+    }
   }
 
   function detailStoreKey(type) {

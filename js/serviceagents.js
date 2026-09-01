@@ -131,6 +131,7 @@ async function fetchAgentsForPools(org, authHeader, pools, options = {}) {
         poolName: pool.name || `Pool ${pool.id}`,
         isHosted: 'No',
         poolType: pool.poolType || '—',
+        agentId: agent.id ?? null,
         name: agent.name || '—',
         status: agent.status || '—',
         enabled: agent.enabled === true ? 'Yes' : agent.enabled === false ? 'No' : '—',
@@ -138,6 +139,8 @@ async function fetchAgentsForPools(org, authHeader, pools, options = {}) {
         version: agent.version || '—',
         createdOn: agent.createdOn ? new Date(agent.createdOn).toLocaleString() : '—',
         rawCreatedTimestamp: agent.createdOn ? new Date(agent.createdOn).getTime() : null,
+        assignedRequest: agent.assignedRequest || null,
+        lastCompletedRequest: agent.lastCompletedRequest || null,
         projectScoped
       }));
     } catch (error) {
