@@ -67,6 +67,7 @@ if (['tbody', 'thead', 'tfoot'].includes(tag)) {
   const template = document.createElement('template');
   template.innerHTML = source;
   root = template.content;
+  host = template;
 }
 
 const blockedTags = [
@@ -99,7 +100,7 @@ root.querySelectorAll('*').forEach(node => {
   });
 });
 
-return root.innerHTML;
+return host && typeof host.innerHTML === 'string' ? host.innerHTML : root.innerHTML;
 }
 
 function setSafeInnerHTML(element, html) {
