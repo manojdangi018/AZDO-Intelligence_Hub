@@ -1,6 +1,3 @@
-function escapeHtml(value) {
-return String(value ?? '').replace(/[&<>'"`]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;','`':'&#96;'}[ch]));
-}
 function displayIdentity(identity) {
 if (!identity) return '—';
 return identity.displayName || identity.uniqueName || identity.providerDisplayName || identity.id || '—';
@@ -203,11 +200,11 @@ const scopeProject = getServiceAgentsProject();
 const pat = document.getElementById('targetPat').value.trim();
 if (!org) return showModal('Please enter the Organization Name or URL first.', 'targetOrg');
 if (!pat) return showModal('Please enter your Personal Access Token (PAT).', 'targetPat');
-const authHeader = 'Basic ' + btoa(':' + pat);
+const authHeader = createBasicAuthHeader(pat);
 const serviceBody = document.getElementById('serviceConnectionsTableBody');
 const agentsBody = document.getElementById('agentsTableBody');
-if (serviceBody) serviceBody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">Loading service connections...</td></tr>';
-if (agentsBody) agentsBody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-400">Loading agent pools and agents...</td></tr>';
+if (serviceBody) setSafeInnerHTML(serviceBody, '<tr><td colspan="6" class="p-4 text-center text-slate-400">Loading service connections...</td></tr>');
+if (agentsBody) setSafeInnerHTML(agentsBody, '<tr><td colspan="9" class="p-4 text-center text-slate-400">Loading agent pools and agents...</td></tr>');
 updateServiceAgentsScopeText();
 const scopeText = scopeProject ? `project ${scopeProject}` : 'organization-wide';
 startFetching(`Fetching ${scopeText} service connections, agent pools and agents...`);
@@ -249,8 +246,8 @@ stopFetching();
 setStatus(`Loaded ${serviceConnections.length} service connections, ${pools.length} ${projectScoped ? 'project-connected' : 'organization'} agent pools, ${realAgentCount} self-hosted agents and ${hostedPoolCount} Microsoft-hosted pools (${scopeText}).`, 'success');
 } catch (error) {
 stopFetching();
-if (serviceBody) serviceBody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`;
-if (agentsBody) agentsBody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`;
+if (serviceBody) setSafeInnerHTML(serviceBody, `<tr><td colspan="7" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`);
+if (agentsBody) setSafeInnerHTML(agentsBody, `<tr><td colspan="9" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`);
 setStatus(`Error fetching service connections and agents: ${error.message}`, 'error');
 }
 }
@@ -262,25 +259,25 @@ if (!body) return;
 const data = rawStore.serviceConnections || [];
 const start = loadMore ? rawStore.serviceConnectionsIndex : 0;
 const end = Math.min(start + PAGE_SIZE, data.length);
-if (!loadMore) body.innerHTML = '';
+if (!loadMore) setSafeInnerHTML(body, '');
 data.slice(start, end).forEach((s, rowOffset) => {
 const row = document.createElement('tr');
 row.dataset.detailType = 'service-connection';
 row.dataset.detailIndex = String(start + rowOffset);
-row.innerHTML = `
+setSafeInnerHTML(row, `
 <td class="p-4 font-medium text-slate-800">${escapeHtml(s.name)}</td>
 <td class="p-4">${escapeHtml(s.type)}</td>
 <td class="p-4 max-w-[320px] truncate" title="${escapeHtml(s.url)}">${escapeHtml(s.url)}</td>
 <td class="p-4">${statusBadge(s.status)}</td>
 <td class="p-4">${escapeHtml(s.isShared)}</td>
-<td class="p-4">${escapeHtml(s.createdBy)}</td>`;
+<td class="p-4">${escapeHtml(s.createdBy)}</td>`);
 body.appendChild(row);
 });
 rawStore.serviceConnectionsIndex = end;
 const remaining = Math.max(0, data.length - end);
 if (count) count.textContent = remaining;
 if (container) container.classList.toggle('hidden', remaining === 0);
-if (!data.length) body.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">No service connections found for the selected scope.</td></tr>';
+if (!data.length) setSafeInnerHTML(body, '<tr><td colspan="6" class="p-4 text-center text-slate-400">No service connections found for the selected scope.</td></tr>');
 }
 function renderAgentsTableBatch(loadMore = false) {
 const body = document.getElementById('agentsTableBody');
@@ -290,12 +287,12 @@ if (!body) return;
 const data = rawStore.agents || [];
 const start = loadMore ? rawStore.agentsIndex : 0;
 const end = Math.min(start + PAGE_SIZE, data.length);
-if (!loadMore) body.innerHTML = '';
+if (!loadMore) setSafeInnerHTML(body, '');
 data.slice(start, end).forEach((a, rowOffset) => {
 const row = document.createElement('tr');
 row.dataset.detailType = 'agent';
 row.dataset.detailIndex = String(start + rowOffset);
-row.innerHTML = `
+setSafeInnerHTML(row, `
 <td class="p-4 font-medium text-slate-800">${escapeHtml(a.poolName)}</td>
 <td class="p-4">${escapeHtml(a.isHosted)}</td>
 <td class="p-4">${escapeHtml(a.poolType)}</td>
@@ -304,14 +301,14 @@ row.innerHTML = `
 <td class="p-4">${escapeHtml(a.enabled)}</td>
 <td class="p-4">${escapeHtml(a.os)}</td>
 <td class="p-4">${escapeHtml(a.version)}</td>
-<td class="p-4">${escapeHtml(a.createdOn)}</td>`;
+<td class="p-4">${escapeHtml(a.createdOn)}</td>`);
 body.appendChild(row);
 });
 rawStore.agentsIndex = end;
 const remaining = Math.max(0, data.length - end);
 if (count) count.textContent = remaining;
 if (container) container.classList.toggle('hidden', remaining === 0);
-if (!data.length) body.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-400">No agents or connected hosted pools found in the selected scope.</td></tr>';
+if (!data.length) setSafeInnerHTML(body, '<tr><td colspan="9" class="p-4 text-center text-slate-400">No agents or connected hosted pools found in the selected scope.</td></tr>');
 }
 function exportServiceConnectionsToXLSX() {
 const data = (rawStore.serviceConnections || []).map(s => ({

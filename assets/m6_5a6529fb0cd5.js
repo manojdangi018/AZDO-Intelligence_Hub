@@ -11,7 +11,7 @@ return showModal('Please select a project first.', 'projectSelect');
 if (!rawQuery) {
 return showModal('Please enter a User Email or Name to search.', 'targetUserQuery');
 }
-const authHeader = 'Basic ' + btoa(':' + pat);
+const authHeader = createBasicAuthHeader(pat);
 showSection('activity');
 startFetching(`Searching activity in project "${selectedProject}" for "${rawQuery}"...`);
 const queryLower = rawQuery.toLowerCase();
@@ -155,8 +155,7 @@ document.getElementById('kpi-4-val').textContent = userPRs.length;
 document.getElementById('kpi-5-label').textContent = 'Status';
 document.getElementById('kpi-5-val').textContent = userCommits.length > 0 ? 'Active' : 'No Commits';
 renderCommitsTableBatch(false);
-document.getElementById('userPrTableBody').innerHTML =
-userPRs.length === 0
+setSafeInnerHTML(document.getElementById('userPrTableBody'), userPRs.length === 0
 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">No pull requests found for "${rawQuery}" in project ${selectedProject}.</td></tr>`
 : userPRs
 .map(
@@ -172,7 +171,7 @@ pr.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-bl
 </tr>
 `
 )
-.join('');
+.join(''));
 const repoCommitMap = {};
 userCommits.forEach((c) => {
 repoCommitMap[c.repo] = (repoCommitMap[c.repo] || 0) + 1;
@@ -196,9 +195,9 @@ function renderCommitsTableBatch(append = false) {
 const tbody = document.getElementById('userCommitsTableBody');
 const container = document.getElementById('seeMoreCommitsContainer');
 const remainingEl = document.getElementById('commitsRemainingCount');
-if (!append) tbody.innerHTML = '';
+if (!append) setSafeInnerHTML(tbody, '');
 if (rawStore.commits.length === 0) {
-tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No commits found in this project for the selected timeframe.</td></tr>`;
+setSafeInnerHTML(tbody, `<tr><td colspan="5" class="p-4 text-center text-slate-400">No commits found in this project for the selected timeframe.</td></tr>`);
 if (container) container.classList.add('hidden');
 return;
 }
@@ -221,7 +220,7 @@ const html = nextBatch
 `
 )
 .join('');
-tbody.insertAdjacentHTML('beforeend', html);
+insertSafeAdjacentHTML(tbody, 'beforeend', html);
 const remaining = rawStore.commits.length - rawStore.commitsIndex;
 if (remaining > 0) {
 if (container) container.classList.remove('hidden');

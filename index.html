@@ -76,14 +76,14 @@ Got it
 <div class="field-group">
 <label>Personal Access Token <span>*</span></label>
 <input type="password" id="targetPat" placeholder="Enter PAT token">
-<small>PAT is used only from this browser session to call Azure DevOps APIs.</small>
+<small>PAT is used only in memory for this browser session and is never saved to browser storage.</small>
 </div>
 
 <div class="flex flex-col gap-2.5">
 <button id="btnLoadProjects" onclick="loadProjectsList()" class="btn-load-projects">Load projects</button>
 <label class="remember-toggle">
 <input type="checkbox" id="chkRememberCreds" onchange="toggleRememberCreds()">
-<span>Remember organization &amp; credentials</span>
+<span>Remember organization only</span>
 </label>
 </div>
 

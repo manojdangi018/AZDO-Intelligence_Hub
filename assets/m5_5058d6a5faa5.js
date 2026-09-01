@@ -3,7 +3,7 @@ const org = extractOrgName(document.getElementById('targetOrg').value);
 const project = document.getElementById('projectSelect').value;
 const pat = document.getElementById('targetPat').value.trim();
 const userQuery = document.getElementById('targetAccessUserQuery').value.trim().toLowerCase();
-const authHeader = 'Basic ' + btoa(':' + pat);
+const authHeader = createBasicAuthHeader(pat);
 showSection('access');
 startFetching(userQuery ? `Scanning groups and teams for "${userQuery}"...` : `Fetching all project security groups, teams, and members...`);
 let accessRows = [];
@@ -161,9 +161,9 @@ function renderAccessTableBatch(append = false) {
 const tbody = document.getElementById('accessTableBody');
 const container = document.getElementById('seeMoreAccessContainer');
 const remainingEl = document.getElementById('accessRemainingCount');
-if (!append) tbody.innerHTML = '';
+if (!append) setSafeInnerHTML(tbody, '');
 if (rawStore.access.length === 0) {
-tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">No security groups or team memberships found.</td></tr>`;
+setSafeInnerHTML(tbody, `<tr><td colspan="4" class="p-4 text-center text-slate-400">No security groups or team memberships found.</td></tr>`);
 container.classList.add('hidden');
 return;
 }
@@ -178,7 +178,7 @@ const html = nextBatch.map((a, rowIndex) => `
 <td class="p-4 text-xs font-mono text-slate-600">${a.email}</td>
 </tr>
 `).join('');
-tbody.insertAdjacentHTML('beforeend', html);
+insertSafeAdjacentHTML(tbody, 'beforeend', html);
 const remaining = rawStore.access.length - rawStore.accessIndex;
 if (remaining > 0) {
 container.classList.remove('hidden');

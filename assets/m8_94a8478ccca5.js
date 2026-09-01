@@ -3,7 +3,7 @@ const org = extractOrgName(document.getElementById('targetOrg').value);
 const project = document.getElementById('projectSelect').value;
 const pat = document.getElementById('targetPat').value.trim();
 const targetUser = document.getElementById('targetWorkItemUser').value.trim();
-const authHeader = 'Basic ' + btoa(':' + pat);
+const authHeader = createBasicAuthHeader(pat);
 showSection('workitems');
 startFetching(targetUser ? `Querying work items assigned to "${targetUser}"...` : `Querying all active work items and sprint status...`);
 try {
@@ -12,7 +12,7 @@ if (targetUser) {
 wiql += ` AND [System.AssignedTo] CONTAINS '${targetUser.replace(/'/g, "''")}'`;
 }
 wiql += ` ORDER BY [System.ChangedDate] DESC`;
-const queryUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/wit/wiql?api-version=7.0`;
+const queryUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/wit/wiql?api-version=${AZDO_API_VERSION}`;
 let queryRes;
 try {
 queryRes = await fetchAzDo(queryUrl, authHeader, {
@@ -20,8 +20,14 @@ method: 'POST',
 body: JSON.stringify({ query: wiql })
 });
 } catch (e) {
-const fallbackWiql = `SELECT [System.Id] FROM workitems WHERE [System.TeamProject] = '${project.replace(/'/g, "''")}' ORDER BY [System.ChangedDate] DESC`;
-queryRes = await fetchAzDo(`https://dev.azure.com/${org}/_apis/wit/wiql?api-version=7.0`, authHeader, {
+const fallbackProject = project.replace(/'/g, "''");
+const fallbackUser = targetUser.replace(/'/g, "''");
+let fallbackWiql = `SELECT [System.Id] FROM workitems WHERE [System.TeamProject] = '${fallbackProject}'`;
+if (targetUser) {
+fallbackWiql += ` AND [System.AssignedTo] CONTAINS '${fallbackUser}'`;
+}
+fallbackWiql += ` ORDER BY [System.ChangedDate] DESC`;
+queryRes = await fetchAzDo(`https://dev.azure.com/${org}/_apis/wit/wiql?api-version=${AZDO_API_VERSION}`, authHeader, {
 method: 'POST',
 body: JSON.stringify({ query: fallbackWiql })
 });
@@ -29,14 +35,14 @@ body: JSON.stringify({ query: fallbackWiql })
 const wiList = queryRes.workItems || [];
 const wiIds = wiList.slice(0, 200).map(w => w.id);
 if (wiIds.length === 0) {
-document.getElementById('workItemsTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No work items found in project "${project}".</td></tr>`;
+setSafeInnerHTML(document.getElementById('workItemsTableBody'), `<tr><td colspan="6" class="p-4 text-center text-slate-400">No work items found in project "${project}".</td></tr>`);
 document.getElementById('seeMoreWorkItemsContainer').classList.add('hidden');
 renderChart([], [], 'Work Item States');
 setStatus(`No work items found matching criteria.`, 'info');
 return;
 }
 const fields = 'System.Id,System.Title,System.WorkItemType,System.State,System.AssignedTo,System.IterationPath,System.CreatedDate,System.ChangedDate';
-const detailsUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/wit/workitems?ids=${wiIds.join(',')}&fields=${fields}&api-version=7.0`;
+const detailsUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/wit/workitems?ids=${wiIds.join(',')}&fields=${fields}&api-version=${AZDO_API_VERSION}`;
 const detailsData = await fetchAzDo(detailsUrl, authHeader);
 const workItems = detailsData.value || [];
 let stateCounts = {};
@@ -105,9 +111,9 @@ function renderWorkItemsTableBatch(append = false) {
 const tbody = document.getElementById('workItemsTableBody');
 const container = document.getElementById('seeMoreWorkItemsContainer');
 const remainingEl = document.getElementById('workItemsRemainingCount');
-if (!append) tbody.innerHTML = '';
+if (!append) setSafeInnerHTML(tbody, '');
 if (rawStore.workitems.length === 0) {
-tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No work items found.</td></tr>`;
+setSafeInnerHTML(tbody, `<tr><td colspan="6" class="p-4 text-center text-slate-400">No work items found.</td></tr>`);
 container.classList.add('hidden');
 return;
 }
@@ -131,7 +137,7 @@ const html = nextBatch.map((r, rowIndex) => `
 <td class="p-4 text-xs text-slate-500">${r.createdDate}</td>
 </tr>
 `).join('');
-tbody.insertAdjacentHTML('beforeend', html);
+insertSafeAdjacentHTML(tbody, 'beforeend', html);
 const remaining = rawStore.workitems.length - rawStore.workitemsIndex;
 if (remaining > 0) {
 container.classList.remove('hidden');

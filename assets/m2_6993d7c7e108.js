@@ -12,7 +12,6 @@ let activeViewSection = 'view-repositories';
 let activeCategory = 'repositories';
 const PAGE_SIZE = 10;
 const PIPELINE_PAGE_SIZE = 25;
-const AZDO_STABLE_API_VERSION = '7.1';
 let rawStore = {
 repos: [], repoIndex: 0,
 repoPrs: [], repoPrsIndex: 0,
@@ -235,22 +234,16 @@ linkEl.removeAttribute('target');
 }
 function initCredentials() {
 const savedOrg = localStorage.getItem('azdo_org');
-const savedPat = localStorage.getItem('azdo_pat');
 if (savedOrg) document.getElementById('targetOrg').value = savedOrg;
-if (savedPat) {
-document.getElementById('targetPat').value = savedPat;
-document.getElementById('chkRememberCreds').checked = true;
-}
+if (savedOrg) document.getElementById('chkRememberCreds').checked = true;
 handleOrgChange();
 }
 function toggleRememberCreds() {
 const isChecked = document.getElementById('chkRememberCreds').checked;
 if (isChecked) {
 localStorage.setItem('azdo_org', document.getElementById('targetOrg').value.trim());
-localStorage.setItem('azdo_pat', document.getElementById('targetPat').value.trim());
 } else {
 localStorage.removeItem('azdo_org');
-localStorage.removeItem('azdo_pat');
 }
 }
 function handleOrgChange() {
@@ -268,7 +261,7 @@ setConnectionBadge(false);
 }
 function resetDropdown(id, placeholder) {
 const el = document.getElementById(id);
-el.innerHTML = `<option value="">${placeholder}</option>`;
+setSafeInnerHTML(el, `<option value="">${placeholder}</option>`);
 el.disabled = true;
 el.classList.add('bg-slate-100', 'cursor-not-allowed');
 el.classList.remove('bg-white');
@@ -292,16 +285,15 @@ loadBtn.classList.add('loading');
 }
 if (document.getElementById('chkRememberCreds').checked) {
 localStorage.setItem('azdo_org', org);
-localStorage.setItem('azdo_pat', pat);
 }
-const authHeader = 'Basic ' + btoa(':' + pat);
+const authHeader = createBasicAuthHeader(pat);
 setStatus(`Loading projects from https://dev.azure.com/${org}...`, 'info');
 try {
 const url = `https://dev.azure.com/${org}/_apis/projects?api-version=${API_VERSION}&$top=500`;
 const data = await fetchAzDo(url, authHeader);
 const projects = data.value || [];
 const projDropdown = document.getElementById('projectSelect');
-projDropdown.innerHTML = '<option value="">-- Select a Project --</option>';
+setSafeInnerHTML(projDropdown, '<option value="">-- Select a Project --</option>');
 projects.forEach(p => {
 const opt = document.createElement('option');
 opt.value = p.name;
@@ -313,7 +305,6 @@ updateProjectRequirementUI();
 document.getElementById('step5Container').classList.add('hidden');
 sessionStorage.setItem('azdo_workspace_active', 'true');
 sessionStorage.setItem('azdo_session_org', org);
-sessionStorage.setItem('azdo_session_pat', pat);
 setConnectionBadge(true);
 showWorkspacePage();
 const projStatus = document.getElementById('projectStatusMsg');
@@ -398,7 +389,7 @@ if (typeof updateServiceAgentsScopeText === 'function') updateServiceAgentsScope
 const projectBadge = document.getElementById('overviewProjectBadge');
 if (projectBadge) projectBadge.textContent = project || '—';
 sessionStorage.setItem('azdo_session_project', project);
-const authHeader = 'Basic ' + btoa(':' + pat);
+const authHeader = createBasicAuthHeader(pat);
 try {
 const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories?api-version=${API_VERSION}`;
 const data = await fetchAzDo(url, authHeader);
@@ -526,19 +517,19 @@ document.getElementById('kpi-4-label').textContent = 'Active PRs';
 document.getElementById('kpi-4-val').textContent = '0';
 document.getElementById('kpi-5-label').textContent = 'Completed PRs';
 document.getElementById('kpi-5-val').textContent = '0';
-document.getElementById('branchesTableBody').innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`;
-document.getElementById('policyBranchesTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`;
-document.getElementById('repoPrsTableBody').innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`;
-document.getElementById('accessTableBody').innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Enter a User ID or click "Fetch User Access" to load access permissions.</td></tr>`;
-document.getElementById('userCommitsTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">Enter a user email/ID and click search.</td></tr>`;
-document.getElementById('userPrTableBody').innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No pull request activity loaded.</td></tr>`;
-document.getElementById('pipelineSummaryTableBody').innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">Click "Fetch Pipeline Runs" to scan pipeline definitions.</td></tr>`;
-document.getElementById('pipelineTableBody').innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No build runs loaded.</td></tr>`;
-document.getElementById('workItemsTableBody').innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Query work items to view backlog.</td></tr>`;
+setSafeInnerHTML(document.getElementById('branchesTableBody'), `<tr><td colspan="7" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`);
+setSafeInnerHTML(document.getElementById('policyBranchesTableBody'), `<tr><td colspan="6" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`);
+setSafeInnerHTML(document.getElementById('repoPrsTableBody'), `<tr><td colspan="7" class="p-4 text-center text-slate-400">Select a project & repository to inspect.</td></tr>`);
+setSafeInnerHTML(document.getElementById('accessTableBody'), `<tr><td colspan="4" class="p-4 text-center text-slate-400">Enter a User ID or click "Fetch User Access" to load access permissions.</td></tr>`);
+setSafeInnerHTML(document.getElementById('userCommitsTableBody'), `<tr><td colspan="5" class="p-4 text-center text-slate-400">Enter a user email/ID and click search.</td></tr>`);
+setSafeInnerHTML(document.getElementById('userPrTableBody'), `<tr><td colspan="5" class="p-4 text-center text-slate-400">No pull request activity loaded.</td></tr>`);
+setSafeInnerHTML(document.getElementById('pipelineSummaryTableBody'), `<tr><td colspan="7" class="p-4 text-center text-slate-400">Click "Fetch Pipeline Runs" to scan pipeline definitions.</td></tr>`);
+setSafeInnerHTML(document.getElementById('pipelineTableBody'), `<tr><td colspan="7" class="p-4 text-center text-slate-400">No build runs loaded.</td></tr>`);
+setSafeInnerHTML(document.getElementById('workItemsTableBody'), `<tr><td colspan="6" class="p-4 text-center text-slate-400">Query work items to view backlog.</td></tr>`);
 const serviceConnectionsBody = document.getElementById('serviceConnectionsTableBody');
-if (serviceConnectionsBody) serviceConnectionsBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load service connections.</td></tr>`;
+if (serviceConnectionsBody) setSafeInnerHTML(serviceConnectionsBody, `<tr><td colspan="6" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load service connections.</td></tr>`);
 const agentsBody = document.getElementById('agentsTableBody');
-if (agentsBody) agentsBody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load agent pools and agents.</td></tr>`;
+if (agentsBody) setSafeInnerHTML(agentsBody, `<tr><td colspan="9" class="p-4 text-center text-slate-400">Click "Fetch Connections &amp; Agents" to load agent pools and agents.</td></tr>`);
 ['seeMoreRepoContainer', 'seeMorePolicyBranchesContainer', 'seeMoreRepoPrsContainer', 'seeMoreAccessContainer', 'seeMoreCommitsContainer', 'seeMorePipelineSummaryContainer', 'seeMorePipelinesContainer', 'seeMoreWorkItemsContainer', 'seeMoreServiceConnectionsContainer', 'seeMoreAgentsContainer'].forEach(id => {
 const el = document.getElementById(id);
 if (el) el.classList.add('hidden');
@@ -547,7 +538,6 @@ renderChart([], [], 'Overview');
 setConnectionBadge(false);
 sessionStorage.removeItem('azdo_workspace_active');
 sessionStorage.removeItem('azdo_session_org');
-sessionStorage.removeItem('azdo_session_pat');
 sessionStorage.removeItem('azdo_session_project');
 sessionStorage.removeItem('azdo_session_category');
 const loadBtn = document.getElementById('btnLoadProjects');
@@ -700,6 +690,20 @@ const wiData = (rawStore.workitems || []).map(w => ({
 exportToExcelFile({ "Work Items": wiData }, "AzureDevOps_WorkItems");
 }
 }
+function exportAccessToXLSX() {
+const accessData = (rawStore.access || []).map(a => ({
+"Team / Group Name": a.team,
+"Type / Scope": a.type,
+"User Display Name": a.name,
+"User Principal / Email": a.email
+}));
+if (!accessData.length) {
+if (typeof showModal === 'function') showModal('No access and permission records are available to export.');
+return;
+}
+exportToExcelFile({ "Access & Permissions": accessData }, "AzureDevOps_Security_Access");
+}
+
 function changeChartType(type) {
 currentChartType = type.toLowerCase() === 'pie' ? 'pie' : type;
 renderChart(currentChartData.labels, currentChartData.values, currentChartData.label);
@@ -781,31 +785,21 @@ initCredentials();
 const workspaceActive = sessionStorage.getItem('azdo_workspace_active');
 if (workspaceActive === 'true') {
 const savedOrg = sessionStorage.getItem('azdo_session_org');
-const savedPat = sessionStorage.getItem('azdo_session_pat');
 const savedProject = sessionStorage.getItem('azdo_session_project');
 const savedCategory = sessionStorage.getItem('azdo_session_category');
+if (savedOrg) document.getElementById('targetOrg').value = savedOrg;
+if (savedCategory) activeCategory = savedCategory;
+// PATs are deliberately never restored from browser storage. The user must re-enter it.
 if (savedOrg) {
-document.getElementById('targetOrg').value = savedOrg;
+handleOrgChange();
+setStatus('Previous workspace details were found, but the PAT was not stored. Re-enter your PAT to reconnect.', 'info');
 }
-if (savedPat) {
-document.getElementById('targetPat').value = savedPat;
-}
-if (savedCategory) {
-activeCategory = savedCategory;
-}
-if (savedOrg && savedPat) {
-await loadProjectsList();
 if (savedProject) {
 const projectSelect = document.getElementById('projectSelect');
-if (projectSelect) {
-projectSelect.value = savedProject;
+if (projectSelect) projectSelect.value = savedProject;
 }
-await handleProjectSelection();
-}
-if (savedCategory) {
-selectExplore(savedCategory);
-}
-}
+if (savedCategory) selectExplore(savedCategory);
+showConnectionPage();
 } else {
 selectExplore('repositories');
 }

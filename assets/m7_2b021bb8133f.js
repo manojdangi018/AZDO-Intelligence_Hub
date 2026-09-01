@@ -3,7 +3,7 @@ const org = extractOrgName(document.getElementById('targetOrg').value);
 const project = document.getElementById('projectSelect').value;
 const pat = document.getElementById('targetPat').value.trim();
 const perPipelineRuns = parseInt(document.getElementById('pipelineRunsTop').value, 10) || 20;
-const authHeader = 'Basic ' + btoa(':' + pat);
+const authHeader = createBasicAuthHeader(pat);
 showSection('pipelines');
 startFetching(`Scanning pipeline definitions and recent runs in descending order...`);
 try {
@@ -135,7 +135,7 @@ if (!pipelineId || !runId) return null;
 const url =
 `https://dev.azure.com/${org}/${project}` +
 `/_apis/pipelines/${encodeURIComponent(pipelineId)}/runs/${encodeURIComponent(runId)}` +
-`?api-version=7.1`;
+`?api-version=${AZDO_API_VERSION}`;
 try {
 return await fetchAzDo(url, authHeader);
 } catch (err) {
@@ -171,7 +171,7 @@ const bUrl =
 `?definitions=${encodeURIComponent(pipe.id)}` +
 `&$top=${perPipelineRuns}` +
 `&queryOrder=queueTimeDescending` +
-`&api-version=7.1`;
+`&api-version=${AZDO_API_VERSION}`;
 const bData = await fetchAzDo(bUrl, authHeader);
 runsObtained = bData?.value || [];
 if (runsObtained.length === 0) {
@@ -179,7 +179,7 @@ const rUrl =
 `https://dev.azure.com/${org}/${project}` +
 `/_apis/pipelines/${encodeURIComponent(pipe.id)}/runs` +
 `?$top=${perPipelineRuns}` +
-`&api-version=7.1`;
+`&api-version=${AZDO_API_VERSION}`;
 const rData = await fetchAzDo(rUrl, authHeader);
 const rawYamlRuns = (rData?.value || []).slice(0, perPipelineRuns);
 runsObtained = rawYamlRuns.map(run => ({
@@ -332,9 +332,9 @@ const tbody = document.getElementById('pipelineSummaryTableBody');
 const container = document.getElementById('seeMorePipelineSummaryContainer');
 const remainingEl = document.getElementById('pipelineSummaryRemainingCount');
 if (!tbody) return;
-if (!append) tbody.innerHTML = '';
+if (!append) setSafeInnerHTML(tbody, '');
 if (rawStore.pipelineSummaries.length === 0) {
-tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No pipelines found.</td></tr>`;
+setSafeInnerHTML(tbody, `<tr><td colspan="7" class="p-4 text-center text-slate-400">No pipelines found.</td></tr>`);
 container.classList.add('hidden');
 return;
 }
@@ -357,7 +357,7 @@ return `
 </tr>
 `;
 }).join('');
-tbody.insertAdjacentHTML('beforeend', html);
+insertSafeAdjacentHTML(tbody, 'beforeend', html);
 const remaining = rawStore.pipelineSummaries.length - rawStore.pipelineSummariesIndex;
 if (remaining > 0) {
 container.classList.remove('hidden');
@@ -370,9 +370,9 @@ function renderPipelineTableBatch(append = false) {
 const tbody = document.getElementById('pipelineTableBody');
 const container = document.getElementById('seeMorePipelinesContainer');
 const remainingEl = document.getElementById('pipelinesRemainingCount');
-if (!append) tbody.innerHTML = '';
+if (!append) setSafeInnerHTML(tbody, '');
 if (rawStore.pipelines.length === 0) {
-tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400">No recent build runs found for scanned pipelines.</td></tr>`;
+setSafeInnerHTML(tbody, `<tr><td colspan="7" class="p-4 text-center text-slate-400">No recent build runs found for scanned pipelines.</td></tr>`);
 container.classList.add('hidden');
 return;
 }
@@ -395,7 +395,7 @@ r.result === 'failed' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700
 <td class="p-4 text-xs text-slate-500">${r.finishTime}</td>
 </tr>
 `).join('');
-tbody.insertAdjacentHTML('beforeend', html);
+insertSafeAdjacentHTML(tbody, 'beforeend', html);
 const remaining = rawStore.pipelines.length - rawStore.pipelineIndex;
 if (remaining > 0) {
 container.classList.remove('hidden');

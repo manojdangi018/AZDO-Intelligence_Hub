@@ -100,7 +100,7 @@ return;
 }
 startFetching(project ? `Loading users for project: ${project}...` : 'Loading organization users and project access...');
 try {
-const authHeader = 'Basic ' + btoa(':' + pat);
+const authHeader = createBasicAuthHeader(pat);
 const entitlements = await fetchAllUserEntitlements(org, authHeader);
 const rows = entitlements.map(flattenUserEntitlement).filter(u => {
 if (!query) return true;
@@ -157,7 +157,7 @@ const project = getUserDirectoryProject();
 if (!tbody) return;
 const thead = document.getElementById('userDirectoryTableHead');
 if (thead) {
-thead.innerHTML = project ? `
+setSafeInnerHTML(thead, project ? `
 <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
 <th class="p-4">User Name</th>
 <th class="p-4">Email Address</th>
@@ -176,11 +176,11 @@ thead.innerHTML = project ? `
 <th class="p-4">Date Added</th>
 <th class="p-4">Last Access</th>
 <th class="p-4">Project Access</th>
-</tr>`;
+</tr>`);
 }
-if (!append) tbody.innerHTML = '';
+if (!append) setSafeInnerHTML(tbody, '');
 if (!rawStore.userEntitlements.length) {
-tbody.innerHTML = `<tr><td colspan="${project ? 8 : 7}" class="p-4 text-center text-slate-400">No users found for the selected scope.</td></tr>`;
+setSafeInnerHTML(tbody, `<tr><td colspan="${project ? 8 : 7}" class="p-4 text-center text-slate-400">No users found for the selected scope.</td></tr>`);
 container?.classList.add('hidden');
 return;
 }
@@ -221,7 +221,7 @@ return `<tr class="hover:bg-slate-50 transition cursor-pointer" data-detail-type
 </tr>`;
 }).join('');
 }
-tbody.insertAdjacentHTML('beforeend', html);
+insertSafeAdjacentHTML(tbody, 'beforeend', html);
 const remaining = rawStore.userEntitlements.length - rawStore.userDirectoryIndex;
 if (remaining > 0) {
 container?.classList.remove('hidden');

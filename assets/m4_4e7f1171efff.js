@@ -1,6 +1,6 @@
 function populateRepoDropdown() {
 const datalist = document.getElementById('repoDatalist');
-datalist.innerHTML = '';
+setSafeInnerHTML(datalist, '');
 const allOpt = document.createElement('option');
 allOpt.value = '-- All Repositories --';
 datalist.appendChild(allOpt);
@@ -11,7 +11,7 @@ datalist.appendChild(opt);
 });
 document.getElementById('repoSelect').value = '-- All Repositories --';
 }
-async function fetchBranchPolicies(org, project, repoId, branchName, authHeader) {
+async function fetchBranchPolicies(org, project, repoId, branchName, authHeader, defaultBranchName = "") {
 const refName = branchName.startsWith('refs/')
 ? branchName
 : `refs/heads/${branchName}`;
@@ -30,7 +30,7 @@ const gitPolicyUrl =
 `?repositoryId=${encodeURIComponent(repoId)}` +
 `&refName=${encodeURIComponent(refName)}` +
 `&$top=1000` +
-`&api-version=7.1`;
+`&api-version=${AZDO_API_VERSION}`;
 try {
 console.log(
 `[Azure DevOps Policy] Fetching policies for ${repoId} ${refName}`
@@ -61,7 +61,7 @@ const fallbackUrl =
 `/${encodeURIComponent(project)}` +
 `/_apis/policy/configurations` +
 `?$top=1000` +
-`&api-version=7.1-preview.1`;
+`&api-version=${AZDO_API_VERSION}`;
 try {
 console.log(
 `[Azure DevOps Policy] Trying fallback policy API for ${repoId} ${refName}`
@@ -78,6 +78,10 @@ const currentRepo =
 String(repoId).toLowerCase();
 const currentRef =
 refName.toLowerCase();
+const normalizedDefaultBranch = String(defaultBranchName || '')
+.replace(/^refs\/heads\//i, '')
+.toLowerCase();
+const currentBranchName = currentRef.replace(/^refs\/heads\//i, '');
 const applicablePolicies =
 allPolicies.filter(policy => {
 if (!policy) {
@@ -94,7 +98,9 @@ Array.isArray(policy.settings?.scope)
 ? policy.settings.scope
 : [];
 if (scopes.length === 0) {
-return true;
+// Do not assume an unscoped configuration protects every branch. That can
+// create false-positive branch protection results when using the fallback API.
+return false;
 }
 return scopes.some(scope => {
 const scopeRepo =
@@ -125,7 +131,7 @@ scope.matchKind || 'Exact'
 if (
 matchKind === 'defaultbranch'
 ) {
-return true;
+return Boolean(normalizedDefaultBranch) && currentBranchName === normalizedDefaultBranch;
 }
 if (
 matchKind === 'prefix'
@@ -321,7 +327,7 @@ branchTable.querySelector(
 'thead tr'
 );
 if (headerRow) {
-headerRow.innerHTML = `
+setSafeInnerHTML(headerRow, `
 <th class="p-4">Repository</th>
 <th class="p-4">Branch Name</th>
 <th class="p-4">Status / Health</th>
@@ -329,7 +335,7 @@ headerRow.innerHTML = `
 <th class="p-4">Last Author</th>
 <th class="p-4">Last Commit Date</th>
 <th class="p-4">Commit Message</th>
-`;
+`);
 }
 }
 if (prTable) {
@@ -338,7 +344,7 @@ prTable.querySelector(
 'thead tr'
 );
 if (headerRow) {
-headerRow.innerHTML = `
+setSafeInnerHTML(headerRow, `
 <th class="p-4">Repository</th>
 <th class="p-4">PR Title</th>
 <th class="p-4">Source &rarr; Target</th>
@@ -346,7 +352,7 @@ headerRow.innerHTML = `
 <th class="p-4">Creator</th>
 <th class="p-4">Status</th>
 <th class="p-4">Created Date</th>
-`;
+`);
 }
 }
 }
@@ -375,9 +381,7 @@ return showModal(
 'repoSelect'
 );
 }
-const authHeader =
-'Basic ' +
-btoa(':' + pat);
+const authHeader = createBasicAuthHeader(pat);
 showSection(
 'repositories'
 );
@@ -483,7 +487,8 @@ org,
 project,
 r.id,
 bName,
-authHeader
+authHeader,
+r.defaultBranch
 )
 ]);
 const commitData =
@@ -586,7 +591,8 @@ org,
 project,
 r.id,
 targetBranch,
-authHeader
+authHeader,
+r.defaultBranch
 );
 const policyInfo =
 parsePolicyInformation(
@@ -785,18 +791,17 @@ document.getElementById(
 'repoRemainingCount'
 );
 if (!append) {
-tbody.innerHTML = '';
+setSafeInnerHTML(tbody, '');
 }
 if (
 rawStore.repos.length === 0
 ) {
-tbody.innerHTML =
-`<tr>
+setSafeInnerHTML(tbody, `<tr>
 <td colspan="7"
 class="p-4 text-center text-slate-400">
 No branches found.
 </td>
-</tr>`;
+</tr>`);
 container.classList.add(
 'hidden'
 );
@@ -878,10 +883,7 @@ ${b.msg}
 `;
 }
 ).join('');
-tbody.insertAdjacentHTML(
-'beforeend',
-html
-);
+insertSafeAdjacentHTML(tbody, 'beforeend', html);
 const remaining =
 rawStore.repos.length -
 rawStore.repoIndex;
@@ -928,17 +930,17 @@ return;
 const policyBranches =
 getPolicyBranches();
 if (!append) {
-tbody.innerHTML = '';
+setSafeInnerHTML(tbody, '');
 rawStore.policyBranchesIndex = 0;
 }
 if (policyBranches.length === 0) {
-tbody.innerHTML = `
+setSafeInnerHTML(tbody, `
 <tr>
 <td colspan="6" class="p-4 text-center text-slate-400">
 No branches with policies found.
 </td>
 </tr>
-`;
+`);
 container.classList.add('hidden');
 remainingEl.textContent = '0';
 return;
@@ -979,7 +981,7 @@ ${b.minReviewers > 0 ? b.minReviewers : '0'}
 </tr>
 `;
 }).join('');
-tbody.insertAdjacentHTML('beforeend', html);
+insertSafeAdjacentHTML(tbody, 'beforeend', html);
 const remaining =
 policyBranches.length - rawStore.policyBranchesIndex;
 if (remaining > 0) {
@@ -1030,18 +1032,17 @@ document.getElementById(
 'repoPrsRemainingCount'
 );
 if (!append) {
-tbody.innerHTML = '';
+setSafeInnerHTML(tbody, '');
 }
 if (
 rawStore.repoPrs.length === 0
 ) {
-tbody.innerHTML =
-`<tr>
+setSafeInnerHTML(tbody, `<tr>
 <td colspan="7"
 class="p-4 text-center text-slate-400">
 No pull requests found.
 </td>
-</tr>`;
+</tr>`);
 container.classList.add(
 'hidden'
 );
@@ -1170,10 +1171,7 @@ ${pr.createdDate}
 `;
 }
 ).join('');
-tbody.insertAdjacentHTML(
-'beforeend',
-html
-);
+insertSafeAdjacentHTML(tbody, 'beforeend', html);
 const remaining =
 rawStore.repoPrs.length -
 rawStore.repoPrsIndex;

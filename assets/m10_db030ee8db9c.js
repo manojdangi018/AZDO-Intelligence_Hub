@@ -212,7 +212,7 @@ const orgValue = document.getElementById('targetOrg')?.value || '';
 const pat = document.getElementById('targetPat')?.value?.trim() || '';
 const org = typeof extractOrgName === 'function' ? extractOrgName(orgValue) : '';
 if (!org || !pat || typeof fetchAzDo !== 'function') return null;
-return { org, pat, authHeader: 'Basic ' + btoa(':' + pat) };
+return { org, pat, authHeader: createBasicAuthHeader(pat) };
 }
 function getNestedBuildId(request) {
 if (!request || typeof request !== 'object') return null;
@@ -357,7 +357,7 @@ queueId = queue?.id ?? null;
 if (!queueId) {
 return { runs: [], error: 'The Microsoft-hosted pool is not mapped to a build queue in the selected project.' };
 }
-const buildUrl = `https://dev.azure.com/${encodeURIComponent(context.org)}/${encodeURIComponent(project)}/_apis/build/builds?queues=${encodeURIComponent(queueId)}&$top=25&queryOrder=finishTimeDescending&api-version=7.1`;
+const buildUrl = `https://dev.azure.com/${encodeURIComponent(context.org)}/${encodeURIComponent(project)}/_apis/build/builds?queues=${encodeURIComponent(queueId)}&$top=25&queryOrder=finishTimeDescending&api-version=${AZDO_API_VERSION}`;
 const buildData = await fetchAzDo(buildUrl, context.authHeader);
 const builds = Array.isArray(buildData?.value) ? buildData.value : [];
 const runs = builds.map(build => {
@@ -388,7 +388,7 @@ const buildIds = [...new Set(requests.map(getNestedBuildId).filter(Boolean))];
 let buildsById = new Map();
 if (project && buildIds.length) {
 try {
-const buildUrl = `https://dev.azure.com/${encodeURIComponent(context.org)}/${encodeURIComponent(project)}/_apis/build/builds?buildIds=${buildIds.join(',')}&api-version=7.1`;
+const buildUrl = `https://dev.azure.com/${encodeURIComponent(context.org)}/${encodeURIComponent(project)}/_apis/build/builds?buildIds=${buildIds.join(',')}&api-version=${AZDO_API_VERSION}`;
 const buildData = await fetchAzDo(buildUrl, context.authHeader);
 buildsById = new Map((buildData?.value || []).map(build => [Number(build.id), build]));
 } catch (buildError) {
@@ -456,7 +456,7 @@ if (document.getElementById('dataDetailModal')) return;
 const wrapper = document.createElement('div');
 wrapper.id = 'dataDetailModal';
 wrapper.className = 'data-detail-modal hidden';
-wrapper.innerHTML = `
+setSafeInnerHTML(wrapper, `
 <div class="data-detail-backdrop" data-detail-close="true"></div>
 <aside class="data-detail-panel" role="dialog" aria-modal="true" aria-labelledby="dataDetailTitle">
 <div class="data-detail-header">
@@ -491,7 +491,7 @@ wrapper.innerHTML = `
 </section>
 </div>
 </aside>
-`;
+`);
 document.body.appendChild(wrapper);
 wrapper.addEventListener('click', event => {
 const tab = event.target.closest('[data-detail-tab]');
@@ -512,10 +512,10 @@ const title = typeof config.title === 'function' ? config.title(row) : config.ti
 const project = document.getElementById('projectSelect')?.value || 'Project';
 const typeLabel = prettyLabel(type.replace(/-/g, ' '));
 const fields = makeFields(row, type);
-document.getElementById('dataDetailBreadcrumb').innerHTML = `
+setSafeInnerHTML(document.getElementById('dataDetailBreadcrumb'), `
 <span>⌂</span><span>/</span><span>${esc(project)}</span><span>/</span><span>${esc(typeLabel)}</span>
-`;
-document.getElementById('dataDetailIcon').innerHTML = iconSvg(config.icon);
+`);
+setSafeInnerHTML(document.getElementById('dataDetailIcon'), iconSvg(config.icon));
 document.getElementById('dataDetailTitle').textContent = title;
 document.getElementById('dataDetailSubtitle').textContent = config.subtitle;
 const openLink = document.getElementById('dataDetailOpenLink');
@@ -527,12 +527,12 @@ openLink.classList.remove('hidden');
 openLink.removeAttribute('href');
 openLink.classList.add('hidden');
 }
-document.getElementById('dataDetailOverview').innerHTML = `
+setSafeInnerHTML(document.getElementById('dataDetailOverview'), `
 <div class="detail-section-card">
 <div class="detail-section-heading"><span class="detail-section-icon">◷</span> ${esc(type === 'repository-branch' || type === 'policy-branch' ? 'Branch Health & Metadata' : 'Record Overview')}</div>
 <div class="detail-grid">${fieldGrid(fields.primary)}</div>
 </div>
-`;
+`);
 if (type === 'user-directory') {
 const projects = Array.isArray(row.projects) ? row.projects : [];
 const projectRows = projects.length ? projects.map(p => {
@@ -548,7 +548,7 @@ return `
 <div class="user-project-permissions">${permissions.length ? permissions.map(x => `<span class="user-project-permission">${esc(x)}</span>`).join('') : '<span class="text-slate-400">No project permission details</span>'}</div>
 </div>`;
 }).join('') : '<div class="user-project-empty">No project access listed</div>';
-document.getElementById('dataDetailDetails').innerHTML = `
+setSafeInnerHTML(document.getElementById('dataDetailDetails'), `
 <div class="detail-section-card user-projects-card">
 <div class="detail-section-heading"><span class="detail-section-icon">⌁</span> PROJECT ACCESS &amp; PERMISSIONS</div>
 <div class="user-project-table">
@@ -556,31 +556,31 @@ document.getElementById('dataDetailDetails').innerHTML = `
 ${projectRows}
 </div>
 </div>
-`;
+`);
 } else if (type === 'pipeline-summary') {
 const allPipelineRuns = Array.isArray(store?.pipelines) ? store.pipelines : [];
-document.getElementById('dataDetailDetails').innerHTML = `
+setSafeInnerHTML(document.getElementById('dataDetailDetails'), `
 <div class="detail-section-card pipeline-history-card">
 <div class="detail-section-heading"><span class="detail-section-icon">⌁</span> PIPELINE RUN HISTORY</div>
 ${buildPipelineHistoryTable(row, allPipelineRuns)}
 </div>
-`;
+`);
 } else if (type === 'agent') {
-document.getElementById('dataDetailDetails').innerHTML = `
+setSafeInnerHTML(document.getElementById('dataDetailDetails'), `
 <div class="detail-section-card agent-runs-card">
 <div class="detail-section-heading"><span class="detail-section-icon">⌁</span> Pipeline Run History</div>
 <div id="agentPipelineRunsContent" class="agent-runs-content">
 <div class="agent-run-loading"><span class="agent-run-spinner"></span> Loading recent pipeline runs for this agent/pool...</div>
 </div>
 </div>
-`;
+`);
 } else {
-document.getElementById('dataDetailDetails').innerHTML = `
+setSafeInnerHTML(document.getElementById('dataDetailDetails'), `
 <div class="detail-section-card">
 <div class="detail-section-heading"><span class="detail-section-icon">⌁</span> Additional Details</div>
 <div class="detail-grid">${fieldGrid(fields.secondary.length ? fields.secondary : [['Record Type', typeLabel]])}</div>
 </div>
-`;
+`);
 }
 document.getElementById('dataDetailJsonPre').textContent = JSON.stringify(row, null, 2);
 switchDataDetailTab('overview');
@@ -594,9 +594,9 @@ const result = await fetchAgentPipelineRuns(row);
 if (currentDetail !== detailSnapshot) return;
 const target = document.getElementById('agentPipelineRunsContent');
 if (!target) return;
-target.innerHTML = result.error
+setSafeInnerHTML(target, result.error
 ? `<div class="agent-run-error">${esc(result.error)}</div>`
-: buildAgentRunsTable(result.runs);
+: buildAgentRunsTable(result.runs));
 }
 }
 function detailStoreKey(type) {
@@ -641,8 +641,8 @@ try {
 await navigator.clipboard.writeText(payload);
 const button = document.getElementById('dataDetailCopyBtn');
 const original = button.innerHTML;
-button.innerHTML = '<span>✓</span> Copied';
-setTimeout(() => { button.innerHTML = original; }, 1400);
+setSafeInnerHTML(button, '<span>✓</span> Copied');
+setTimeout(() => { setSafeInnerHTML(button, original); }, 1400);
 } catch (_) {
 const area = document.createElement('textarea');
 area.value = payload;
