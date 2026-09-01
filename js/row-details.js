@@ -59,6 +59,11 @@
       subtitle: 'Azure DevOps Agent Pool Telemetry',
       icon: 'agent'
     },
+    'user-directory': {
+      title: row => row.name || 'User',
+      subtitle: 'Organization & Project User Entitlement Telemetry',
+      icon: 'users'
+    },
     'work-item': {
       title: row => `#${row.id || '—'} · ${row.title || 'Work Item'}`,
       subtitle: 'Work Item & Backlog Telemetry',
@@ -144,7 +149,7 @@
   }
 
   function makeFields(row, type) {
-    const omit = new Set(['rawDate', 'rawTimestamp', 'isSyntheticHosted', 'projectScoped']);
+    const omit = new Set(['rawDate', 'rawTimestamp', 'isSyntheticHosted', 'projectScoped', 'raw']);
     const entries = Object.entries(row || {}).filter(([key]) => !omit.has(key));
 
     if (type === 'repository-branch') {
@@ -187,6 +192,7 @@
       'pipeline-run': ['name', 'buildNumber', 'branch', 'reason', 'author', 'result', 'finishTime'],
       'service-connection': ['name', 'type', 'status', 'isReady', 'isShared', 'url', 'createdBy', 'projectName'],
       'agent': ['poolName', 'hosted', 'isHosted', 'poolType', 'name', 'status', 'enabled', 'os', 'version', 'createdOn'],
+      'user-directory': ['name', 'email', 'accessLevel', 'status', 'dateCreated', 'lastAccessedDate', 'licensingSource', 'licenseAssignmentSource', 'projectCount'],
       'work-item': ['id', 'type', 'title', 'assignedTo', 'state', 'createdDate']
     }[type] || entries.map(([key]) => key);
 
@@ -569,6 +575,7 @@
       'pipeline-run': 'pipelines',
       'service-connection': 'serviceConnections',
       'agent': 'agents',
+      'user-directory': 'userEntitlements',
       'work-item': 'workitems'
     })[type];
   }

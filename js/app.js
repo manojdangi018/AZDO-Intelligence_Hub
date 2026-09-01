@@ -30,7 +30,8 @@ let rawStore = {
   pipelineSummaries: [], pipelineSummariesIndex: 0,
   workitems: [], workitemsIndex: 0,
   serviceConnections: [], serviceConnectionsIndex: 0,
-  agents: [], agentsIndex: 0
+  agents: [], agentsIndex: 0,
+  userEntitlements: [], userDirectoryIndex: 0
 };
 
 /* ============================================================
@@ -118,6 +119,8 @@ function workspaceHasData(category) {
       return (rawStore.serviceConnections?.length || 0) > 0 ||
              (rawStore.agents?.length || 0) > 0 ||
              (rawStore.agentPools?.length || 0) > 0;
+    case 'users':
+      return (rawStore.userEntitlements?.length || 0) > 0;
     default:
       return false;
   }
@@ -161,7 +164,8 @@ function setWorkspaceDefaultKpis(category) {
     work_items: [['Total Work Items', '0'], ['Active / New', '0'], ['In Progress', '0'], ['Resolved', '0'], ['Closed / Done', '0']],
     user_access: [['Active Scope', '—'], ['Groups & Teams', '0'], ['Total Memberships', '0'], ['Mode', 'Security Access'], ['Status', 'Ready']],
     user_activity: [['Active Scope', '—'], ['Active Repos', '0'], ['Commits Made', '0'], ['Pull Requests', '0'], ['Status', 'No Commits']],
-    service_agents: [['Total Service Connections', '0'], ['Microsoft-hosted Pools', '0'], ['Self-hosted Agents', '0']]
+    service_agents: [['Total Service Connections', '0'], ['Microsoft-hosted Pools', '0'], ['Self-hosted Agents', '0']],
+    users: [['Total Users', '0'], ['Active Users', '0'], ['Basic / Stakeholder', '0'], ['Project Access', '0'], ['Scope', 'Organization']]
   };
 
   const values = defaults[category] || defaults.repositories;
@@ -427,14 +431,18 @@ function updateProjectRequirementUI() {
   const note = document.getElementById('projectRequirementText');
   const select = document.getElementById('projectSelect');
   const serviceAgentsActive = activeCategory === 'service_agents';
+  const usersActive = activeCategory === 'users';
+  const projectOptional = serviceAgentsActive || usersActive;
 
-  if (mark) mark.classList.toggle('hidden', serviceAgentsActive);
+  if (mark) mark.classList.toggle('hidden', projectOptional);
   if (note) {
     note.textContent = serviceAgentsActive
       ? 'Project is optional for Service Connections & Agent Pools. Leave it blank for organization-wide information.'
-      : 'Project selection is required for Repositories, Access & Teams, User Activity, Pipelines & Builds, and Work Items.';
+      : usersActive
+        ? 'Project is optional for User Directory. Leave it blank for organization-wide users, or select a project for project-level access.'
+        : 'Project selection is required for Repositories, Access & Teams, User Activity, Pipelines & Builds, and Work Items.';
   }
-  if (select) select.setAttribute('aria-required', serviceAgentsActive ? 'false' : 'true');
+  if (select) select.setAttribute('aria-required', projectOptional ? 'false' : 'true');
 }
 
 function switchToOrganizationServiceAgents() {
@@ -476,6 +484,10 @@ async function handleProjectSelection() {
       updatePathPreview(org);
       if (typeof updateServiceAgentsScopeText === 'function') updateServiceAgentsScopeText();
       renderActiveSubstep();
+    } else if (activeCategory === 'users') {
+      updatePathPreview(org);
+      if (typeof updateUserDirectoryScopeText === 'function') updateUserDirectoryScopeText();
+      renderActiveSubstep();
     } else {
       document.getElementById('step5Container').classList.add('hidden');
       updatePathPreview(org);
@@ -512,14 +524,15 @@ function renderActiveSubstep() {
   const subPipelines = document.getElementById('substepPipelines');
   const subWorkItems = document.getElementById('substepWorkItems');
   const subServiceAgents = document.getElementById('substepServiceAgents');
+  const subUsers = document.getElementById('substepUsers');
 
-  if (!project && activeCategory !== 'service_agents') {
+  if (!project && !['service_agents', 'users'].includes(activeCategory)) {
     step5.classList.add('hidden');
     return;
   }
 
   step5.classList.remove('hidden');
-  [subRepo, subAccess, subActivity, subPipelines, subWorkItems, subServiceAgents].forEach(el => el.classList.add('hidden'));
+  [subRepo, subAccess, subActivity, subPipelines, subWorkItems, subServiceAgents, subUsers].forEach(el => el?.classList.add('hidden'));
 
   if (activeCategory === 'repositories') {
     subRepo.classList.remove('hidden');
@@ -532,6 +545,10 @@ function renderActiveSubstep() {
     subPipelines.classList.remove('hidden');
   } else if (activeCategory === 'service_agents') {
     subServiceAgents.classList.remove('hidden');
+    if (typeof updateServiceAgentsScopeText === 'function') updateServiceAgentsScopeText();
+  } else if (activeCategory === 'users') {
+    subUsers.classList.remove('hidden');
+    if (typeof updateUserDirectoryScopeText === 'function') updateUserDirectoryScopeText();
   } else if (activeCategory === 'work_items') {
     subWorkItems.classList.remove('hidden');
   }
@@ -539,7 +556,7 @@ function renderActiveSubstep() {
 
 function showSection(viewId) {
   activeViewSection = `view-${viewId}`;
-  ['repositories', 'access', 'activity', 'pipelines', 'serviceagents', 'workitems'].forEach(v => {
+  ['repositories', 'access', 'activity', 'pipelines', 'serviceagents', 'users', 'workitems'].forEach(v => {
     document.getElementById(`view-${v}`).classList.toggle('hidden', v !== viewId);
   });
 }
@@ -562,7 +579,8 @@ function selectExplore(category) {
     work_items: 'workitems',
     user_activity: 'activity',
     user_access: 'access',
-    service_agents: 'serviceagents'
+    service_agents: 'serviceagents',
+    users: 'users'
   };
   const viewId = viewMap[category] || 'repositories';
 
@@ -603,7 +621,8 @@ function disconnectSession() {
     pipelineSummaries: [], pipelineSummariesIndex: 0,
     workitems: [], workitemsIndex: 0,
     serviceConnections: [], serviceConnectionsIndex: 0,
-    agents: [], agentsIndex: 0
+    agents: [], agentsIndex: 0,
+    userEntitlements: [], userDirectoryIndex: 0
   };
   cachedRepos = [];
   workspaceDisplayStore = {};
