@@ -321,6 +321,7 @@ const rows = runs.map(run => `
 <td>${esc(run.buildNumber)}</td>
 <td>${esc(run.triggeredBy)}</td>
 <td>${esc(run.dateTime)}</td>
+<td><span class="pipeline-status-badge ${formatPipelineRunStatus(run.status).className}">${esc(formatPipelineRunStatus(run.status).label)}</span></td>
 </tr>
 `).join('');
 return `
@@ -330,7 +331,7 @@ return `
 </div>
 <div class="agent-run-table-wrap">
 <table class="agent-run-table">
-<thead><tr><th>Pipeline Name</th><th>Build #</th><th>Triggered By</th><th>Date &amp; Time</th></tr></thead>
+<thead><tr><th>Pipeline Name</th><th>Build #</th><th>Triggered By</th><th>Date &amp; Time</th><th>Status</th></tr></thead>
 <tbody>${rows}</tbody>
 </table>
 </div>
