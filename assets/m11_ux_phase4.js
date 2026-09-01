@@ -246,7 +246,13 @@ function installProgressHooks(){
 
 function init(){
   initGlobalSearch(); initControls(); bindSortableHeaders(); installProgressHooks();
-  const observer=new MutationObserver(()=>{bindSortableHeaders();applyFilters();refreshAdvancedDashboard();});
+  // Watch only for newly rendered table/header nodes. Do not call the dashboard
+  // refreshers from the observer: refreshAdvancedDashboard() updates text/HTML,
+  // which itself creates child-list mutations and can cause an infinite mutation
+  // loop that freezes the connection form (including the Organization/PAT inputs).
+  const observer=new MutationObserver(()=>{
+    bindSortableHeaders();
+  });
   observer.observe(document.body,{childList:true,subtree:true});
   setTimeout(()=>{bindSortableHeaders();refreshAdvancedDashboard();},100);
 }
