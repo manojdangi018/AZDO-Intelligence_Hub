@@ -14,28 +14,15 @@ return showModal('Please enter a User Email or Name to search.', 'targetUserQuer
 const authHeader = createBasicAuthHeader(pat);
 showSection('activity');
 startFetching(`Searching activity in project "${selectedProject}" for "${rawQuery}"...`);
-const queryLower = rawQuery.toLowerCase();
-const emailPrefix = queryLower.includes('@') ? queryLower.split('@')[0] : queryLower;
-const nameParts = emailPrefix.split(/[\._\-\s]+/).filter(p => p.length >= 2);
-const formattedName = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-const searchAuthors = Array.from(new Set([rawQuery, emailPrefix, formattedName, formattedName.toLowerCase()].filter(Boolean)));
+const queryLower = normalizeIdentityText(rawQuery);
+const searchAuthors = buildIdentitySearchVariants(rawQuery);
 function matchesUser(authorName, authorEmail, committerName, committerEmail) {
-const aName = (authorName || '').toLowerCase();
-const aEmail = (authorEmail || '').toLowerCase();
-const cName = (committerName || '').toLowerCase();
-const cEmail = (committerEmail || '').toLowerCase();
-if (aEmail.includes(queryLower) || cEmail.includes(queryLower) ||
-aName.includes(queryLower) || cName.includes(queryLower) ||
-aEmail.includes(emailPrefix) || cEmail.includes(emailPrefix) ||
-aName.includes(emailPrefix) || cName.includes(emailPrefix)) {
-return true;
-}
-if (nameParts.length > 0) {
-const allInAuthor = nameParts.every(p => aName.includes(p) || aEmail.includes(p));
-const allInCommitter = nameParts.every(p => cName.includes(p) || cEmail.includes(p));
-if (allInAuthor || allInCommitter) return true;
-}
-return false;
+return identityMatchesQuery(rawQuery, {
+  displayName: authorName,
+  mailAddress: authorEmail,
+  name: committerName,
+  email: committerEmail
+});
 }
 let cutoffDate = null;
 let fromDateIso = null;
@@ -49,6 +36,33 @@ let userCommits = [];
 let userPRs = [];
 const reposTouched = new Set();
 let foundDisplayName = '';
+async function resolveCommitBranches(repoId, commitRows) {
+  const result = new Map();
+  const pushKeys = new Map();
+  for (const c of commitRows || []) {
+    const pushId = c?.push?.pushId;
+    if (pushId !== undefined && pushId !== null) {
+      pushKeys.set(String(pushId), c.commitId);
+    }
+  }
+  if (!pushKeys.size) return result;
+  const entries = [...pushKeys.entries()];
+  const BATCH = 6;
+  for (let i = 0; i < entries.length; i += BATCH) {
+    const batch = entries.slice(i, i + BATCH);
+    await Promise.all(batch.map(async ([pushId, commitId]) => {
+      try {
+        const pushUrl = `https://dev.azure.com/${org}/${encodeURIComponent(selectedProject)}/_apis/git/repositories/${repoId}/pushes/${encodeURIComponent(pushId)}?includeRefUpdates=true&api-version=${API_VERSION}`;
+        const push = await fetchAzDo(pushUrl, authHeader);
+        const refs = (push?.refUpdates || []).map(r => String(r?.name || '').replace(/^refs\/heads\//i, '')).filter(Boolean);
+        const key = String(commitId || '').toLowerCase();
+        if (key && refs.length === 1) result.set(key, refs);
+        else if (key && refs.length > 1) result.set(key, [`Ambiguous push refs: ${refs.join(', ')}`]);
+      } catch (_) {}
+    }));
+  }
+  return result;
+}
 try {
 const projReposUrl = `https://dev.azure.com/${org}/${encodeURIComponent(selectedProject)}/_apis/git/repositories?api-version=${API_VERSION}`;
 const projReposRes = await fetchAzDoPaged(projReposUrl, authHeader, { pageSize: 500 });
@@ -79,7 +93,11 @@ foundDisplayName = c.author.name;
 }
 userCommits.push({
 repo: r.name,
-branch: r.defaultBranch ? r.defaultBranch.replace(/^refs\/heads\//, '') : 'main',
+repoId: r.id,
+branch: 'Resolving...',
+branchSource: 'push metadata',
+commitSha: c.commitId || '',
+rawPush: c.push || null,
 commitId: (c.commitId || '').substring(0, 8),
 rawDate: commitDate,
 date: isNaN(commitDate.getTime()) ? 'N/A' : commitDate.toLocaleDateString(),
@@ -88,7 +106,7 @@ comment: c.comment || 'No commit message'
 }
 }
 });
-if (commits.length > 0) break; // Found commits using this author variant
+if (commits.some(c => matchesUser(c.author?.name, c.author?.email, c.committer?.name, c.committer?.email))) break; // Stop only when this variant actually matched the requested identity
 } catch (err) {
 }
 }
@@ -123,9 +141,23 @@ rawDate: prDate
 return Promise.all([commitsPromise, prsPromise]);
 }));
 }
+const commitsByRepo = new Map();
+userCommits.forEach(c => {
+  if (!commitsByRepo.has(c.repoId)) commitsByRepo.set(c.repoId, []);
+  commitsByRepo.get(c.repoId).push(c);
+});
+for (const [repoId, rows] of commitsByRepo.entries()) {
+  const branchMap = await resolveCommitBranches(repoId, rows.map(r => ({ commitId: r.commitSha, push: r.rawPush })));
+  rows.forEach(r => {
+    const branches = branchMap.get(String(r.commitSha || '').toLowerCase()) || [];
+    r.branch = branches.length ? branches.join(', ') : 'Branch not resolved';
+    r.branchSource = branches.length === 1 && !String(branches[0]).startsWith('Ambiguous push refs:') ? 'push ref update' : branches.length ? 'push contains multiple ref updates' : 'commit push metadata unavailable';
+    delete r.rawPush;
+  });
+}
 const seen = new Set();
 userCommits = userCommits.filter((c) => {
-const key = `${c.repo}_${c.commitId}`;
+const key = `${c.repo}_${c.commitSha || c.commitId}`;
 if (seen.has(key)) return false;
 seen.add(key);
 return true;

@@ -2,7 +2,7 @@ async function fetchUserAccessData() {
 const org = extractOrgName(document.getElementById('targetOrg').value);
 const project = document.getElementById('projectSelect').value;
 const pat = document.getElementById('targetPat').value.trim();
-const userQuery = document.getElementById('targetAccessUserQuery').value.trim().toLowerCase();
+const userQuery = document.getElementById('targetAccessUserQuery').value.trim();
 const authHeader = createBasicAuthHeader(pat);
 showSection('access');
 startFetching(userQuery ? `Scanning groups and teams for "${userQuery}"...` : `Fetching all project security groups, teams, and members...`);
@@ -88,7 +88,7 @@ const members = memData?.value || [];
 await Promise.all(members.map(async (m) => {
 const identity = await resolveSubjectDescriptor(m.memberDescriptor);
 if (identity) {
-if (!userQuery || identity.name.toLowerCase().includes(userQuery) || identity.email.toLowerCase().includes(userQuery)) {
+if (!userQuery || identityMatchesQuery(userQuery, identity)) {
 accessRows.push({
 team: groupName,
 type: 'Security Group',
@@ -109,7 +109,7 @@ const members = mData?.value || [];
 members.forEach(m => {
 const name = m.identity?.displayName || 'Unknown';
 const email = m.identity?.uniqueName || m.identity?.mailAddress || 'N/A';
-if (!userQuery || name.toLowerCase().includes(userQuery) || email.toLowerCase().includes(userQuery)) {
+if (!userQuery || identityMatchesQuery(userQuery, { displayName: name, mailAddress: email, uniqueName: email })) {
 accessRows.push({
 team: t.name,
 type: 'Team',

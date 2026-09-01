@@ -16,42 +16,41 @@ fetchAzDoPaged(classicUrl, authHeader, { pageSize: 500 })
 const pipelineMap = new Map();
 if (modernRes.status === 'fulfilled' && modernRes.value?.value) {
 modernRes.value.value.forEach(p => {
-pipelineMap.set(p.name, {
+const key = `yaml:${p.id}`;
+pipelineMap.set(key, {
 id: p.id,
 name: p.name,
-type: 'yaml'
+type: 'yaml',
+identityKey: key,
+path: p.folder || p.path || ''
 });
 });
 }
 if (classicRes.status === 'fulfilled' && classicRes.value?.value) {
 classicRes.value.value.forEach(d => {
-if (!pipelineMap.has(d.name)) {
-pipelineMap.set(d.name, {
+const key = `classic:${d.id}`;
+pipelineMap.set(key, {
 id: d.id,
 name: d.name,
-type: 'classic'
+type: 'classic',
+identityKey: key,
+path: d.path || ''
+});
 });
 }
-});
-}
-function parseTriggerType(reasonStr) {
-const r = (reasonStr || '').toLowerCase();
-if (r.includes('batchedci') || r.includes('individualci') || r === 'ci') {
-return 'Auto (CI)';
-}
-if (r.includes('pullrequest') || r.includes('validatepr')) {
-return 'Auto (PR)';
-}
-if (r.includes('schedule')) {
-return 'Auto (Scheduled)';
-}
-if (r.includes('buildcompletion') || r.includes('triggered')) {
-return 'Auto (Triggered)';
-}
-if (r.includes('manual') || r.includes('usercreated') || r.includes('none')) {
-return 'Manual';
-}
-return 'Manual';
+function parseTriggerType(runObj = {}) {
+const reason = String(runObj?.reason || runObj?.variables?.['Build.Reason']?.value || '').trim().toLowerCase();
+const ti = runObj?.triggerInfo || {};
+const hasPr = Object.keys(ti).some(k => /^pr\./i.test(k)) || reason === 'pullrequest' || reason === 'validatepr';
+const hasCi = Object.keys(ti).some(k => /^ci\./i.test(k)) || ['individualci', 'batchedci', 'ci'].includes(reason);
+if (hasPr) return { label: 'Auto (PR)', category: 'pr', automatic: true, rawReason: reason || 'pullRequest' };
+if (hasCi) return { label: 'Auto (CI)', category: 'ci', automatic: true, rawReason: reason || 'ci' };
+if (['schedule', 'scheduleforced'].includes(reason) || Object.keys(ti).some(k => /schedule/i.test(k))) return { label: 'Auto (Scheduled)', category: 'scheduled', automatic: true, rawReason: reason || 'schedule' };
+if (['buildcompletion', 'buildcompletiontrigger'].includes(reason)) return { label: 'Auto (Build Completion)', category: 'build-completion', automatic: true, rawReason: reason };
+if (['resourcetrigger', 'resource'].includes(reason)) return { label: 'Auto (Resource)', category: 'resource', automatic: true, rawReason: reason };
+if (['triggered', 'trigger'].includes(reason)) return { label: 'Auto (Triggered)', category: 'triggered', automatic: true, rawReason: reason };
+if (['manual', 'usercreated', 'none', ''].includes(reason)) return { label: 'Manual', category: 'manual', automatic: false, rawReason: reason || 'manual' };
+return { label: `Other (${reason})`, category: 'other', automatic: false, rawReason: reason };
 }
 function parseBranch(bObj) {
 const directBranch =
@@ -147,9 +146,12 @@ return null;
 }
 }
 let summaryMap = {};
-pipelineMap.forEach((pipe, name) => {
-summaryMap[name] = {
-name: name,
+pipelineMap.forEach((pipe, identityKey) => {
+summaryMap[identityKey] = {
+name: pipe.name,
+identityKey: identityKey,
+pipelineId: pipe.id,
+pipelineType: pipe.type,
 total: 0,
 succeeded: 0,
 failed: 0,
@@ -212,20 +214,21 @@ queueTime: run.createdDate
 runsObtained.forEach(b => {
 const result = (b.result || b.status || 'unknown').toLowerCase();
 const isSuccess = result === 'succeeded';
-const trigger = parseTriggerType(b.reason);
-const isAuto = trigger.startsWith('Auto');
+const triggerInfo = parseTriggerType(b);
+const trigger = triggerInfo.label;
+const isAuto = triggerInfo.automatic;
 const author = parseAuthor(b, pipe.name, trigger);
 const branch = parseBranch(b);
-summaryMap[pipe.name].total++;
+summaryMap[pipe.identityKey].total++;
 if (isSuccess) {
-summaryMap[pipe.name].succeeded++;
+summaryMap[pipe.identityKey].succeeded++;
 } else {
-summaryMap[pipe.name].failed++;
+summaryMap[pipe.identityKey].failed++;
 }
 if (isAuto) {
-summaryMap[pipe.name].autoTriggers++;
+summaryMap[pipe.identityKey].autoTriggers++;
 } else {
-summaryMap[pipe.name].manualTriggers++;
+summaryMap[pipe.identityKey].manualTriggers++;
 }
 const rawTime =
 b.finishTime ||
@@ -243,16 +246,21 @@ const parsedDate = rawTime
 const parsedTriggerDate = rawTriggerTime
 ? new Date(rawTriggerTime)
 : new Date(0);
-summaryMap[pipe.name].latestRunTimestamp = Math.max(
-summaryMap[pipe.name].latestRunTimestamp || 0,
+summaryMap[pipe.identityKey].latestRunTimestamp = Math.max(
+summaryMap[pipe.identityKey].latestRunTimestamp || 0,
 parsedDate.getTime() || 0
 );
 allRuns.push({
 id: b.id || '',
 name: pipe.name,
+pipelineId: pipe.id,
+pipelineType: pipe.type,
+pipelineIdentityKey: pipe.identityKey,
 buildNumber: b.buildNumber || b.id,
 branch: branch,
 reason: trigger,
+triggerCategory: triggerInfo.category,
+rawReason: triggerInfo.rawReason,
 author: author,
 result: b.result || b.status || 'unknown',
 rawTimestamp: parsedDate.getTime(),
@@ -342,7 +350,7 @@ const html = nextBatch.map((p, rowIndex) => {
 const rate = p.total > 0 ? Math.round((p.succeeded / p.total) * 100) : 0;
 return `
 <tr class="hover:bg-slate-50 transition" data-detail-type="pipeline-summary" data-detail-index="${batchStartIndex + rowIndex}">
-<td class="p-4 font-semibold text-slate-900">${p.name}</td>
+<td class="p-4 font-semibold text-slate-900">${p.name}<div class="mt-1 text-[10px] font-semibold uppercase text-slate-400">${p.pipelineType === 'yaml' ? 'YAML / Pipeline' : 'Classic Build'} · ID ${p.pipelineId}</div></td>
 <td class="p-4 font-mono font-medium">${p.total}</td>
 <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">${p.succeeded}</span></td>
 <td class="p-4"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-red-50 text-red-600">${p.failed}</span></td>
@@ -405,6 +413,9 @@ function exportPipelinesToXLSX() {
 if (!rawStore.pipelineSummaries || rawStore.pipelineSummaries.length === 0) return;
 const summaryData = rawStore.pipelineSummaries.map(p => ({
 "Pipeline Name": p.name,
+"Pipeline Type": p.pipelineType,
+"Pipeline ID": p.pipelineId,
+"Pipeline Identity": p.identityKey,
 "Total Runs": p.total,
 "Successful Builds": p.succeeded,
 "Failed / Other": p.failed,
@@ -414,9 +425,13 @@ const summaryData = rawStore.pipelineSummaries.map(p => ({
 }));
 const runsData = (rawStore.pipelines || []).map(r => ({
 "Pipeline Name": r.name,
+"Pipeline Type": r.pipelineType,
+"Pipeline ID": r.pipelineId,
 "Build Number": r.buildNumber,
 "Branch": r.branch,
 "Trigger Type": r.reason,
+"Raw Build Reason": r.rawReason,
+"Trigger Category": r.triggerCategory,
 "Triggered By": r.author,
 "Result": r.result,
 "Finish Time": r.finishTime

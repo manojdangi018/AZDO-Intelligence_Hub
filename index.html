@@ -231,15 +231,22 @@ Got it
               <label class="block text-[11px] font-semibold mb-1" style="color: #c9d8ee;">
                 SELECT OR TYPE REPOSITORY <span class="text-red-400">*</span>
               </label>
-              <div class="flex gap-2">
+              <div class="flex gap-2 flex-wrap">
                 <input list="repoDatalist" id="repoSelect" 
                   placeholder="Type or select repository..." 
                   onfocus="this.value=''"
                   onblur="if(!this.value) this.value='-- All Repositories --'"
-                  class="w-full text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium" />
+                  class="flex-1 min-w-[220px] text-xs border border-blue-300 rounded-md px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium" />
                 <datalist id="repoDatalist"></datalist>
+                <select id="staleBranchThresholdDays" onchange="updateStaleBranchThresholdLabel()" title="Branches older than this number of days are flagged as stale" class="text-xs border border-blue-300 rounded-md px-2 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium">
+                  <option value="30">Stale &gt; 30 days</option>
+                  <option value="60">Stale &gt; 60 days</option>
+                  <option value="90" selected>Stale &gt; 90 days</option>
+                  <option value="180">Stale &gt; 180 days</option>
+                  <option value="365">Stale &gt; 365 days</option>
+                </select>
                 <button onclick="fetchRepositoryData()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md transition flex-shrink-0">
-                  Fetch Deatils
+                  Fetch Details
                 </button>
               </div>
             </div>
@@ -456,7 +463,7 @@ Export Full Telemetry (.xlsx)
 <div class="p-4 border-b border-slate-100 flex justify-between items-center">
 <div>
 <h3 class="font-bold text-slate-900 text-sm">Repositories & Active Branch Matrix</h3>
-<span class="text-xs text-slate-400">Branches older than 90 days are flagged as Stale</span>
+<span class="text-xs text-slate-400">Branches older than <span id="staleBranchThresholdLabel">90 days</span> are flagged as Stale</span>
 </div>
 <button onclick="exportBranchesToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>

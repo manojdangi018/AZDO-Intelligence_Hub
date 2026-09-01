@@ -412,6 +412,65 @@ do {
 } while (continuation);
 return { ...lastResponse, [itemProperty]: items, items: itemProperty === 'items' ? items : lastResponse.items, _pagination: { pages: pageCount, itemCount: items.length, complete: !azdoApiRunState?.truncated } };
 }
+function normalizeIdentityText(value) {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/[^a-z0-9@._' -]+/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function getIdentityCandidates(identity = {}) {
+  const values = [
+    identity.displayName,
+    identity.name,
+    identity.mailAddress,
+    identity.email,
+    identity.uniqueName,
+    identity.principalName,
+    identity.accountName,
+    identity.descriptor
+  ].filter(Boolean).map(normalizeIdentityText).filter(Boolean);
+  const expanded = new Set(values);
+  values.forEach(v => {
+    if (v.includes('@')) expanded.add(v.split('@')[0]);
+    if (v.includes('\\')) expanded.add(v.split('\\').pop());
+    if (v.includes('.')) expanded.add(v.replace(/[._-]+/g, ' '));
+  });
+  return [...expanded];
+}
+function identityMatchesQuery(query, identity = {}) {
+  const q = normalizeIdentityText(query);
+  if (!q) return true;
+  const qTokens = q.split(/[\s._-]+/).filter(Boolean);
+  const candidates = getIdentityCandidates(identity);
+  if (candidates.some(c => c === q || c.includes(q))) return true;
+  if (q.includes('@')) {
+    const prefix = q.split('@')[0];
+    if (candidates.some(c => c === prefix || c.includes(prefix))) return true;
+  }
+  return qTokens.length > 1 && candidates.some(c => qTokens.every(token => c.includes(token)));
+}
+function buildIdentitySearchVariants(query) {
+  const q = String(query || '').trim();
+  const n = normalizeIdentityText(q);
+  if (!n) return [];
+  const variants = new Set([q, n]);
+  if (n.includes('@')) {
+    variants.add(n.split('@')[0]);
+  }
+  const tokens = n.split(/[\s._-]+/).filter(t => t.length >= 2);
+  if (tokens.length) {
+    variants.add(tokens.join(' '));
+    variants.add(tokens.join('.'));
+  }
+  return [...variants];
+}
+window.normalizeIdentityText = normalizeIdentityText;
+window.getIdentityCandidates = getIdentityCandidates;
+window.identityMatchesQuery = identityMatchesQuery;
+window.buildIdentitySearchVariants = buildIdentitySearchVariants;
 window.fetchAzDoPaged = fetchAzDoPaged;
 window.beginAzDoOperation = beginAzDoOperation;
 window.cancelAzDoOperation = cancelAzDoOperation;

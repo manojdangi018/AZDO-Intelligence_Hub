@@ -84,7 +84,7 @@ async function fetchUserDirectoryData() {
 const org = extractOrgName(document.getElementById('targetOrg')?.value || '');
 const pat = (document.getElementById('targetPat')?.value || '').trim();
 const project = getUserDirectoryProject();
-const query = (document.getElementById('targetDirectoryUserQuery')?.value || '').trim().toLowerCase();
+const query = (document.getElementById('targetDirectoryUserQuery')?.value || '').trim();
 if (!org || !pat) {
 setStatus('Organization and PAT are required.', 'error');
 return;
@@ -95,7 +95,7 @@ const authHeader = createBasicAuthHeader(pat);
 const entitlements = await fetchAllUserEntitlements(org, authHeader);
 const rows = entitlements.map(flattenUserEntitlement).filter(u => {
 if (!query) return true;
-return u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query);
+return identityMatchesQuery(query, { displayName: u.name, mailAddress: u.email, uniqueName: u.email });
 });
 let scopedRows = rows;
 if (project) {

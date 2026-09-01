@@ -155,7 +155,8 @@ const primary = [
 ['Health Status', row.isStale ? 'Stale' : 'Active Branch'],
 ['Policy Enforcement', row.hasPolicy ? 'Protected with Policies' : 'No Active Policies'],
 ['Last Commit Author', row.author],
-['Last Commit Date', row.date]
+['Last Commit Date', row.date],
+['Branch Association Source', row.branchSource || 'Branch tip lookup']
 ];
 const secondary = [
 ['Required Reviewers', row.minReviewers || 0],
@@ -182,8 +183,8 @@ const preferredOrder = {
 'user-pr': ['repo', 'title', 'source', 'target', 'status', 'createdDate'],
 'access': ['team', 'type', 'name', 'email'],
 'user-commit': ['repo', 'branch', 'commitId', 'date', 'comment'],
-'pipeline-summary': ['name', 'total', 'succeeded', 'failed', 'autoTriggers', 'manualTriggers'],
-'pipeline-run': ['name', 'buildNumber', 'branch', 'reason', 'author', 'result', 'finishTime'],
+'pipeline-summary': ['name', 'pipelineType', 'pipelineId', 'total', 'succeeded', 'failed', 'autoTriggers', 'manualTriggers'],
+'pipeline-run': ['name', 'pipelineType', 'pipelineId', 'buildNumber', 'branch', 'reason', 'rawReason', 'triggerCategory', 'author', 'result', 'finishTime'],
 'service-connection': ['name', 'type', 'status', 'isReady', 'isShared', 'url', 'createdBy', 'projectName'],
 'agent': ['poolName', 'hosted', 'isHosted', 'poolType', 'name', 'status', 'enabled', 'os', 'version', 'createdOn'],
 'user-directory': ['name', 'email', 'accessLevel', 'status', 'dateCreated', 'lastAccessedDate', 'licensingSource', 'licenseAssignmentSource', 'projectCount'],
@@ -269,7 +270,7 @@ return { label: value ? String(value) : 'Unknown', className: 'pipeline-status-u
 function buildPipelineHistoryTable(pipelineRow, runs) {
 const pipelineName = pipelineRow?.name || 'Unknown Pipeline';
 const pipelineRuns = (Array.isArray(runs) ? runs : [])
-.filter(run => String(run?.name || '').toLowerCase() === String(pipelineName).toLowerCase())
+.filter(run => pipelineRow?.identityKey ? String(run?.pipelineIdentityKey || '') === String(pipelineRow.identityKey) : String(run?.name || '').toLowerCase() === String(pipelineName).toLowerCase())
 .sort((a, b) => (Number(b?.triggerTimestamp) || Number(b?.rawTimestamp) || 0) - (Number(a?.triggerTimestamp) || Number(a?.rawTimestamp) || 0));
 if (!pipelineRuns.length) {
 return `

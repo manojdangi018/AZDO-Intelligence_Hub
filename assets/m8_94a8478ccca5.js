@@ -1,3 +1,37 @@
+async function fetchWorkItemStateMetadata(org, project, workItemTypes, authHeader) {
+const typeNames = [...new Set((workItemTypes || []).filter(Boolean))];
+const map = new Map();
+const results = await Promise.allSettled(typeNames.map(async typeName => {
+  const url = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/wit/workitemtypes/${encodeURIComponent(typeName)}/states?api-version=${AZDO_API_VERSION}`;
+  const data = await fetchAzDo(url, authHeader);
+  return { typeName, states: Array.isArray(data?.value) ? data.value : [] };
+}));
+results.forEach(r => {
+  if (r.status !== 'fulfilled') return;
+  r.value.states.forEach(state => {
+    const name = String(state?.name || '').trim();
+    const category = String(state?.category || '').trim();
+    if (name) map.set(`${r.value.typeName.toLowerCase()}|${name.toLowerCase()}`, category || 'Unknown');
+  });
+});
+return map;
+}
+function normalizeWorkItemStateCategory(category, state) {
+const c = String(category || '').toLowerCase();
+const s = String(state || '').toLowerCase();
+if (c.includes('proposed')) return 'Proposed';
+if (c.includes('in progress') || c.includes('inprogress')) return 'In Progress';
+if (c.includes('resolved')) return 'Resolved';
+if (c.includes('completed')) return 'Completed';
+if (c.includes('removed')) return 'Removed';
+// If the state metadata endpoint is unavailable for a custom process, retain a
+// conservative name-based fallback instead of losing all KPI classification.
+if (['new','active','to do','todo'].includes(s)) return 'Proposed';
+if (['in progress','in-progress','doing'].includes(s)) return 'In Progress';
+if (['resolved'].includes(s)) return 'Resolved';
+if (['closed','done','completed'].includes(s)) return 'Completed';
+return 'Other';
+}
 async function fetchWorkItemsData() {
 const org = extractOrgName(document.getElementById('targetOrg').value);
 const project = document.getElementById('projectSelect').value;
@@ -51,10 +85,9 @@ return fetchAzDo(detailsUrl, authHeader);
 }));
 const workItems = detailResults.flatMap(result => result.status === 'fulfilled' ? (result.value?.value || []) : []);
 let stateCounts = {};
-let activeCount = 0;
-let inProgressCount = 0;
-let resolvedCount = 0;
-let closedCount = 0;
+let stateCategoryCounts = { Proposed: 0, 'In Progress': 0, Resolved: 0, Completed: 0, Removed: 0, Other: 0 };
+const workItemTypes = [...new Set(workItems.map(w => w.fields?.['System.WorkItemType']).filter(Boolean))];
+const stateMetadata = await fetchWorkItemStateMetadata(org, project, workItemTypes, authHeader);
 rawStore.workitems = workItems.map(w => {
 const fields = w.fields || {};
 const type = fields['System.WorkItemType'] || 'Work Item';
@@ -67,22 +100,15 @@ fields['System.AssignedTo'].uniqueName ||
 fields['System.AssignedTo'];
 }
 stateCounts[state] = (stateCounts[state] || 0) + 1;
-const sLower = state.toLowerCase();
-if (sLower === 'active' || sLower === 'new' || sLower === 'to do') {
-activeCount++;
-} else if (sLower === 'in progress' || sLower === 'doing' || sLower === 'in-progress') {
-inProgressCount++;
-} else if (sLower === 'resolved') {
-resolvedCount++;
-} else if (sLower === 'closed' || sLower === 'done' || sLower === 'completed') {
-closedCount++;
-}
+const stateCategory = normalizeWorkItemStateCategory(stateMetadata.get(`${type.toLowerCase()}|${state.toLowerCase()}`), state);
+stateCategoryCounts[stateCategory] = (stateCategoryCounts[stateCategory] || 0) + 1;
 return {
 id: w.id,
 type: type,
 title: fields['System.Title'] || 'Untitled',
 assignedTo: assignedName,
 state: state,
+stateCategory: stateCategory,
 createdDate: fields['System.CreatedDate'] ? new Date(fields['System.CreatedDate']).toLocaleDateString() : 'N/A',
 changedDate: fields['System.ChangedDate'] ? new Date(fields['System.ChangedDate']).toLocaleString() : 'N/A',
 rawChangedTimestamp: fields['System.ChangedDate'] ? new Date(fields['System.ChangedDate']).getTime() : null
@@ -93,14 +119,14 @@ rawStore.workitemsIndex = 0;
 document.getElementById('kpi-1-label').textContent = 'Total Work Items';
 document.getElementById('kpi-1-val').textContent = rawStore.workitems.length;
 document.getElementById('kpi-1-val').className = 'text-2xl font-extrabold text-blue-600 mt-1 truncate';
-document.getElementById('kpi-2-label').textContent = 'Active / New';
-document.getElementById('kpi-2-val').textContent = activeCount;
+document.getElementById('kpi-2-label').textContent = 'Proposed / Open';
+document.getElementById('kpi-2-val').textContent = stateCategoryCounts.Proposed || 0;
 document.getElementById('kpi-3-label').textContent = 'In Progress';
-document.getElementById('kpi-3-val').textContent = inProgressCount;
+document.getElementById('kpi-3-val').textContent = stateCategoryCounts['In Progress'] || 0;
 document.getElementById('kpi-4-label').textContent = 'Resolved';
-document.getElementById('kpi-4-val').textContent = resolvedCount;
-document.getElementById('kpi-5-label').textContent = 'Closed / Done';
-document.getElementById('kpi-5-val').textContent = closedCount;
+document.getElementById('kpi-4-val').textContent = stateCategoryCounts.Resolved || 0;
+document.getElementById('kpi-5-label').textContent = 'Completed';
+document.getElementById('kpi-5-val').textContent = stateCategoryCounts.Completed || 0;
 renderWorkItemsTableBatch(false);
 const chartLabels = Object.keys(stateCounts);
 const chartData = Object.values(stateCounts);
@@ -133,9 +159,9 @@ const html = nextBatch.map((r, rowIndex) => `
 <td class="p-4 text-xs font-semibold ${r.assignedTo === 'Unassigned' ? 'text-slate-400 italic' : 'text-slate-800'}">${r.assignedTo}</td>
 <td class="p-4 text-xs">
 <span class="px-2 py-0.5 rounded-full font-semibold ${
-['closed', 'done', 'resolved', 'completed'].includes(r.state.toLowerCase()) ? 'bg-emerald-100 text-emerald-700' :
-['in progress', 'doing', 'in-progress'].includes(r.state.toLowerCase()) ? 'bg-amber-100 text-amber-700' :
-['active', 'new', 'to do'].includes(r.state.toLowerCase()) ? 'bg-blue-100 text-blue-700' :
+r.stateCategory === 'Completed' || r.stateCategory === 'Resolved' ? 'bg-emerald-100 text-emerald-700' :
+r.stateCategory === 'In Progress' ? 'bg-amber-100 text-amber-700' :
+r.stateCategory === 'Proposed' ? 'bg-blue-100 text-blue-700' :
 'bg-slate-100 text-slate-700'
 }">${r.state}</span>
 </td>

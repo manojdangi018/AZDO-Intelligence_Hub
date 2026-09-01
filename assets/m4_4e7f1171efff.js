@@ -109,7 +109,7 @@ scope.repositoryId || ''
 ).toLowerCase();
 const scopeRef =
 String(
-scope.refName || ''
+scope.refName || scope.ref || ''
 ).toLowerCase();
 if (
 scopeRepo &&
@@ -136,9 +136,8 @@ return Boolean(normalizedDefaultBranch) && currentBranchName === normalizedDefau
 if (
 matchKind === 'prefix'
 ) {
-return currentRef.startsWith(
-scopeRef
-);
+const normalizedScope = scopeRef.endsWith('*') ? scopeRef.slice(0, -1) : scopeRef;
+return currentRef.startsWith(normalizedScope);
 }
 return currentRef === scopeRef;
 });
@@ -165,6 +164,8 @@ return request;
 }
 function parsePolicyInformation(policies) {
 let minReviewers = 0;
+let blockingPolicyCount = 0;
+let requiredReviewerCount = 0;
 const policyList = [];
 const POLICY_TYPES = {
 MIN_REVIEWERS:
@@ -185,7 +186,7 @@ STATUS_CHECK:
 (policies || []).forEach(policy => {
 if (
 !policy ||
-policy.isDeleted ||
+policy.isDeleted === true ||
 policy.isEnabled === false
 ) {
 return;
@@ -200,6 +201,7 @@ const typeNameLower =
 typeName.toLowerCase();
 const settings =
 policy.settings || {};
+if (policy.isBlocking === true || settings.isBlocking === true) blockingPolicyCount += 1;
 if (
 typeId === POLICY_TYPES.MIN_REVIEWERS
 ) {
@@ -237,6 +239,7 @@ typeNameLower.includes(
 'required reviewer'
 )
 ) {
+requiredReviewerCount += Array.isArray(settings.requiredReviewerIds) ? settings.requiredReviewerIds.length : 1;
 policyList.push(
 'Required Reviewers'
 );
@@ -302,7 +305,10 @@ policyList.length > 0,
 minReviewers:
 minReviewers,
 policies:
-[...new Set(policyList)]
+[...new Set(policyList)],
+blockingPolicyCount,
+requiredReviewerCount,
+policyCount: [...new Set(policyList)].length
 };
 }
 function clearBranchPolicyCache() {
@@ -356,6 +362,18 @@ setSafeInnerHTML(headerRow, `
 }
 }
 }
+function getStaleBranchThresholdDays() {
+const el = document.getElementById('staleBranchThresholdDays');
+const value = Number.parseInt(el?.value || '90', 10);
+return Number.isFinite(value) && value > 0 ? value : 90;
+}
+function updateStaleBranchThresholdLabel() {
+const days = getStaleBranchThresholdDays();
+const label = document.getElementById('staleBranchThresholdLabel');
+if (label) label.textContent = `${days} days`;
+}
+window.getStaleBranchThresholdDays = getStaleBranchThresholdDays;
+window.updateStaleBranchThresholdLabel = updateStaleBranchThresholdLabel;
 async function fetchRepositoryData() {
 const org =
 extractOrgName(
@@ -389,6 +407,7 @@ startFetching(
 'Fetching branches, branch policies, and PR telemetry across selected repository...'
 );
 ensurePolicyTableHeaders();
+updateStaleBranchThresholdLabel();
 clearBranchPolicyCache();
 let targetRepos =
 cachedRepos;
@@ -428,6 +447,7 @@ let repoBranchCounts = {};
 let allPRs = [];
 const now =
 new Date();
+const staleThresholdDays = getStaleBranchThresholdDays();
 try {
 const repoPromises =
 targetRepos.map(
@@ -525,7 +545,7 @@ commitDate
 ? (
 (now - commitDate) /
 (1000 * 60 * 60 * 24)
-) > 90
+) > staleThresholdDays
 : false;
 return {
 repo:
@@ -545,6 +565,8 @@ commitDate && !isNaN(commitDate.getTime())
 : null,
 isStale:
 isStale,
+staleThresholdDays:
+staleThresholdDays,
 msg:
 topCommit?.comment ||
 '',
@@ -553,7 +575,10 @@ policyInfo.hasPolicy,
 minReviewers:
 policyInfo.minReviewers,
 policies:
-policyInfo.policies
+policyInfo.policies,
+blockingPolicyCount: policyInfo.blockingPolicyCount,
+requiredReviewerCount: policyInfo.requiredReviewerCount,
+policyCount: policyInfo.policyCount
 };
 }
 )
@@ -640,7 +665,10 @@ actualReviewers,
 minRequiredReviewers:
 policyInfo.minReviewers,
 targetPolicies:
-policyInfo.policies
+policyInfo.policies,
+blockingPolicyCount: policyInfo.blockingPolicyCount,
+requiredReviewerCount: policyInfo.requiredReviewerCount,
+policyCount: policyInfo.policyCount
 };
 }
 )
@@ -760,7 +788,7 @@ p.targetPolicies &&
 p.targetPolicies.length > 0
 ).length;
 setStatus(
-`Loaded ${rawStore.repos.length} branches, ` +
+`Loaded ${rawStore.repos.length} branches (stale threshold: ${staleThresholdDays} days), ` +
 `${branchPolicyCount} branches with policies, ` +
 `${allPRs.length} pull requests, and ` +
 `${prPolicyCount} PR target branches with policies ` +
@@ -1007,7 +1035,8 @@ const data = policyBranches.map(b => ({
 "Branch Policies": Array.isArray(b.policies) ? b.policies.join(', ') : 'None',
 "Last Author": b.author || 'Unknown',
 "Last Commit Date": b.date || 'N/A',
-"Commit Message": b.msg || ''
+"Commit Message": b.msg || '',
+"Stale Threshold (Days)": b.staleThresholdDays || 90
 }));
 exportToExcelFile(
 { "Branches With Policies": data },
