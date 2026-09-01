@@ -229,6 +229,10 @@ document.getElementById('statusBar')?.classList.remove('fetching');
 document.getElementById('btnCancelAzDoFetch')?.remove();
 azdoActiveAbortController = null;
 azdoApiRunActive = false;
+window.azdoActiveRequests = typeof azdoActiveRequests !== 'undefined' ? azdoActiveRequests : 0;
+window.azdoRequestQueue = typeof azdoRequestQueue !== 'undefined' ? azdoRequestQueue : [];
+window.azdoApiRunActive = false;
+try { document.dispatchEvent(new CustomEvent('azdo:operation-complete', { detail: getAzDoApiRunState?.() })); } catch (_) {}
 }
 function showWorkspacePage() {
 document.getElementById('connectionPage')?.classList.add('hidden');
