@@ -27,7 +27,16 @@ path: p.folder || p.path || ''
 });
 }
 if (classicRes.status === 'fulfilled' && classicRes.value?.value) {
+const yamlPipelineIds = new Set(
+Array.from(pipelineMap.values())
+.filter(p => p.pipelineType === 'yaml' || p.type === 'yaml')
+.map(p => String(p.id))
+);
 classicRes.value.value.forEach(d => {
+// The Build Definitions API also returns YAML-backed definitions.
+// Those are already represented by the Pipelines API, so do not add
+// the same Azure DevOps pipeline a second time.
+if (yamlPipelineIds.has(String(d.id))) return;
 const key = `classic:${d.id}`;
 pipelineMap.set(key, {
 id: d.id,

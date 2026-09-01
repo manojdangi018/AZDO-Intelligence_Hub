@@ -318,7 +318,7 @@ return `<div class="agent-run-empty">No pipeline run history was returned for th
 const rows = runs.map(run => `
 <tr>
 <td>${esc(run.pipelineName)}</td>
-<td>${esc(run.buildId)}</td>
+<td>${esc(run.buildNumber)}</td>
 <td>${esc(run.triggeredBy)}</td>
 <td>${esc(run.dateTime)}</td>
 </tr>
@@ -330,7 +330,7 @@ return `
 </div>
 <div class="agent-run-table-wrap">
 <table class="agent-run-table">
-<thead><tr><th>Pipeline Name</th><th>Build ID</th><th>Triggered By</th><th>Date &amp; Time</th></tr></thead>
+<thead><tr><th>Pipeline Name</th><th>Build #</th><th>Triggered By</th><th>Date &amp; Time</th></tr></thead>
 <tbody>${rows}</tbody>
 </table>
 </div>
@@ -366,6 +366,7 @@ const dateValue = build.finishTime || build.startTime || build.queueTime || buil
 return {
 pipelineName: build.definition?.name || build.definition?.path || 'Unknown pipeline',
 buildId: build.id || '—',
+buildNumber: build.buildNumber || build.name || (build.id != null ? `#${build.id}` : '—'),
 triggeredBy: build.requestedBy?.displayName || build.requestedFor?.displayName || '—',
 dateTime: formatRunDateTime(dateValue),
 timestamp: dateValue ? new Date(dateValue).getTime() || 0 : 0,
@@ -405,6 +406,7 @@ const dateValue = build?.finishTime || build?.startTime || request.finishTime ||
 return {
 pipelineName,
 buildId: buildId || '—',
+buildNumber: build?.buildNumber || build?.name || request?.buildNumber || request?.data?.buildNumber || (buildId ? `#${buildId}` : '—'),
 triggeredBy,
 dateTime: formatRunDateTime(dateValue),
 timestamp: dateValue ? new Date(dateValue).getTime() : 0,
