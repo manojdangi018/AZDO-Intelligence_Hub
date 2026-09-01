@@ -461,7 +461,7 @@ setSafeInnerHTML(wrapper, `
 <aside class="data-detail-panel" role="dialog" aria-modal="true" aria-labelledby="dataDetailTitle">
 <div class="data-detail-header">
 <div class="data-detail-breadcrumb" id="dataDetailBreadcrumb"></div>
-<button class="data-detail-close" type="button" aria-label="Close" onclick="closeDataDetail()">&times;</button>
+<button class="data-detail-close" type="button" aria-label="Close" data-detail-action="close">&times;</button>
 <div class="data-detail-title-row">
 <div class="data-detail-icon" id="dataDetailIcon"></div>
 <div class="min-w-0">
@@ -474,7 +474,7 @@ setSafeInnerHTML(wrapper, `
 <a id="dataDetailOpenLink" class="data-detail-action-btn hidden" target="_blank" rel="noopener noreferrer">
 <span>↗</span> Open in Azure DevOps
 </a>
-<button id="dataDetailCopyBtn" class="data-detail-action-btn" type="button" onclick="copyDataDetailTelemetry()">
+<button id="dataDetailCopyBtn" class="data-detail-action-btn" type="button" data-detail-action="copy">
 <span>▣</span> Copy Telemetry
 </button>
 </div>
@@ -495,8 +495,22 @@ setSafeInnerHTML(wrapper, `
 document.body.appendChild(wrapper);
 wrapper.addEventListener('click', event => {
 const tab = event.target.closest('[data-detail-tab]');
-if (tab) switchDataDetailTab(tab.dataset.detailTab);
-if (event.target.closest('[data-detail-close="true"]')) closeDataDetail();
+if (tab) {
+switchDataDetailTab(tab.dataset.detailTab);
+return;
+}
+if (event.target.closest('[data-detail-close="true"]')) {
+closeDataDetail();
+return;
+}
+const action = event.target.closest('[data-detail-action]')?.dataset.detailAction;
+if (action === 'close') {
+closeDataDetail();
+return;
+}
+if (action === 'copy') {
+copyDataDetailTelemetry();
+}
 });
 }
 let currentDetail = null;
@@ -652,25 +666,29 @@ document.execCommand('copy');
 area.remove();
 }
 }
+const boundDetailRows = new WeakSet();
 function bindRows() {
 document.querySelectorAll('table tbody tr[data-detail-type]').forEach(row => {
 row.classList.add('data-detail-row');
 row.setAttribute('tabindex', '0');
 row.setAttribute('role', 'button');
-});
-}
-document.addEventListener('click', event => {
-const row = event.target.closest('tr[data-detail-type]');
-if (!row) return;
+row.setAttribute('aria-label', 'Open details');
+if (boundDetailRows.has(row)) return;
+boundDetailRows.add(row);
+row.addEventListener('click', event => {
 if (event.target.closest('button, a, input, select, textarea')) return;
 openDataDetail(row.dataset.detailType, row.dataset.detailIndex);
 });
+row.addEventListener('keydown', event => {
+if (event.key === 'Enter' || event.key === ' ') {
+event.preventDefault();
+openDataDetail(row.dataset.detailType, row.dataset.detailIndex);
+}
+});
+});
+}
 document.addEventListener('keydown', event => {
 if (event.key === 'Escape') closeDataDetail();
-if (event.key === 'Enter') {
-const row = event.target.closest?.('tr[data-detail-type]');
-if (row) openDataDetail(row.dataset.detailType, row.dataset.detailIndex);
-}
 });
 window.openDataDetail = openDataDetail;
 window.closeDataDetail = closeDataDetail;
