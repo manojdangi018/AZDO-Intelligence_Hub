@@ -8,7 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<link rel="stylesheet" href="css/styles.css" />
+<link rel="stylesheet" href="assets/s_c55696c73322.css" />
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
 
@@ -76,14 +76,14 @@ Got it
 <div class="field-group">
 <label>Personal Access Token <span>*</span></label>
 <input type="password" id="targetPat" placeholder="Enter PAT token">
-<small>In Cloudflare mode, the PAT is stored securely as a Worker secret. In direct mode, it is kept only in browser memory.</small>
+<small>PAT is used only from this browser session to call Azure DevOps APIs.</small>
 </div>
 
 <div class="flex flex-col gap-2.5">
 <button id="btnLoadProjects" onclick="loadProjectsList()" class="btn-load-projects">Load projects</button>
 <label class="remember-toggle">
 <input type="checkbox" id="chkRememberCreds" onchange="toggleRememberCreds()">
-<span>Remember organization</span>
+<span>Remember organization &amp; credentials</span>
 </label>
 </div>
 
@@ -656,15 +656,14 @@ Export Pipelines (.xlsx)
 <th class="p-4">Pipeline Name</th>
 <th class="p-4">Total Scanned</th>
 <th class="p-4">Successful Builds</th>
-<th class="p-4">Failed</th>
-<th class="p-4">Canceled</th>
+<th class="p-4">Failed / Other</th>
 <th class="p-4">Auto / CI Triggers</th>
 <th class="p-4">Manual Triggers</th>
 <th class="p-4">Success Rate</th>
 </tr>
 </thead>
 <tbody id="pipelineSummaryTableBody" class="divide-y divide-slate-100">
-<tr><td colspan="8" class="p-4 text-center text-slate-400">Click "Fetch Pipeline Runs" to scan pipeline definitions.</td></tr>
+<tr><td colspan="7" class="p-4 text-center text-slate-400">Click "Fetch Pipeline Runs" to scan pipeline definitions.</td></tr>
 </tbody>
 </table>
 <div id="seeMorePipelineSummaryContainer" class="hidden p-4 border-t border-slate-100 text-center">
@@ -682,15 +681,16 @@ See More (<span id="pipelineSummaryRemainingCount">0</span> remaining)
 <thead>
 <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
 <th class="p-4">Pipeline Name</th>
-<th class="p-4">Trigger Branch</th>
 <th class="p-4">Build #</th>
+<th class="p-4">Branch</th>
+<th class="p-4">Trigger Type</th>
 <th class="p-4">Triggered By</th>
-<th class="p-4">Trigger Date</th>
-<th class="p-4">Status</th>
+<th class="p-4">Result</th>
+<th class="p-4">Finish Time</th>
 </tr>
 </thead>
 <tbody id="pipelineTableBody" class="divide-y divide-slate-100">
-<tr><td colspan="6" class="p-4 text-center text-slate-400">No build runs loaded.</td></tr>
+<tr><td colspan="7" class="p-4 text-center text-slate-400">No build runs loaded.</td></tr>
 </tbody>
 </table>
 <div id="seeMorePipelinesContainer" class="hidden p-4 border-t border-slate-100 text-center">
@@ -840,18 +840,16 @@ See More (<span id="workItemsRemainingCount">0</span> remaining)
 </main>
 </div>
 
-<!-- Runtime configuration -->
 <!-- Modular Scripts -->
-<script src="config.js?v=20260901-cloudflare-1"></script>
-<script src="assets/m_api_27c45b08488f.js"></script>
-<script src="assets/m_app_bcda98897a02.js"></script>
-<script src="assets/m_serviceagents_42f59c6605f0.js"></script>
-<script src="assets/m_repos_26a86ebfd170.js"></script>
-<script src="assets/m_access_f04a57aa2b1d.js"></script>
-<script src="assets/m_activity_e84bc76db74d.js"></script>
-<script src="assets/m_pipelines_64478996a506.js"></script>
-<script src="assets/m_workitems_e41ff1d6fc10.js"></script>
-<script src="assets/m_users_a63a2805e83e.js"></script>
-<script src="assets/m_row-details_56b0ffa20217.js"></script>
+<script src="assets/m1_5dee75f7117c.js"></script>
+<script src="assets/m2_6993d7c7e108.js"></script>
+<script src="assets/m3_3184062e0706.js"></script>
+<script src="assets/m4_4e7f1171efff.js"></script>
+<script src="assets/m5_5058d6a5faa5.js"></script>
+<script src="assets/m6_5a6529fb0cd5.js"></script>
+<script src="assets/m7_2b021bb8133f.js"></script>
+<script src="assets/m8_94a8478ccca5.js"></script>
+<script src="assets/m9_9eddd4881ee8.js"></script>
+<script src="assets/m10_db030ee8db9c.js"></script>
 </body>
 </html>
