@@ -1317,23 +1317,3 @@ color: #64748b;
 background: #f8fafc;
 font-size: 13px;
 }
-
-
-/* Phase 4 UX improvements */
-.table-sortable { cursor: pointer; user-select: none; position: relative; }
-.table-sortable:hover { background: #f1f5f9; }
-.table-sort-indicator { color: #2563eb; font-size: 9px; margin-left: 3px; }
-.ux-progress-panel { margin-top: 10px; padding: 12px 14px; border: 1px solid #bfdbfe; border-radius: 10px; background: #eff6ff; color: #1e3a8a; }
-.ux-progress-head { display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:12px; }
-.ux-progress-head div { display:flex; flex-direction:column; gap:2px; }
-.ux-progress-head span { color:#64748b; font-size:11px; }
-.ux-progress-percent { font-weight:800; font-size:13px; }
-.ux-progress-track { height:6px; background:#dbeafe; border-radius:999px; overflow:hidden; margin:9px 0; }
-.ux-progress-bar { height:100%; background:#2563eb; border-radius:999px; transition:width .25s ease; }
-.ux-progress-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:6px 14px; font-size:10px; color:#475569; }
-.ux-progress-grid b { color:#0f172a; }
-.ux-permission-warning { margin-top:9px; padding:8px 10px; border-radius:7px; background:#fef3c7; color:#92400e; font-size:11px; border:1px solid #fde68a; }
-.ux-insight-card { border:1px solid #e2e8f0; border-radius:10px; padding:12px; background:#f8fafc; min-height:92px; }
-.ux-insight-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#64748b; }
-.ux-insight-value { margin-top:4px; font-size:21px; font-weight:800; color:#0f172a; }
-.ux-insight-note { margin-top:2px; font-size:10px; color:#94a3b8; }

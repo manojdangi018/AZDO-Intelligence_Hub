@@ -125,13 +125,7 @@ azdoApiRunState = {
   retries: 0,
   pages: 0,
   truncated: false,
-  cancelled: false,
-  completed: 0,
-  active: 0,
-  queued: 0,
-  recordsScanned: 0,
-  recordsSkipped: 0,
-  permissionWarnings: 0
+  cancelled: false
 };
 return azdoActiveAbortController;
 }
@@ -154,31 +148,11 @@ return azdoApiRunState ? {
   failures: [...azdoApiRunState.failures]
 } : null;
 }
-function getAzDoProgressState() {
-const state = azdoApiRunState || {};
-return {
-  id: state.id || 0,
-  requests: state.requests || 0,
-  completed: state.completed || 0,
-  retries: state.retries || 0,
-  pages: state.pages || 0,
-  recordsScanned: state.recordsScanned || 0,
-  recordsSkipped: state.recordsSkipped || 0,
-  permissionWarnings: state.permissionWarnings || 0,
-  failures: Array.isArray(state.failures) ? state.failures.length : 0,
-  activeRequests: azdoActiveRequests || 0,
-  queuedRequests: azdoRequestQueue.length || 0,
-  cancelled: state.cancelled === true,
-  truncated: state.truncated === true
-};
-}
 function getAzDoPartialResultMessage() {
 const state = azdoApiRunState;
 if (!state) return '';
 const parts = [];
 if (state.failures.length) parts.push(`${state.failures.length} API request${state.failures.length === 1 ? '' : 's'} failed`);
-if (state.permissionWarnings) parts.push(`${state.permissionWarnings} permission warning${state.permissionWarnings === 1 ? '' : 's'}`);
-if (state.recordsSkipped) parts.push(`${state.recordsSkipped} record${state.recordsSkipped === 1 ? '' : 's'} unavailable/skipped`);
 if (state.truncated) parts.push('pagination stopped at the configured safety limit');
 if (state.cancelled) parts.push('operation cancelled');
 if (!parts.length) return '';
@@ -303,11 +277,7 @@ for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
   signal?.addEventListener('abort', abortFromCaller, { once: true });
   if (timeoutMs > 0) timeoutId = setTimeout(() => { timedOut = true; timeoutController.abort(); }, timeoutMs);
   try {
-    if (azdoApiRunActive && azdoApiRunState) {
-      azdoApiRunState.requests += 1;
-      azdoApiRunState.active = azdoActiveRequests;
-      azdoApiRunState.queued = azdoRequestQueue.length;
-    }
+    if (azdoApiRunActive && azdoApiRunState) azdoApiRunState.requests += 1;
     let res;
     try {
       res = await fetch(url, {
@@ -350,9 +320,6 @@ for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       }
       const context = [activityId ? `ActivityId: ${activityId}` : '', requestId ? `RequestId: ${requestId}` : ''].filter(Boolean).join(' | ');
       if (context) message += ` ${context}`;
-      if (azdoApiRunActive && azdoApiRunState && (res.status === 401 || res.status === 403)) {
-        azdoApiRunState.permissionWarnings += 1;
-      }
       throw new AzureDevOpsApiError(message, res.status, {
         statusText: res.statusText, activityId, requestId, rawMessage: apiMessage,
         retryable: isRetryableStatus(res.status), retryDelayMs: getRetryDelayMs(res, attempt), url, attempts: attempt
@@ -369,14 +336,7 @@ for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       Object.defineProperty(data, '__azdoContinuationToken', { value: continuationToken || '', enumerable: false, configurable: true });
       Object.defineProperty(data, '__azdoStatus', { value: res.status, enumerable: false, configurable: true });
     } catch (_) {}
-    if (azdoApiRunActive && azdoApiRunState) {
-      azdoApiRunState.succeeded += 1;
-      azdoApiRunState.completed += 1;
-      const valueRecords = getArrayProperty(data, 'value');
-      azdoApiRunState.recordsScanned += valueRecords.length;
-      azdoApiRunState.active = azdoActiveRequests;
-      azdoApiRunState.queued = azdoRequestQueue.length;
-    }
+    if (azdoApiRunActive && azdoApiRunState) azdoApiRunState.succeeded += 1;
     return data;
   } catch (error) {
     lastError = error;
@@ -387,12 +347,6 @@ for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     const canRetry = retry && attempt < maxAttempts && (error?.retryable === true || isRetryableStatus(error?.status));
     if (!canRetry) {
       recordAzDoFailure(error, url);
-      if (azdoApiRunActive && azdoApiRunState) {
-        azdoApiRunState.completed += 1;
-        azdoApiRunState.recordsSkipped += 1;
-        azdoApiRunState.active = azdoActiveRequests;
-        azdoApiRunState.queued = azdoRequestQueue.length;
-      }
       throw error;
     }
     if (azdoApiRunActive && azdoApiRunState) azdoApiRunState.retries += 1;
@@ -521,5 +475,4 @@ window.fetchAzDoPaged = fetchAzDoPaged;
 window.beginAzDoOperation = beginAzDoOperation;
 window.cancelAzDoOperation = cancelAzDoOperation;
 window.getAzDoApiRunState = getAzDoApiRunState;
-window.getAzDoProgressState = getAzDoProgressState;
 window.getAzDoPartialResultMessage = getAzDoPartialResultMessage;

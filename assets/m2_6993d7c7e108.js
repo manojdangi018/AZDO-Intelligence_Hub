@@ -202,7 +202,6 @@ else el.classList.add('bg-blue-50', 'text-blue-700');
 const partial = type === 'success' ? getAzDoPartialResultMessage() : '';
 el.textContent = `${msg || ''}${partial}`;
 if (typeof renderCancelFetchButton === 'function') renderCancelFetchButton();
-if (typeof renderAzDoProgressPanel === 'function' && azdoApiRunActive) renderAzDoProgressPanel();
 }
 function renderCancelFetchButton() {
 const statusBar = document.getElementById('statusBar');
@@ -218,14 +217,14 @@ if (!btn) {
   statusBar.appendChild(btn);
 }
 }
-function legacyStartFetching(message) {
+function startFetching(message) {
 const controller = beginAzDoOperation();
 setStatus(message, 'info');
 document.getElementById('statusBar')?.classList.add('fetching');
 renderCancelFetchButton();
 return { id: azdoApiRunState?.id || 0, signal: controller.signal };
 }
-function legacyStopFetching() {
+function stopFetching() {
 document.getElementById('statusBar')?.classList.remove('fetching');
 document.getElementById('btnCancelAzDoFetch')?.remove();
 azdoActiveAbortController = null;
@@ -462,7 +461,6 @@ subWorkItems.classList.remove('hidden');
 }
 function showSection(viewId) {
 activeViewSection = `view-${viewId}`;
-refreshTableControlScope?.();
 ['repositories', 'access', 'activity', 'pipelines', 'serviceagents', 'users', 'workitems'].forEach(v => {
 document.getElementById(`view-${v}`).classList.toggle('hidden', v !== viewId);
 });
@@ -495,10 +493,6 @@ configureServiceAgentsOverview(viewId === 'serviceagents');
 }
 renderActiveSubstep();
 restoreWorkspaceDisplayState(category);
-refreshTableControlScope();
-wireTableHeaderSorting();
-applyTableUx();
-renderAdvancedDashboard();
 }
 function setConnectionBadge(connected) {
 const text = document.getElementById('connectionBadgeText');
@@ -581,313 +575,25 @@ document.documentElement.classList.remove('restore-workspace-page');
 showConnectionPage();
 setStatus('Disconnected from Azure DevOps. Enter credentials to connect again.', 'info');
 }
-function __originalStartFetching(message) {
-const controller = beginAzDoOperation();
-setStatus(message, 'info');
-document.getElementById('statusBar')?.classList.add('fetching');
-renderCancelFetchButton();
-return { id: azdoApiRunState?.id || 0, signal: controller.signal };
-}
-function __originalStopFetching() {
-document.getElementById('statusBar')?.classList.remove('fetching');
-document.getElementById('btnCancelAzDoFetch')?.remove();
-azdoActiveAbortController = null;
-azdoApiRunActive = false;
-}
-const tableUxState = {
-  query: '',
-  scope: 'all',
-  sortColumn: '',
-  sortDirection: 'asc',
-  status: 'all',
-  dateFrom: '',
-  dateTo: ''
-};
-let tableUxObserver = null;
-let tableUxApplying = false;
-let tableUxProgressTimer = null;
-
-function getActiveTables() {
-  const activeSection = document.getElementById(activeViewSection);
-  return activeSection ? [...activeSection.querySelectorAll('table')] : [];
-}
-function getTableLabel(table) {
-  if (!table) return 'Table';
-  const heading = table.closest('.bg-white')?.querySelector('h3');
-  return String(heading?.textContent || table.id || 'Table').trim();
-}
-function refreshTableControlScope() {
-  const scopeEl = document.getElementById('tableFilterScope');
-  if (!scopeEl) return;
-  const tables = getActiveTables();
-  const current = tableUxState.scope;
-  const options = [{ value: 'all', label: 'All Tables' }];
-  tables.forEach(table => options.push({ value: table.id, label: getTableLabel(table) }));
-  scopeEl.innerHTML = options.map(o => `<option value="${escapeHtml(o.value)}">Filter: ${escapeHtml(o.label)}</option>`).join('');
-  scopeEl.value = options.some(o => o.value === current) ? current : 'all';
-  tableUxState.scope = scopeEl.value;
-  refreshSortOptions();
-  refreshStatusOptions();
-}
-function refreshSortOptions() {
-  const sortEl = document.getElementById('tableSortColumn');
-  if (!sortEl) return;
-  const tables = getActiveTables().filter(t => tableUxState.scope === 'all' || t.id === tableUxState.scope);
-  const seen = new Set();
-  const options = [{ value: '', label: 'Sort by column...' }];
-  tables.forEach(table => table.querySelectorAll('thead th').forEach((th, idx) => {
-    const label = String(th.textContent || '').replace(/\s+/g, ' ').trim();
-    if (!label || seen.has(label.toLowerCase())) return;
-    seen.add(label.toLowerCase());
-    options.push({ value: label, label });
-  }));
-  sortEl.innerHTML = options.map(o => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`).join('');
-  sortEl.value = options.some(o => o.value === tableUxState.sortColumn) ? tableUxState.sortColumn : '';
-  tableUxState.sortColumn = sortEl.value;
-}
-function refreshStatusOptions() {
-  const statusEl = document.getElementById('tableStatusFilter');
-  if (!statusEl) return;
-  const tables = getActiveTables().filter(t => tableUxState.scope === 'all' || t.id === tableUxState.scope);
-  const values = new Set();
-  const statusHeaderPattern = /status|result|health|state|ready|enabled|access|trigger/i;
-  tables.forEach(table => {
-    const headers = [...table.querySelectorAll('thead th')].map(th => String(th.textContent || '').trim());
-    const statusIndexes = headers.map((h,i) => statusHeaderPattern.test(h) ? i : -1).filter(i => i >= 0);
-    table.querySelectorAll('tbody tr').forEach(row => {
-      statusIndexes.forEach(i => {
-        const cell = row.children[i];
-        const value = String(cell?.textContent || '').replace(/\s+/g, ' ').trim();
-        if (value && value.length <= 60) values.add(value);
-      });
-    });
-  });
-  const preferred = ['Succeeded','Failed','Partially Succeeded','Canceled','In Progress','Not Started','Active','Stale','Ready','Not Ready','Enabled','Disabled','New','Resolved','Closed','Done'];
-  const sorted = [...values].sort((a,b) => {
-    const ai = preferred.findIndex(v => v.toLowerCase() === a.toLowerCase());
-    const bi = preferred.findIndex(v => v.toLowerCase() === b.toLowerCase());
-    if (ai >= 0 || bi >= 0) return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
-    return a.localeCompare(b);
-  }).slice(0, 30);
-  const options = [{ value: 'all', label: 'Status: All' }, ...sorted.map(v => ({value:v,label:v}))];
-  statusEl.innerHTML = options.map(o => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`).join('');
-  statusEl.value = options.some(o => o.value === tableUxState.status) ? tableUxState.status : 'all';
-  tableUxState.status = statusEl.value;
-}
-function parseUxDate(value) {
-  const text = String(value || '').trim();
-  if (!text || text === '—' || text === 'N/A') return null;
-  let m = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-  if (m) {
-    const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), Number(m[4] || 0), Number(m[5] || 0), Number(m[6] || 0));
-    return Number.isFinite(d.getTime()) ? d : null;
-  }
-  m = text.match(/^(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-  if (m) {
-    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4] || 0), Number(m[5] || 0), Number(m[6] || 0));
-    return Number.isFinite(d.getTime()) ? d : null;
-  }
-  const d = new Date(text);
-  return Number.isFinite(d.getTime()) ? d : null;
-}
-function getRowDate(table, row) {
-  const headers = [...table.querySelectorAll('thead th')].map(th => String(th.textContent || '').replace(/\s+/g,' ').trim());
-  const dateIndexes = headers.map((h,i) => /date|time|created|changed|access|finish|commit/i.test(h) ? i : -1).filter(i => i >= 0);
-  for (const i of dateIndexes) {
-    const d = parseUxDate(row.children[i]?.textContent || '');
-    if (d) return d;
-  }
-  return null;
-}
-function normalizeSortValue(text) {
-  const raw = String(text || '').replace(/\s+/g, ' ').trim();
-  const n = Number(raw.replace(/[%#,\s]/g,''));
-  if (raw !== '' && Number.isFinite(n) && /^[-+]?\d[\d,\s]*(?:\.\d+)?%?$/.test(raw)) return {type:'number', value:n};
-  const d = parseUxDate(raw);
-  if (d) return {type:'date', value:d.getTime()};
-  return {type:'text', value:raw.toLowerCase()};
-}
-function applyTableUx() {
-  if (tableUxApplying) return;
-  tableUxApplying = true;
-  try {
-    const tables = getActiveTables();
-    const q = String(tableUxState.query || '').trim().toLowerCase();
-    const from = tableUxState.dateFrom ? new Date(`${tableUxState.dateFrom}T00:00:00`) : null;
-    const to = tableUxState.dateTo ? new Date(`${tableUxState.dateTo}T23:59:59.999`) : null;
-    tables.forEach(table => {
-      const isTarget = tableUxState.scope === 'all' || table.id === tableUxState.scope;
-      const headers = [...table.querySelectorAll('thead th')].map(th => String(th.textContent || '').replace(/\s+/g,' ').trim());
-      let sortIndex = -1;
-      if (tableUxState.sortColumn) {
-        sortIndex = headers.findIndex(h => h.toLowerCase() === tableUxState.sortColumn.toLowerCase());
-      }
-      const rows = [...table.querySelectorAll('tbody tr')].filter(r => r.children.length > 1);
-      rows.forEach(row => {
-        if (!isTarget) { row.style.display = ''; return; }
-        const text = row.textContent.toLowerCase();
-        const statusMatch = tableUxState.status === 'all' || text.includes(String(tableUxState.status).toLowerCase());
-        const queryMatch = !q || text.includes(q);
-        const rowDate = getRowDate(table, row);
-        const dateMatch = (!from || (rowDate && rowDate >= from)) && (!to || (rowDate && rowDate <= to));
-        row.style.display = queryMatch && statusMatch && dateMatch ? '' : 'none';
-      });
-      if (isTarget && sortIndex >= 0) {
-        const tbody = table.querySelector('tbody');
-        const sortedRows = rows.slice().sort((a,b) => {
-          const av = normalizeSortValue(a.children[sortIndex]?.textContent || '');
-          const bv = normalizeSortValue(b.children[sortIndex]?.textContent || '');
-          if (av.value === bv.value) return 0;
-          if (av.type === bv.type) return av.value < bv.value ? -1 : 1;
-          return String(av.value).localeCompare(String(bv.value));
-        });
-        if (tableUxState.sortDirection === 'desc') sortedRows.reverse();
-        sortedRows.forEach(r => tbody.appendChild(r));
-      }
-      const ths = table.querySelectorAll('thead th');
-      ths.forEach(th => {
-        th.classList.add('table-sortable');
-        const label = String(th.textContent || '').replace(/[▲▼]$/,'').replace(/\s+/g,' ').trim();
-        th.setAttribute('title', 'Click to sort this column');
-        th.dataset.sortLabel = label;
-        const existing = th.querySelector('.table-sort-indicator');
-        if (existing) existing.remove();
-        if (tableUxState.sortColumn && label.toLowerCase() === tableUxState.sortColumn.toLowerCase()) {
-          const indicator = document.createElement('span');
-          indicator.className = 'table-sort-indicator';
-          indicator.textContent = tableUxState.sortDirection === 'asc' ? ' ▲' : ' ▼';
-          th.appendChild(indicator);
-        }
-      });
-    });
-    updateTableUxCounts();
-  } finally { tableUxApplying = false; }
-}
-function updateTableUxCounts() {
-  const countEl = document.getElementById('tableVisibleCount');
-  const hiddenEl = document.getElementById('tableHiddenCount');
-  if (!countEl || !hiddenEl) return;
-  let visible = 0, hidden = 0;
-  getActiveTables().forEach(table => table.querySelectorAll('tbody tr').forEach(row => {
-    if (row.children.length <= 1) return;
-    if (row.style.display === 'none') hidden += 1; else visible += 1;
-  }));
-  countEl.textContent = String(visible);
-  hiddenEl.textContent = String(hidden);
-}
 function filterActiveTable() {
-  tableUxState.query = document.getElementById('tableFilterInput')?.value || '';
-  tableUxState.scope = document.getElementById('tableFilterScope')?.value || 'all';
-  tableUxState.status = document.getElementById('tableStatusFilter')?.value || 'all';
-  tableUxState.dateFrom = document.getElementById('tableDateFrom')?.value || '';
-  tableUxState.dateTo = document.getElementById('tableDateTo')?.value || '';
-  applyTableUx();
+const query = document.getElementById('tableFilterInput').value.toLowerCase();
+const scope = document.getElementById('tableFilterScope')?.value || 'all';
+const activeSection = document.getElementById(activeViewSection);
+if (!activeSection) return;
+const tables = activeSection.querySelectorAll('table');
+tables.forEach(table => {
+const isTarget = scope === 'all' || table.id === scope;
+const rows = table.querySelectorAll('tbody tr');
+rows.forEach(r => {
+if (!isTarget) {
+r.style.display = '';
+} else {
+const text = r.textContent.toLowerCase();
+r.style.display = text.includes(query) ? '' : 'none';
 }
-function sortActiveTableColumn(label) {
-  if (!label) return;
-  if (tableUxState.sortColumn.toLowerCase() === String(label).toLowerCase()) {
-    tableUxState.sortDirection = tableUxState.sortDirection === 'asc' ? 'desc' : 'asc';
-  } else {
-    tableUxState.sortColumn = String(label);
-    tableUxState.sortDirection = 'asc';
-  }
-  const sortEl = document.getElementById('tableSortColumn');
-  if (sortEl) sortEl.value = tableUxState.sortColumn;
-  applyTableUx();
+});
+});
 }
-function clearTableUxFilters() {
-  tableUxState.query = ''; tableUxState.status = 'all'; tableUxState.dateFrom = ''; tableUxState.dateTo = '';
-  tableUxState.sortColumn = ''; tableUxState.sortDirection = 'asc';
-  ['tableFilterInput','tableDateFrom','tableDateTo'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
-  const statusEl=document.getElementById('tableStatusFilter'); if(statusEl) statusEl.value='all';
-  const sortEl=document.getElementById('tableSortColumn'); if(sortEl) sortEl.value='';
-  applyTableUx();
-}
-function wireTableHeaderSorting() {
-  getActiveTables().forEach(table => table.querySelectorAll('thead th').forEach(th => {
-    if (th.dataset.uxSortBound === 'true') return;
-    th.dataset.uxSortBound = 'true';
-    th.addEventListener('click', () => sortActiveTableColumn(th.dataset.sortLabel || th.textContent));
-  }));
-}
-function initTableUxObserver() {
-  if (tableUxObserver) tableUxObserver.disconnect();
-  const container = document.querySelector('.dashboard-content');
-  if (!container || typeof MutationObserver === 'undefined') return;
-  tableUxObserver = new MutationObserver(() => {
-    if (tableUxApplying) return;
-    clearTimeout(tableUxObserver._timer);
-    tableUxObserver._timer = setTimeout(() => {
-      refreshSortOptions(); refreshStatusOptions(); wireTableHeaderSorting(); applyTableUx();
-    }, 60);
-  });
-  tableUxObserver.observe(container, { childList: true, subtree: true });
-}
-function getAdvancedDashboardMetrics(category) {
-  const rs = rawStore;
-  if (category === 'repositories') {
-    const branches = rs.repos || [], prs = rs.repoPrs || [];
-    const stale = branches.filter(x => x.isStale).length;
-    const policy = branches.filter(x => x.hasPolicy).length;
-    return [
-      ['Branches Scanned', branches.length, 'Total branch records'],
-      ['Stale Branches', stale, branches.length ? `${Math.round(stale / branches.length * 100)}% of branches` : 'No branch data'],
-      ['Policy Coverage', branches.length ? `${Math.round(policy / branches.length * 100)}%` : '0%', `${policy} branches with policy`],
-      ['Open PRs', prs.filter(x => /active|open/i.test(String(x.status||''))).length, `${prs.length} PR records loaded`]
-    ];
-  }
-  if (category === 'pipelines') {
-    const p = rs.pipelineSummaries || [], runs = rs.pipelines || [];
-    const total = p.reduce((a,x)=>a+(Number(x.total)||0),0), success=p.reduce((a,x)=>a+(Number(x.succeeded)||0),0), failed=p.reduce((a,x)=>a+(Number(x.failed)||0),0), auto=p.reduce((a,x)=>a+(Number(x.autoTriggers)||0),0);
-    return [['Pipelines',p.length,'Unique pipeline identities'],['Success Rate',total?`${Math.round(success/total*100)}%`:'0%',`${success} successful / ${total} scanned`],['Failed / Other',failed,`${runs.length} run records loaded`],['Auto Trigger Rate',total?`${Math.round(auto/total*100)}%`:'0%',`${auto} automatic triggers`]];
-  }
-  if (category === 'work_items') {
-    const w=rs.workitems||[]; const active=w.filter(x=>/active|new|todo|to do/i.test(String(x.state||''))).length; const progress=w.filter(x=>/progress|doing/i.test(String(x.state||''))).length;
-    return [['Work Items',w.length,'Records loaded'],['Active / New',active,`${w.length?Math.round(active/w.length*100):0}% of records`],['In Progress',progress,'Based on process state category'],['Types',new Set(w.map(x=>x.type).filter(Boolean)).size,'Work item types']];
-  }
-  if (category === 'service_agents') {
-    const c=rs.serviceConnections||[], a=(rs.agents||[]).filter(x=>!x.isSyntheticHosted && x.name && x.name!=='Unable to read agents'), pools=rs.agentPools||[];
-    return [['Service Connections',c.length,'Loaded connections'],['Agent Pools',pools.length,'Visible pools'],['Self-hosted Agents',a.length,'Real agents'],['Not Ready',a.filter(x=>/offline|not ready|disabled/i.test(`${x.status} ${x.enabled}`)).length,'Review agent health']];
-  }
-  if (category === 'user_activity') {
-    const c=rs.commits||[], p=rs.repoPrs||[]; return [['Commits',c.length,'User activity records'],['Pull Requests',p.length,'User PR records'],['Repositories',new Set(c.map(x=>x.repo).filter(Boolean)).size,'Repositories touched'],['Branches',new Set(c.map(x=>x.branch).filter(Boolean)).size,'Branches associated']];
-  }
-  if (category === 'user_access') {
-    const a=rs.access||[]; return [['Memberships',a.length,'Access records'],['Groups / Teams',new Set(a.map(x=>x.team).filter(Boolean)).size,'Unique security containers'],['Users',new Set(a.map(x=>x.email||x.name).filter(Boolean)).size,'Unique identities'],['Permission Warnings',getAzDoProgressState?.().permissionWarnings||0,'403/401 responses']];
-  }
-  if (category === 'users') {
-    const u=rs.userEntitlements||[]; const active=u.filter(x=>/active/i.test(String(x.status||''))).length; return [['Users',u.length,'Entitlement records'],['Active Users',active,`${u.length?Math.round(active/u.length*100):0}% active`],['Projects',new Set(u.flatMap(x=>(x.projects||[]).map(p=>p.projectName)).filter(Boolean)).size,'Projects represented'],['Project Access',u.reduce((n,x)=>n+(x.projects||[]).length,0),'Project access records']];
-  }
-  return [];
-}
-function renderAdvancedDashboard() {
-  const host = document.getElementById('advancedDashboard'); if (!host) return;
-  const metrics = getAdvancedDashboardMetrics(activeCategory);
-  if (!metrics.length) { host.innerHTML=''; return; }
-  host.innerHTML = `<div class="flex items-center justify-between mb-3"><div><h3 class="font-bold text-slate-900 text-sm">Advanced Dashboard Insights</h3><p class="text-xs text-slate-400">Derived from the records currently loaded in this workspace.</p></div><span class="text-[10px] uppercase tracking-wider font-bold text-slate-400">Live summary</span></div><div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">${metrics.map(m=>`<div class="ux-insight-card"><div class="ux-insight-label">${escapeHtml(m[0])}</div><div class="ux-insight-value">${escapeHtml(m[1])}</div><div class="ux-insight-note">${escapeHtml(m[2])}</div></div>`).join('')}</div>`;
-}
-function renderAzDoProgressPanel() {
-  const host = document.getElementById('azdoProgressPanel'); if (!host) return;
-  const p = typeof getAzDoProgressState === 'function' ? getAzDoProgressState() : {};
-  const running = azdoApiRunActive && !p.cancelled;
-  host.classList.remove('hidden');
-  host.innerHTML = `<div class="ux-progress-head"><div><strong>${running ? 'Azure DevOps scan in progress' : (p.cancelled ? 'Azure DevOps scan cancelled' : 'Azure DevOps scan summary')}</strong><span>${p.requests||0} requests · ${p.pages||0} pages · ${p.retries||0} retries</span></div><span class="ux-progress-percent">${p.requests ? Math.round((p.completed||0)/Math.max(p.requests||1,p.completed||1)*100) : 0}%</span></div><div class="ux-progress-track"><div class="ux-progress-bar" style="width:${p.requests ? Math.min(100,Math.round((p.completed||0)/Math.max(p.requests||1,p.completed||1)*100)) : (running ? 15 : 100)}%"></div></div><div class="ux-progress-grid"><span><b>${p.recordsScanned||0}</b> records scanned</span><span><b>${p.recordsSkipped||0}</b> records skipped/unavailable</span><span><b>${p.activeRequests||0}</b> active requests</span><span><b>${p.queuedRequests||0}</b> queued</span><span><b>${p.permissionWarnings||0}</b> permission warnings</span><span><b>${p.failures||0}</b> failed requests</span></div>${p.permissionWarnings ? '<div class="ux-permission-warning"><strong>Permission warning:</strong> Some Azure DevOps resources returned 401/403. Results may be incomplete for those resources.</div>' : ''}</div>`;
-}
-function startFetching(message) {
-  const result = typeof __originalStartFetching === 'function' ? __originalStartFetching(message) : null;
-  renderAzDoProgressPanel();
-  clearInterval(tableUxProgressTimer);
-  tableUxProgressTimer = setInterval(renderAzDoProgressPanel, 300);
-  return result || { id: azdoApiRunState?.id || 0, signal: getAzDoAbortSignal?.() };
-}
-function stopFetching() {
-  if (typeof __originalStopFetching === 'function') __originalStopFetching();
-  clearInterval(tableUxProgressTimer);
-  tableUxProgressTimer = null;
-  renderAzDoProgressPanel();
-  renderAdvancedDashboard();
-}
-
 function exportToExcelFile(sheetsData, baseFileName) {
 if (typeof XLSX === 'undefined') {
 alert('Excel library is still loading, please try again in a moment.');
@@ -1101,10 +807,6 @@ minRotation: 20
 }
 document.addEventListener('DOMContentLoaded', async function () {
 initCredentials();
-refreshTableControlScope();
-wireTableHeaderSorting();
-initTableUxObserver();
-renderAdvancedDashboard();
 const workspaceActive = sessionStorage.getItem('azdo_workspace_active');
 if (workspaceActive === 'true') {
 const savedOrg = sessionStorage.getItem('azdo_session_org');
