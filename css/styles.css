@@ -1516,3 +1516,20 @@ table tbody tr.data-detail-row:focus {
 
 /* Microsoft-hosted agent history uses project build-queue correlation. */
 .agent-hosted-note { margin: 0 0 12px; color: #64748b; font-size: 12px; }
+
+/* User Directory detail: project-to-permission matrix */
+.user-projects-card { overflow: hidden; }
+.user-project-table { border: 1px solid #dbe3ee; border-radius: 10px; overflow: hidden; background: #fff; }
+.user-project-header, .user-project-row { display: grid; grid-template-columns: minmax(190px, 0.85fr) minmax(0, 1.75fr); }
+.user-project-header { background: #f8fafc; color: #526987; font-size: 11px; font-weight: 800; letter-spacing: .04em; }
+.user-project-header > div, .user-project-row > div { padding: 13px 16px; }
+.user-project-row { border-top: 1px solid #e5eaf1; }
+.user-project-name { font-weight: 700; color: #1e293b; word-break: break-word; }
+.user-project-permissions { display: flex; flex-wrap: wrap; gap: 7px; align-items: flex-start; }
+.user-project-permission { display: inline-flex; padding: 5px 9px; border: 1px solid #bfdbfe; border-radius: 7px; background: #eff6ff; color: #0f4fba; font-size: 12px; line-height: 1.25; }
+.user-project-empty { padding: 18px; color: #64748b; }
+@media (max-width: 640px) {
+  .user-project-header, .user-project-row { grid-template-columns: 1fr; }
+  .user-project-header > div:first-child { display: none; }
+  .user-project-row > div + div { padding-top: 0; }
+}

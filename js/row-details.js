@@ -113,6 +113,23 @@
     return String(value);
   }
 
+  function formatDetailDate(value) {
+    if (!value) return '—';
+    const d = value instanceof Date ? value : new Date(value);
+    if (!Number.isFinite(d.getTime())) return valueText(value);
+    return d.toLocaleString('en-GB', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false
+    });
+  }
+
+  function isDateField(key) {
+    const k = String(key || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+    return /(^|date|time|timestamp)$/.test(k) ||
+      ['datecreated','lastaccesseddate','createdon','finishdate','finishtime','createddate','changeddate','rawcreatedtimestamp'].includes(k);
+  }
+
   function statusClass(value) {
     const v = String(value || '').toLowerCase();
     if (['active', 'active branch', 'online', 'succeeded', 'completed', 'protected with policies', 'yes', 'enabled'].includes(v)) {
@@ -128,8 +145,8 @@
   }
 
   function renderValue(key, value) {
-    const text = valueText(value);
     const lowerKey = String(key).toLowerCase();
+    const text = isDateField(key) ? formatDetailDate(value) : valueText(value);
     const lowerText = text.toLowerCase();
 
     if (
@@ -524,7 +541,32 @@
       </div>
     `;
 
-    if (type === 'agent') {
+    if (type === 'user-directory') {
+      const projects = Array.isArray(row.projects) ? row.projects : [];
+      const projectRows = projects.length ? projects.map(p => {
+        const permissions = [
+          p.group ? `Role: ${p.group}` : '',
+          p.teams?.length ? `Teams: ${p.teams.join(', ')}` : '',
+          p.assignmentSource && p.assignmentSource !== 'unknown' ? `Assignment: ${p.assignmentSource}` : '',
+          p.inherited && p.inherited !== 'notSet' ? `Permission Source: ${p.inherited}` : ''
+        ].filter(Boolean);
+        return `
+          <div class="user-project-row">
+            <div class="user-project-name">${esc(p.projectName || 'Unknown Project')}</div>
+            <div class="user-project-permissions">${permissions.length ? permissions.map(x => `<span class="user-project-permission">${esc(x)}</span>`).join('') : '<span class="text-slate-400">No project permission details</span>'}</div>
+          </div>`;
+      }).join('') : '<div class="user-project-empty">No project access listed</div>';
+
+      document.getElementById('dataDetailDetails').innerHTML = `
+        <div class="detail-section-card user-projects-card">
+          <div class="detail-section-heading"><span class="detail-section-icon">⌁</span> PROJECT ACCESS &amp; PERMISSIONS</div>
+          <div class="user-project-table">
+            <div class="user-project-header"><div>PROJECT NAME</div><div>PERMISSIONS</div></div>
+            ${projectRows}
+          </div>
+        </div>
+      `;
+    } else if (type === 'agent') {
       document.getElementById('dataDetailDetails').innerHTML = `
         <div class="detail-section-card agent-runs-card">
           <div class="detail-section-heading"><span class="detail-section-icon">⌁</span> Pipeline Run History</div>
