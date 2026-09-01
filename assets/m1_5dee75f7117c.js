@@ -111,24 +111,6 @@ let azdoApiRunActive = false;
 let azdoRequestQueue = [];
 let azdoActiveRequests = 0;
 
-function dispatchAzDoProgressEvent() {
-try {
-window.azdoApiRunState = azdoApiRunState;
-window.azdoApiRunActive = azdoApiRunActive;
-window.azdoActiveRequests = azdoActiveRequests;
-window.azdoRequestQueue = azdoRequestQueue;
-document.dispatchEvent(new CustomEvent('azdo:progress', { detail: getAzDoApiRunState() }));
-} catch (_) {}
-}
-function recordAzDoSkipped(count = 1, reason = '') {
-if (azdoApiRunActive && azdoApiRunState) {
-azdoApiRunState.recordsSkipped += Math.max(0, Number(count) || 0);
-if (reason) azdoApiRunState.permissionDetails.push(String(reason));
-}
-dispatchAzDoProgressEvent();
-}
-window.recordAzDoSkipped = recordAzDoSkipped;
-
 function beginAzDoOperation() {
 if (azdoActiveAbortController) azdoActiveAbortController.abort();
 azdoActiveAbortController = new AbortController();
@@ -144,15 +126,13 @@ azdoApiRunState = {
   pages: 0,
   truncated: false,
   cancelled: false,
+  completed: 0,
+  active: 0,
+  queued: 0,
   recordsScanned: 0,
   recordsSkipped: 0,
-  permissionWarnings: 0,
-  permissionDetails: []
+  permissionWarnings: 0
 };
-window.azdoApiRunState = azdoApiRunState;
-window.azdoApiRunActive = azdoApiRunActive;
-window.azdoActiveAbortController = azdoActiveAbortController;
-dispatchAzDoProgressEvent();
 return azdoActiveAbortController;
 }
 function getAzDoAbortSignal() {
@@ -165,7 +145,6 @@ function cancelAzDoOperation() {
 if (!azdoActiveAbortController) return false;
 azdoApiRunState && (azdoApiRunState.cancelled = true);
 azdoActiveAbortController.abort();
-dispatchAzDoProgressEvent();
 if (typeof setStatus === 'function') setStatus('The current Azure DevOps operation was cancelled.', 'info');
 return true;
 }
@@ -175,15 +154,33 @@ return azdoApiRunState ? {
   failures: [...azdoApiRunState.failures]
 } : null;
 }
+function getAzDoProgressState() {
+const state = azdoApiRunState || {};
+return {
+  id: state.id || 0,
+  requests: state.requests || 0,
+  completed: state.completed || 0,
+  retries: state.retries || 0,
+  pages: state.pages || 0,
+  recordsScanned: state.recordsScanned || 0,
+  recordsSkipped: state.recordsSkipped || 0,
+  permissionWarnings: state.permissionWarnings || 0,
+  failures: Array.isArray(state.failures) ? state.failures.length : 0,
+  activeRequests: azdoActiveRequests || 0,
+  queuedRequests: azdoRequestQueue.length || 0,
+  cancelled: state.cancelled === true,
+  truncated: state.truncated === true
+};
+}
 function getAzDoPartialResultMessage() {
 const state = azdoApiRunState;
 if (!state) return '';
 const parts = [];
 if (state.failures.length) parts.push(`${state.failures.length} API request${state.failures.length === 1 ? '' : 's'} failed`);
+if (state.permissionWarnings) parts.push(`${state.permissionWarnings} permission warning${state.permissionWarnings === 1 ? '' : 's'}`);
+if (state.recordsSkipped) parts.push(`${state.recordsSkipped} record${state.recordsSkipped === 1 ? '' : 's'} unavailable/skipped`);
 if (state.truncated) parts.push('pagination stopped at the configured safety limit');
 if (state.cancelled) parts.push('operation cancelled');
-if (state.recordsSkipped) parts.push(`${state.recordsSkipped} record${state.recordsSkipped === 1 ? '' : 's'} skipped/unavailable`);
-if (state.permissionWarnings) parts.push(`${state.permissionWarnings} permission warning${state.permissionWarnings === 1 ? '' : 's'}`);
 if (!parts.length) return '';
 return ` Partial result: ${parts.join('; ')}.`;
 }
@@ -232,7 +229,6 @@ async function acquireAzDoRequestSlot(signal) {
 if (signal?.aborted) throw new AzureDevOpsApiError('Azure DevOps request cancelled.', 0, { cancelled: true });
 if (azdoActiveRequests < AZDO_API_MAX_CONCURRENCY) {
   azdoActiveRequests += 1;
-  dispatchAzDoProgressEvent();
   return;
 }
 await new Promise((resolve, reject) => {
@@ -247,11 +243,9 @@ await new Promise((resolve, reject) => {
   entry.cleanup = () => signal?.removeEventListener('abort', onAbort);
 });
 azdoActiveRequests += 1;
-dispatchAzDoProgressEvent();
 }
 function releaseAzDoRequestSlot() {
 azdoActiveRequests = Math.max(0, azdoActiveRequests - 1);
-dispatchAzDoProgressEvent();
 while (azdoRequestQueue.length && azdoActiveRequests < AZDO_API_MAX_CONCURRENCY) {
   const entry = azdoRequestQueue.shift();
   if (!entry) break;
@@ -309,8 +303,11 @@ for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
   signal?.addEventListener('abort', abortFromCaller, { once: true });
   if (timeoutMs > 0) timeoutId = setTimeout(() => { timedOut = true; timeoutController.abort(); }, timeoutMs);
   try {
-    if (azdoApiRunActive && azdoApiRunState) azdoApiRunState.requests += 1;
-    dispatchAzDoProgressEvent();
+    if (azdoApiRunActive && azdoApiRunState) {
+      azdoApiRunState.requests += 1;
+      azdoApiRunState.active = azdoActiveRequests;
+      azdoApiRunState.queued = azdoRequestQueue.length;
+    }
     let res;
     try {
       res = await fetch(url, {
@@ -353,6 +350,9 @@ for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       }
       const context = [activityId ? `ActivityId: ${activityId}` : '', requestId ? `RequestId: ${requestId}` : ''].filter(Boolean).join(' | ');
       if (context) message += ` ${context}`;
+      if (azdoApiRunActive && azdoApiRunState && (res.status === 401 || res.status === 403)) {
+        azdoApiRunState.permissionWarnings += 1;
+      }
       throw new AzureDevOpsApiError(message, res.status, {
         statusText: res.statusText, activityId, requestId, rawMessage: apiMessage,
         retryable: isRetryableStatus(res.status), retryDelayMs: getRetryDelayMs(res, attempt), url, attempts: attempt
@@ -364,16 +364,19 @@ for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       try { data = JSON.parse(text); }
       catch (_) { data = { value: [], rawText: text }; }
     }
-    const recordArray = Array.isArray(data?.value) ? data.value : (Array.isArray(data?.items) ? data.items : (Array.isArray(data?.workItems) ? data.workItems : null));
-    if (azdoApiRunActive && azdoApiRunState && recordArray) azdoApiRunState.recordsScanned += recordArray.length;
-    dispatchAzDoProgressEvent();
     const continuationToken = getContinuationTokenFromResponse(res, data);
     try {
       Object.defineProperty(data, '__azdoContinuationToken', { value: continuationToken || '', enumerable: false, configurable: true });
       Object.defineProperty(data, '__azdoStatus', { value: res.status, enumerable: false, configurable: true });
     } catch (_) {}
-    if (azdoApiRunActive && azdoApiRunState) azdoApiRunState.succeeded += 1;
-    dispatchAzDoProgressEvent();
+    if (azdoApiRunActive && azdoApiRunState) {
+      azdoApiRunState.succeeded += 1;
+      azdoApiRunState.completed += 1;
+      const valueRecords = getArrayProperty(data, 'value');
+      azdoApiRunState.recordsScanned += valueRecords.length;
+      azdoApiRunState.active = azdoActiveRequests;
+      azdoApiRunState.queued = azdoRequestQueue.length;
+    }
     return data;
   } catch (error) {
     lastError = error;
@@ -385,18 +388,14 @@ for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     if (!canRetry) {
       recordAzDoFailure(error, url);
       if (azdoApiRunActive && azdoApiRunState) {
-        if (Number(error?.status) === 401 || Number(error?.status) === 403) {
-          azdoApiRunState.permissionWarnings += 1;
-          azdoApiRunState.permissionDetails.push(`${Number(error.status) === 401 ? 'Authentication' : 'Permission'} denied${error?.url ? `: ${error.url}` : ''}`);
-        } else {
-          azdoApiRunState.recordsSkipped += 1;
-        }
+        azdoApiRunState.completed += 1;
+        azdoApiRunState.recordsSkipped += 1;
+        azdoApiRunState.active = azdoActiveRequests;
+        azdoApiRunState.queued = azdoRequestQueue.length;
       }
-      dispatchAzDoProgressEvent();
       throw error;
     }
     if (azdoApiRunActive && azdoApiRunState) azdoApiRunState.retries += 1;
-    dispatchAzDoProgressEvent();
     await sleep(error?.retryDelayMs || getRetryDelayMs(null, attempt), signal);
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
@@ -522,4 +521,5 @@ window.fetchAzDoPaged = fetchAzDoPaged;
 window.beginAzDoOperation = beginAzDoOperation;
 window.cancelAzDoOperation = cancelAzDoOperation;
 window.getAzDoApiRunState = getAzDoApiRunState;
+window.getAzDoProgressState = getAzDoProgressState;
 window.getAzDoPartialResultMessage = getAzDoPartialResultMessage;

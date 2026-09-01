@@ -198,13 +198,6 @@ Got it
 <h1 class="app-title">Azure DevOps Intelligence Hub</h1>
 <p class="app-subtitle">Repository, pipeline, work item, security and user activity insights</p>
 </div>
-<div class="phase4-global-search">
-  <div class="phase4-search-wrap">
-    <span class="phase4-search-icon" aria-hidden="true">⌕</span>
-    <input id="globalSearchInput" type="search" autocomplete="off" placeholder="Global search across loaded data..." aria-label="Global search" />
-    <div id="globalSearchResults" class="phase4-search-results hidden"></div>
-  </div>
-</div>
 <div class="topbar-actions">
 <span id="connectionBadge" class="connection-badge"><span class="status-dot"></span><span id="connectionBadgeText">Ready to connect</span></span>
 <button id="btnDisconnect" onclick="disconnectSession()" class="btn-disconnect hidden">
@@ -392,11 +385,7 @@ Got it
         </div>
 
 <div id="statusBar" class="status-bar hidden"></div>
-<div id="phase4ProgressPanel" class="phase4-progress-panel hidden" aria-live="polite">
-  <div class="phase4-progress-head"><strong>Scan progress</strong><span id="phase4ProgressText">Preparing API request progress...</span></div>
-  <div class="phase4-progress-track"><div class="phase4-progress-indeterminate"></div></div>
-  <div id="phase4ScannedText" class="phase4-progress-meta">Records scanned: 0 · Skipped/unavailable: 0 · Pages: 0</div>
-</div>
+<div id="azdoProgressPanel" class="hidden ux-progress-panel"></div>
 <div class="active-path-row"><span>Active Azure DevOps Path:</span><a id="activePathLink" href="javascript:void(0)">https://dev.azure.com/</a></div>
 </section>
 
@@ -450,49 +439,29 @@ Got it
 </div>
 </div>
 
-<!-- Phase 4: Cross-workspace intelligence and data quality -->
-<section id="phase4AdvancedDashboard" class="phase4-advanced-dashboard">
-  <div class="phase4-dashboard-title"><div><h3>Advanced Workspace Insights</h3><p>Live counts, scan quality and API reliability for the selected workspace.</p></div><span id="phase4QualityText">No API reliability warnings detected for the current operation.</span></div>
-  <div class="phase4-metric-grid">
-    <div class="phase4-metric-card"><span>Workspace Records</span><strong data-phase4-metric="records">0</strong></div>
-    <div class="phase4-metric-card"><span>Records Scanned</span><strong data-phase4-metric="scanned">0</strong></div>
-    <div class="phase4-metric-card"><span>Skipped / Unavailable</span><strong data-phase4-metric="skipped">0</strong></div>
-    <div class="phase4-metric-card"><span>Permission Warnings</span><strong data-phase4-metric="warnings">0</strong></div>
-  </div>
-  <div id="phase4PermissionWarnings" class="phase4-warning hidden"></div>
-</section>
+<div id="advancedDashboard" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm"></div>
 
 <!-- Universal Table Controls -->
-<div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-3">
-<div class="flex items-center gap-2 flex-grow max-w-xl">
-<select id="tableFilterScope" onchange="filterActiveTable()" class="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium">
-  <option value="all">Filter: All Tables</option>
-  <option value="table-repositories">Filter: Repositories &amp; Active Branch</option>
-  <option value="table-policy-branches">Filter: Branches With Policies</option>
-  <option value="table-repo-prs">Filter: Pull Requests</option>
-  <option value="table-users">Filter: Organization &amp; Project Users</option>
-  <option value="table-access">Filter: User Access</option>
-  <option value="table-user-commits">Filter: User Commits</option>
-  <option value="table-user-prs">Filter: User Pull Requests</option>
-  <option value="table-pipeline-summary">Filter: Pipeline Summary</option>
-  <option value="table-pipelines">Filter: Build Runs</option>
-  <option value="table-service-connections">Filter: Service Connections</option>
-  <option value="table-agents">Filter: Agents</option>
-  <option value="table-workitems">Filter: Work Items</option>
+<div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+<div class="flex flex-wrap items-center gap-2">
+<select id="tableFilterScope" onchange="filterActiveTable()" class="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium"></select>
+<input type="text" id="tableFilterInput" oninput="filterActiveTable()" placeholder="Quick filter rows..." class="flex-1 min-w-[220px] text-xs border border-slate-300 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+<select id="tableStatusFilter" onchange="filterActiveTable()" class="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700"></select>
+<select id="tableSortColumn" onchange="sortActiveTableColumn(this.value)" class="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700"></select>
+<select id="tableSortDirection" onchange="tableUxState.sortDirection=this.value; applyTableUx()" class="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700">
+<option value="asc">Ascending</option><option value="desc">Descending</option>
 </select>
-
-<input type="text" id="tableFilterInput" oninput="filterActiveTable()" placeholder="Search current workspace rows..." class="w-full text-xs border border-slate-300 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-<select id="uxStatusFilter" class="text-xs border border-slate-300 rounded-md px-2.5 py-1.5 bg-white text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"></select>
-<label class="phase4-date-control">From <input id="uxDateFrom" type="date" /></label>
-<label class="phase4-date-control">To <input id="uxDateTo" type="date" /></label>
-<button id="uxClearFilters" type="button" class="text-xs border border-slate-300 rounded-md px-3 py-1.5 font-semibold text-slate-600 hover:bg-slate-50">Clear</button>
 </div>
-<div id="phase4FilterCount" class="text-[11px] text-slate-400 whitespace-nowrap">0 of 0 displayed rows match filters</div>
-
+<div class="flex flex-wrap items-center gap-2">
+<label class="text-xs text-slate-500 font-semibold">Date from <input type="date" id="tableDateFrom" onchange="filterActiveTable()" class="ml-1 text-xs border border-slate-300 rounded-md px-2 py-1.5"></label>
+<label class="text-xs text-slate-500 font-semibold">to <input type="date" id="tableDateTo" onchange="filterActiveTable()" class="ml-1 text-xs border border-slate-300 rounded-md px-2 py-1.5"></label>
+<button onclick="clearTableUxFilters()" class="text-xs border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold px-3 py-1.5 rounded-md">Clear Filters</button>
+<span class="ml-auto text-xs text-slate-400"><b id="tableVisibleCount">0</b> visible · <b id="tableHiddenCount">0</b> hidden</span>
 <button onclick="exportCurrentTableToXLSX()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg transition flex items-center gap-2 shadow-sm">
-<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003 3h0m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
 Export Full Telemetry (.xlsx)
 </button>
+</div>
 </div>
 
 <!-- VIEW 1: Repositories, Branches & Pull Requests -->
@@ -896,6 +865,5 @@ See More (<span id="workItemsRemainingCount">0</span> remaining)
 <script src="assets/m8_94a8478ccca5.js"></script>
 <script src="assets/m9_9eddd4881ee8.js"></script>
 <script src="assets/m10_db030ee8db9c.js"></script>
-<script src="assets/m11_ux_phase4.js"></script>
 </body>
 </html>

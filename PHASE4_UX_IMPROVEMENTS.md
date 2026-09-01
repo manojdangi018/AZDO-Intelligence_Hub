@@ -1,23 +1,49 @@
 # Phase 4 — UX Improvements
 
-Implemented on top of the verified Phase 3 Status baseline.
+Implemented on top of the verified Phase 3 status baseline.
 
-## Included
+## Improvements
 
-1. Global search across loaded workspace data, with direct navigation to supported detail records.
-2. Improved current-workspace table filters: text, status, date range, table scope, and clear-all.
-3. Click-to-sort on every rendered data-table column, with numeric/date-aware sorting and indicators.
-4. Date range filtering across displayed table rows; date cells are detected from common ISO and DD/MM/YYYY formats.
-5. Advanced Workspace Insights panel with workspace record count, scanned count, skipped/unavailable count, and permission warnings.
-6. Live scan progress panel showing completed/active/queued API requests and retries.
-7. Central API record counters for arrays returned by Azure DevOps list/WIQL calls.
-8. Explicit skipped/unavailable and permission-warning reporting when API operations fail.
-9. Existing Phase 1 security, popup/detail, Phase 2 reliability, and Phase 3 data-accuracy functionality is preserved.
+1. Better filters
+   - Workspace-aware table selector
+   - Global text filter
+   - Status/result/state filter
+   - Date-from/date-to filter
+   - Clear filters
+   - Visible/hidden row counts
 
-## Notes
+2. Sortable columns
+   - Click table headers to sort
+   - Sort direction selector
+   - Numeric/date/text-aware sorting
+   - Works with the existing See More table rendering
 
-- Global search operates on data already loaded in the browser; it does not silently issue broad new API scans.
-- Table sorting/filtering operates on rows currently rendered by the existing workspace pagination. Existing "See More" behavior remains unchanged.
-- Date filtering keeps a row when at least one detected date cell falls inside the selected range.
-- "Skipped / unavailable" is deliberately labeled rather than presented as an exact business-record count when the API only exposes request-level failure information.
-- Permission warnings are surfaced for HTTP 401/403 failures captured by the central API layer.
+3. Date filtering
+   - Detects date/time/created/changed/access/finish/commit columns
+   - Supports the common Azure DevOps date formats used by the application
+
+4. Advanced dashboards
+   - Workspace-specific insight cards derived from loaded telemetry
+   - Repository health, pipeline success, work-item, service/agent, activity, access, and user summaries
+
+5. Loading progress
+   - Live scan progress panel
+   - Request/page/retry counters
+   - Active and queued request counts
+
+6. API request progress
+   - Central API run state exposes completed requests, retries, pages, and active/queued work
+
+7. Records scanned
+   - Central API layer counts array records returned from successful responses
+
+8. Records skipped/unavailable
+   - Final failed API requests are surfaced as unavailable/skipped records in the scan summary
+
+9. Permission warnings
+   - 401/403 responses are counted
+   - Visible warning explains that results may be incomplete for protected resources
+
+## Compatibility
+
+Phase 1 security/correctness and Phase 2 API reliability remain intact. Existing popup/detail handling, table rendering, pagination, cancellation, retries, and exports were preserved.
