@@ -488,8 +488,6 @@ document.querySelectorAll('.sidebar-item').forEach(btn => {
 btn.classList.toggle('active', btn.dataset.view === viewId);
 });
 if (typeof showSection === 'function') showSection(viewId);
-updateTableUxOptions();
-filterActiveTable();
 if (typeof configureServiceAgentsOverview === 'function') {
 configureServiceAgentsOverview(viewId === 'serviceagents');
 }
@@ -577,250 +575,25 @@ document.documentElement.classList.remove('restore-workspace-page');
 showConnectionPage();
 setStatus('Disconnected from Azure DevOps. Enter credentials to connect again.', 'info');
 }
-let tableUxState = {
-query: '', scope: 'all', value: '', dateFrom: '', dateTo: '', sortColumn: '', sortDirection: 'asc'
-};
-let chartTopN = 10;
-let phase4UxObserver = null;
-
-const TABLE_UX_DATE_COLUMNS = new Set([
-  'last commit date', 'created date', 'creation date', 'finish time', 'date added', 'last access', 'created on', 'date & time', 'commit date'
-]);
-
-function getActiveUxTables() {
-  const activeSection = document.getElementById(activeViewSection);
-  return activeSection ? [...activeSection.querySelectorAll('table')] : [];
-}
-
-function parseUxDate(value) {
-  const text = String(value ?? '').trim();
-  if (!text || text === '—' || text.toLowerCase() === 'n/a') return null;
-  const dmy = text.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:[ ,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-  if (dmy) {
-    const [, dd, mm, yyyy, hh='0', min='0', sec='0'] = dmy;
-    const d = new Date(Number(yyyy), Number(mm)-1, Number(dd), Number(hh), Number(min), Number(sec));
-    if (Number.isFinite(d.getTime())) return d;
-  }
-  const iso = new Date(text);
-  return Number.isFinite(iso.getTime()) ? iso : null;
-}
-
-function getRowDate(row, table) {
-  const headers = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim().toLowerCase());
-  for (let i = 0; i < headers.length; i++) {
-    if (TABLE_UX_DATE_COLUMNS.has(headers[i]) || /date|time|created|access|commit|finish/i.test(headers[i])) {
-      const cell = row.cells[i];
-      const d = parseUxDate(cell?.textContent || '');
-      if (d) return d;
-    }
-  }
-  return null;
-}
-
-function normalizeUxValue(value) {
-  return String(value ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
-}
-
-function getUxRows(table) {
-  return [...table.querySelectorAll('tbody tr')].filter(row => row.cells.length > 0 && !row.querySelector('td[colspan]'));
-}
-
-function getUxScopeTables() {
-  const scope = document.getElementById('tableFilterScope')?.value || 'all';
-  return getActiveUxTables().filter(table => scope === 'all' || table.id === scope);
-}
-
-function collectUxValueOptions() {
-  const select = document.getElementById('tableFilterValue');
-  if (!select) return;
-  const previous = tableUxState.value || '';
-  const values = new Set();
-  const patterns = [/^active$/i,/^stale$/i,/^succeeded$/i,/^failed$/i,/^canceled$/i,/^cancelled$/i,/^in progress$/i,/^not started$/i,/^online$/i,/^offline$/i,/^completed$/i,/^resolved$/i,/^new$/i,/^closed$/i,/^done$/i,/^yes$/i,/^no$/i,/^yaml \/ pipeline$/i,/^classic build$/i,/^manual$/i,/^auto \(/i];
-  getUxScopeTables().forEach(table => getUxRows(table).forEach(row => [...row.cells].forEach(cell => {
-    const text = cell.textContent.replace(/\s+/g,' ').trim();
-    if (text && text.length <= 40 && patterns.some(p => p.test(text))) values.add(text);
-  })));
-  setSafeInnerHTML(select, '<option value="">All statuses / values</option>');
-  [...values].sort((a,b)=>a.localeCompare(b)).forEach(value => {
-    const opt=document.createElement('option'); opt.value=value; opt.textContent=value; select.appendChild(opt);
-  });
-  if ([...select.options].some(o => o.value === previous)) select.value = previous;
-  else { select.value=''; tableUxState.value=''; }
-}
-
-function updateTableUxOptions() {
-  const sortSelect = document.getElementById('tableSortColumn');
-  if (!sortSelect) return;
-  const table = getUxScopeTables()[0];
-  const previous = tableUxState.sortColumn || '';
-  setSafeInnerHTML(sortSelect, '<option value="">Select column...</option>');
-  if (table) {
-    [...table.querySelectorAll('thead th')].forEach((th, index) => {
-      const opt=document.createElement('option'); opt.value=String(index); opt.textContent=th.textContent.replace(/↕|↑|↓/g,'').trim() || `Column ${index+1}`; sortSelect.appendChild(opt);
-    });
-  }
-  if ([...sortSelect.options].some(o=>o.value===previous)) sortSelect.value=previous;
-  collectUxValueOptions();
-  decorateSortableHeaders();
-}
-
-function rowMatchesUxFilters(row, table) {
-  const query = normalizeUxValue(document.getElementById('tableFilterInput')?.value || '');
-  const value = normalizeUxValue(document.getElementById('tableFilterValue')?.value || '');
-  const from = document.getElementById('tableDateFrom')?.value ? new Date(document.getElementById('tableDateFrom').value+'T00:00:00') : null;
-  const to = document.getElementById('tableDateTo')?.value ? new Date(document.getElementById('tableDateTo').value+'T23:59:59.999') : null;
-  const text = normalizeUxValue(row.textContent);
-  if (query && !text.includes(query)) return false;
-  if (value && ![...row.cells].some(cell => normalizeUxValue(cell.textContent) === value || normalizeUxValue(cell.textContent).includes(value))) return false;
-  if (from || to) {
-    const date = getRowDate(row, table);
-    if (!date) return false;
-    if (from && date < from) return false;
-    if (to && date > to) return false;
-  }
-  return true;
-}
-
 function filterActiveTable() {
-  const scope = document.getElementById('tableFilterScope')?.value || 'all';
-  tableUxState = {
-    ...tableUxState,
-    query: document.getElementById('tableFilterInput')?.value || '',
-    scope,
-    value: document.getElementById('tableFilterValue')?.value || '',
-    dateFrom: document.getElementById('tableDateFrom')?.value || '',
-    dateTo: document.getElementById('tableDateTo')?.value || ''
-  };
-  let visible = 0;
-  let total = 0;
-  getActiveUxTables().forEach(table => {
-    const target = scope === 'all' || table.id === scope;
-    getUxRows(table).forEach(row => {
-      total++;
-      const show = !target || rowMatchesUxFilters(row, table);
-      row.classList.toggle('phase4-filtered-out', !show);
-      if (target && show) visible++;
-    });
-  });
-  if (scope === 'all') visible = getActiveUxTables().reduce((sum, table) => sum + getUxRows(table).filter(row => rowMatchesUxFilters(row, table)).length, 0);
-  const countEl=document.getElementById('tableUxResultCount');
-  if (countEl) countEl.textContent = `${visible} row${visible===1?'':'s'} shown`;
-  updateAdvancedDashboardInsights();
+const query = document.getElementById('tableFilterInput').value.toLowerCase();
+const scope = document.getElementById('tableFilterScope')?.value || 'all';
+const activeSection = document.getElementById(activeViewSection);
+if (!activeSection) return;
+const tables = activeSection.querySelectorAll('table');
+tables.forEach(table => {
+const isTarget = scope === 'all' || table.id === scope;
+const rows = table.querySelectorAll('tbody tr');
+rows.forEach(r => {
+if (!isTarget) {
+r.style.display = '';
+} else {
+const text = r.textContent.toLowerCase();
+r.style.display = text.includes(query) ? '' : 'none';
 }
-
-function sortCellValue(row, index) {
-  const cell = row.cells[index];
-  const text = cell?.textContent?.replace(/\s+/g,' ').trim() || '';
-  const date = parseUxDate(text);
-  if (date) return { type:'date', value:date.getTime() };
-  const numeric = text.replace(/[^0-9.-]/g,'');
-  if (numeric && /^-?\d+(\.\d+)?$/.test(numeric)) return { type:'number', value:Number(numeric) };
-  return { type:'text', value:text.toLowerCase() };
+});
+});
 }
-
-function sortTableDom(table, columnIndex, direction) {
-  const tbody=table?.querySelector('tbody');
-  if (!tbody) return;
-  const rows=getUxRows(table);
-  const sign=direction==='desc'?-1:1;
-  rows.sort((a,b)=>{
-    const av=sortCellValue(a,columnIndex), bv=sortCellValue(b,columnIndex);
-    if (av.type==='number' && bv.type==='number') return (av.value-bv.value)*sign;
-    if (av.type==='date' && bv.type==='date') return (av.value-bv.value)*sign;
-    return String(av.value).localeCompare(String(bv.value),undefined,{numeric:true,sensitivity:'base'})*sign;
-  });
-  rows.forEach(row=>tbody.appendChild(row));
-}
-
-function sortActiveTable() {
-  const scope=document.getElementById('tableFilterScope')?.value || 'all';
-  const column=document.getElementById('tableSortColumn')?.value || '';
-  const direction=document.getElementById('tableSortDirection')?.value || 'asc';
-  tableUxState.sortColumn=column; tableUxState.sortDirection=direction;
-  if (column !== '') getActiveUxTables().filter(t=>scope==='all'||t.id===scope).forEach(t=>sortTableDom(t,Number(column),direction));
-  decorateSortableHeaders();
-  filterActiveTable();
-}
-
-function decorateSortableHeaders() {
-  getActiveUxTables().forEach(table=>{
-    table.querySelectorAll('thead th').forEach((th,index)=>{
-      th.classList.add('phase4-sortable');
-      if (th.dataset.phase4Bound !== '1') {
-        th.dataset.phase4Bound='1';
-        th.addEventListener('click',()=>{
-          const scopeEl=document.getElementById('tableFilterScope');
-          if (scopeEl && scopeEl.value==='all') scopeEl.value=table.id;
-          const sortEl=document.getElementById('tableSortColumn');
-          const dirEl=document.getElementById('tableSortDirection');
-          const current=sortEl?.value;
-          if (sortEl) { updateTableUxOptions(); sortEl.value=String(index); }
-          if (dirEl) dirEl.value=(current===String(index)&&dirEl.value==='asc')?'desc':'asc';
-          sortActiveTable();
-        });
-      }
-    });
-  });
-}
-
-function clearTableUxFilters() {
-  ['tableFilterInput','tableDateFrom','tableDateTo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const val=document.getElementById('tableFilterValue'); if(val) val.value='';
-  const sort=document.getElementById('tableSortColumn'); if(sort) sort.value='';
-  const scope=document.getElementById('tableFilterScope'); if(scope) scope.value='all';
-  tableUxState={query:'',scope:'all',value:'',dateFrom:'',dateTo:'',sortColumn:'',sortDirection:'asc'};
-  filterActiveTable(); updateTableUxOptions();
-}
-
-function getCategoryDashboardData() {
-  const rs=rawStore||{};
-  switch(activeCategory){
-    case 'repositories': { const rows=rs.repos||[]; const stale=rows.filter(r=>r.isStale).length; return {count:rows.length,latest:rows[0]?.date,health:rows.length?`${Math.round(((rows.length-stale)/rows.length)*100)}% active`:'—',label:'branches'}; }
-    case 'pipelines': { const rows=rs.pipelineSummaries||[]; const runs=rs.pipelines||[]; const success=runs.length?runs.filter(r=>String(r.result||'').toLowerCase()==='succeeded').length/runs.length*100:0; return {count:rows.length,latest:runs[0]?.finishTime||runs[0]?.date,health:runs.length?`${Math.round(success)}% success`:'—',label:'pipelines'}; }
-    case 'work_items': { const rows=rs.workitems||[]; const inProg=rows.filter(r=>String(r.stateCategory||'').toLowerCase()==='in progress').length; return {count:rows.length,latest:rows[0]?.changedDate||rows[0]?.createdDate,health:rows.length?`${inProg} in progress`:'—',label:'work items'}; }
-    case 'user_activity': { const rows=rs.commits||[]; return {count:rows.length,latest:rows[0]?.date,health:`${(rs.repoPrs||[]).length} PRs`,label:'activity records'}; }
-    case 'user_access': { const rows=rs.access||[]; return {count:rows.length,latest:'—',health:`${new Set(rows.map(r=>r.email||r.name).filter(Boolean)).size} identities`,label:'access records'}; }
-    case 'service_agents': { const rows=rs.agents||[]; const online=rows.filter(r=>/online/i.test(r.status||'')).length; return {count:rows.length,latest:rows[0]?.createdOn,health:rows.length?`${Math.round(online/rows.length*100)}% online`:'—',label:'agents'}; }
-    case 'users': { const rows=rs.userEntitlements||[]; const active=rows.filter(r=>String(r.status||'').toLowerCase()==='active').length; return {count:rows.length,latest:rows[0]?.lastAccessedDate,health:rows.length?`${Math.round(active/rows.length*100)}% active`:'—',label:'users'}; }
-    default:return {count:0,latest:null,health:'—',label:'records'};
-  }
-}
-
-function updateAdvancedDashboardInsights() {
-  const data=getCategoryDashboardData();
-  const visible=getUxScopeTables().reduce((sum,table)=>sum+getUxRows(table).filter(row=>rowMatchesUxFilters(row,table)).length,0);
-  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val??'—';};
-  set('insight-records',data.count); set('insight-visible',visible);
-  set('insight-latest',data.latest ? (parseUxDate(data.latest)?.toLocaleString()||data.latest) : '—'); set('insight-health',data.health);
-  const sub=document.getElementById('advancedDashboardSubtitle'); if(sub)sub.textContent=`Live summary for ${data.label}; filters apply to the currently rendered rows.`;
-}
-
-function changeChartTopN(value) {
-  chartTopN=Math.max(1,Number(value)||10);
-  renderChart(currentChartData.labels||[], currentChartData.values||[], currentChartData.label||'Overview');
-}
-
-function initializePhase4Ux() {
-  updateTableUxOptions();
-  decorateSortableHeaders();
-  updateAdvancedDashboardInsights();
-  const workspace = document.getElementById('workspacePage');
-  if (workspace && !phase4UxObserver && typeof MutationObserver !== 'undefined') {
-    let timer = null;
-    phase4UxObserver = new MutationObserver(() => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        updateTableUxOptions();
-        decorateSortableHeaders();
-        filterActiveTable();
-      }, 100);
-    });
-    phase4UxObserver.observe(workspace, {subtree:true, childList:true});
-  }
-}
-
-window.addEventListener('load',()=>setTimeout(initializePhase4Ux,250));
-
 function exportToExcelFile(sheetsData, baseFileName) {
 if (typeof XLSX === 'undefined') {
 alert('Excel library is still loading, please try again in a moment.');
@@ -961,9 +734,7 @@ currentChartType = type.toLowerCase() === 'pie' ? 'pie' : type;
 renderChart(currentChartData.labels, currentChartData.values, currentChartData.label);
 }
 function renderChart(labels, data, datasetLabel) {
-currentChartData = { labels: [...(labels || [])], values: [...(data || [])], label: datasetLabel };
-const displayLabels = currentChartData.labels.slice(0, Math.max(1, chartTopN || 10));
-const displayValues = currentChartData.values.slice(0, Math.max(1, chartTopN || 10));
+currentChartData = { labels, values: data, label: datasetLabel };
 const ctx = document.getElementById('analyticsChart').getContext('2d');
 if (chartInstance) chartInstance.destroy();
 const palette = ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16', '#f43f5e', '#a855f7'];
@@ -975,10 +746,10 @@ Chart.register(ChartDataLabels);
 chartInstance = new Chart(ctx, {
 type: currentChartType,
 data: {
-labels: displayLabels.length ? displayLabels : ['No Data'],
+labels: labels.length ? labels : ['No Data'],
 datasets: [{
 label: datasetLabel,
-data: displayValues.length ? displayValues : [0],
+data: data.length ? data : [0],
 backgroundColor: isPie ? palette : '#3b82f6',
 borderColor: isLine ? '#2563eb' : undefined,
 pointBackgroundColor: isLine ? '#2563eb' : undefined,
