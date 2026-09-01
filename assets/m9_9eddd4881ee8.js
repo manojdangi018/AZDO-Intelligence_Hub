@@ -72,22 +72,13 @@ raw: entitlement
 };
 }
 async function fetchAllUserEntitlements(org, authHeader) {
-const all = [];
-let continuation = '';
-let guard = 0;
-do {
 const params = new URLSearchParams();
 params.set('api-version', AZDO_STABLE_API_VERSION || '7.1');
 params.set('select', 'projects');
 params.set('$orderBy', 'lastAccessed desc');
-if (continuation) params.set('continuationToken', continuation);
 const url = `https://vsaex.dev.azure.com/${encodeURIComponent(org)}/_apis/userentitlements?${params.toString()}`;
-const data = await fetchAzDo(url, authHeader);
-all.push(...(data?.items || data?.value || []));
-continuation = data?.continuationToken || '';
-guard += 1;
-} while (continuation && guard < 100);
-return all;
+const data = await fetchAzDoPaged(url, authHeader, { itemProperty: 'items', pageSize: 100 });
+return data?.items || [];
 }
 async function fetchUserDirectoryData() {
 const org = extractOrgName(document.getElementById('targetOrg')?.value || '');
@@ -145,7 +136,7 @@ const message = String(err?.message || err);
 if (/403|forbidden/i.test(message)) {
 setStatus('User Directory requires the Azure DevOps Member Entitlement Management read permission (vso.memberentitlementmanagement) on the PAT.', 'error');
 } else {
-setStatus(`Error loading organization users: ${message}`, 'error');
+setStatus(isAzDoCancellation(err) ? 'The user directory operation was cancelled.' : `Error loading organization users: ${message}`, isAzDoCancellation(err) ? 'info' : 'error');
 }
 }
 }

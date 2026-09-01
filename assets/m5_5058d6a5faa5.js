@@ -55,23 +55,17 @@ console.warn('Could not resolve project descriptor:', e);
 }
 let graphGroups = [];
 try {
-let contToken = '';
-do {
-const tokenParam = contToken ? `&continuationToken=${encodeURIComponent(contToken)}` : '';
 const scopeParam = projectDescriptor ? `&scopeDescriptor=${encodeURIComponent(projectDescriptor)}` : '';
-const gUrl = `https://vssps.dev.azure.com/${org}/_apis/graph/groups?api-version=${API_VERSION}${scopeParam}${tokenParam}`;
-const gData = await fetchAzDo(gUrl, authHeader);
-const list = gData?.value || [];
-graphGroups.push(...list);
-contToken = gData?.continuationToken || '';
-} while (contToken);
+const gUrl = `https://vssps.dev.azure.com/${org}/_apis/graph/groups?api-version=${API_VERSION}${scopeParam}`;
+const gData = await fetchAzDoPaged(gUrl, authHeader, { pageSize: 500 });
+graphGroups = gData?.value || [];
 } catch (e) {
 console.warn('Graph group listing fallback:', e);
 }
 let teams = [];
 try {
 const teamsUrl = `https://dev.azure.com/${org}/_apis/projects/${project}/teams?$expandIdentity=true&$top=500&api-version=${API_VERSION}`;
-const tData = await fetchAzDo(teamsUrl, authHeader);
+const tData = await fetchAzDoPaged(teamsUrl, authHeader, { pageSize: 500 });
 teams = tData?.value || [];
 } catch (e) {
 console.warn('Teams query fallback:', e);
@@ -89,7 +83,7 @@ const groupTasks = graphGroups.map(async (g) => {
 const groupName = (g.displayName || '').replace(`[${project}]\\`, '');
 try {
 const memUrl = `https://vssps.dev.azure.com/${org}/_apis/graph/Memberships/${g.descriptor}?direction=Down&api-version=${API_VERSION}`;
-const memData = await fetchAzDo(memUrl, authHeader);
+const memData = await fetchAzDoPaged(memUrl, authHeader, { pageSize: 500 });
 const members = memData?.value || [];
 await Promise.all(members.map(async (m) => {
 const identity = await resolveSubjectDescriptor(m.memberDescriptor);
@@ -110,7 +104,7 @@ groupMemberCounts[groupName] = (groupMemberCounts[groupName] || 0) + 1;
 const teamTasks = teams.map(async (t) => {
 try {
 const mUrl = `https://dev.azure.com/${org}/_apis/projects/${project}/teams/${t.id}/members?$top=500&api-version=${API_VERSION}`;
-const mData = await fetchAzDo(mUrl, authHeader);
+const mData = await fetchAzDoPaged(mUrl, authHeader, { pageSize: 500 });
 const members = mData?.value || [];
 members.forEach(m => {
 const name = m.identity?.displayName || 'Unknown';
@@ -154,7 +148,7 @@ stopFetching();
 setStatus(`Loaded ${accessRows.length} member assignments across all ${Object.keys(groupMemberCounts).length} groups & teams.`, 'success');
 } catch (err) {
 stopFetching();
-setStatus(`Error querying security access: ${err.message}`, 'error');
+setStatus(isAzDoCancellation(err) ? 'The security access operation was cancelled.' : `Error querying security access: ${err.message}`, isAzDoCancellation(err) ? 'info' : 'error');
 }
 }
 function renderAccessTableBatch(append = false) {

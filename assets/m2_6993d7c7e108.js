@@ -22,6 +22,7 @@ pipelineSummaries: [], pipelineSummariesIndex: 0,
 workitems: [], workitemsIndex: 0,
 serviceConnections: [], serviceConnectionsIndex: 0,
 agents: [], agentsIndex: 0,
+agentPools: [],
 userEntitlements: [], userDirectoryIndex: 0
 };
 let workspaceDisplayStore = {};
@@ -198,14 +199,36 @@ el.classList.remove('hidden', 'bg-red-50', 'text-red-700', 'bg-green-50', 'text-
 if (type === 'error') el.classList.add('bg-red-50', 'text-red-700');
 else if (type === 'success') el.classList.add('bg-green-50', 'text-green-700');
 else el.classList.add('bg-blue-50', 'text-blue-700');
-el.textContent = msg;
+const partial = type === 'success' ? getAzDoPartialResultMessage() : '';
+el.textContent = `${msg || ''}${partial}`;
+if (typeof renderCancelFetchButton === 'function') renderCancelFetchButton();
+}
+function renderCancelFetchButton() {
+const statusBar = document.getElementById('statusBar');
+if (!statusBar || !azdoActiveAbortController || azdoActiveAbortController.signal.aborted) return;
+let btn = document.getElementById('btnCancelAzDoFetch');
+if (!btn) {
+  btn = document.createElement('button');
+  btn.id = 'btnCancelAzDoFetch';
+  btn.type = 'button';
+  btn.className = 'ml-3 inline-flex items-center rounded bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700';
+  btn.textContent = 'Cancel';
+  btn.addEventListener('click', () => cancelAzDoOperation());
+  statusBar.appendChild(btn);
+}
 }
 function startFetching(message) {
+const controller = beginAzDoOperation();
 setStatus(message, 'info');
 document.getElementById('statusBar')?.classList.add('fetching');
+renderCancelFetchButton();
+return { id: azdoApiRunState?.id || 0, signal: controller.signal };
 }
 function stopFetching() {
 document.getElementById('statusBar')?.classList.remove('fetching');
+document.getElementById('btnCancelAzDoFetch')?.remove();
+azdoActiveAbortController = null;
+azdoApiRunActive = false;
 }
 function showWorkspacePage() {
 document.getElementById('connectionPage')?.classList.add('hidden');
@@ -287,10 +310,11 @@ if (document.getElementById('chkRememberCreds').checked) {
 localStorage.setItem('azdo_org', org);
 }
 const authHeader = createBasicAuthHeader(pat);
+beginAzDoOperation();
 setStatus(`Loading projects from https://dev.azure.com/${org}...`, 'info');
 try {
 const url = `https://dev.azure.com/${org}/_apis/projects?api-version=${API_VERSION}&$top=500`;
-const data = await fetchAzDo(url, authHeader);
+const data = await fetchAzDoPaged(url, authHeader, { pageSize: 500 });
 const projects = data.value || [];
 const projDropdown = document.getElementById('projectSelect');
 setSafeInnerHTML(projDropdown, '<option value="">-- Select a Project --</option>');
@@ -392,7 +416,7 @@ sessionStorage.setItem('azdo_session_project', project);
 const authHeader = createBasicAuthHeader(pat);
 try {
 const url = `https://dev.azure.com/${org}/${project}/_apis/git/repositories?api-version=${API_VERSION}`;
-const data = await fetchAzDo(url, authHeader);
+const data = await fetchAzDoPaged(url, authHeader, { pageSize: 500 });
 cachedRepos = data.value || [];
 } catch (e) {
 console.warn('Could not prefetch repos:', e);
@@ -492,6 +516,7 @@ pipelineSummaries: [], pipelineSummariesIndex: 0,
 workitems: [], workitemsIndex: 0,
 serviceConnections: [], serviceConnectionsIndex: 0,
 agents: [], agentsIndex: 0,
+agentPools: [],
 userEntitlements: [], userDirectoryIndex: 0
 };
 cachedRepos = [];

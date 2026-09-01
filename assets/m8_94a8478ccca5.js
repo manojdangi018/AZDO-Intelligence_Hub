@@ -12,7 +12,7 @@ if (targetUser) {
 wiql += ` AND [System.AssignedTo] CONTAINS '${targetUser.replace(/'/g, "''")}'`;
 }
 wiql += ` ORDER BY [System.ChangedDate] DESC`;
-const queryUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/wit/wiql?api-version=${AZDO_API_VERSION}`;
+const queryUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/wit/wiql?$top=20000&api-version=${AZDO_API_VERSION}`;
 let queryRes;
 try {
 queryRes = await fetchAzDo(queryUrl, authHeader, {
@@ -27,13 +27,13 @@ if (targetUser) {
 fallbackWiql += ` AND [System.AssignedTo] CONTAINS '${fallbackUser}'`;
 }
 fallbackWiql += ` ORDER BY [System.ChangedDate] DESC`;
-queryRes = await fetchAzDo(`https://dev.azure.com/${org}/_apis/wit/wiql?api-version=${AZDO_API_VERSION}`, authHeader, {
+queryRes = await fetchAzDo(`https://dev.azure.com/${org}/_apis/wit/wiql?$top=20000&api-version=${AZDO_API_VERSION}`, authHeader, {
 method: 'POST',
 body: JSON.stringify({ query: fallbackWiql })
 });
 }
-const wiList = queryRes.workItems || [];
-const wiIds = wiList.slice(0, 200).map(w => w.id);
+const wiList = Array.isArray(queryRes.workItems) ? queryRes.workItems : [];
+const wiIds = wiList.map(w => w.id).filter(Boolean);
 if (wiIds.length === 0) {
 setSafeInnerHTML(document.getElementById('workItemsTableBody'), `<tr><td colspan="6" class="p-4 text-center text-slate-400">No work items found in project "${project}".</td></tr>`);
 document.getElementById('seeMoreWorkItemsContainer').classList.add('hidden');
@@ -42,9 +42,14 @@ setStatus(`No work items found matching criteria.`, 'info');
 return;
 }
 const fields = 'System.Id,System.Title,System.WorkItemType,System.State,System.AssignedTo,System.IterationPath,System.CreatedDate,System.ChangedDate';
-const detailsUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/wit/workitems?ids=${wiIds.join(',')}&fields=${fields}&api-version=${AZDO_API_VERSION}`;
-const detailsData = await fetchAzDo(detailsUrl, authHeader);
-const workItems = detailsData.value || [];
+const ID_BATCH_SIZE = 200;
+const idBatches = [];
+for (let i = 0; i < wiIds.length; i += ID_BATCH_SIZE) idBatches.push(wiIds.slice(i, i + ID_BATCH_SIZE));
+const detailResults = await Promise.allSettled(idBatches.map(ids => {
+const detailsUrl = `https://dev.azure.com/${org}/${encodeURIComponent(project)}/_apis/wit/workitems?ids=${ids.join(',')}&fields=${fields}&api-version=${AZDO_API_VERSION}`;
+return fetchAzDo(detailsUrl, authHeader);
+}));
+const workItems = detailResults.flatMap(result => result.status === 'fulfilled' ? (result.value?.value || []) : []);
 let stateCounts = {};
 let activeCount = 0;
 let inProgressCount = 0;
@@ -104,7 +109,7 @@ stopFetching();
 setStatus(`Loaded ${rawStore.workitems.length} work items successfully.`, 'success');
 } catch (err) {
 stopFetching();
-setStatus(`Error fetching work items: ${err.message}`, 'error');
+setStatus(isAzDoCancellation(err) ? 'The work item operation was cancelled.' : `Error fetching work items: ${err.message}`, isAzDoCancellation(err) ? 'info' : 'error');
 }
 }
 function renderWorkItemsTableBatch(append = false) {

@@ -10,8 +10,8 @@ try {
 const modernUrl = `https://dev.azure.com/${org}/${project}/_apis/pipelines?api-version=${API_VERSION}`;
 const classicUrl = `https://dev.azure.com/${org}/${project}/_apis/build/definitions?api-version=${API_VERSION}`;
 const [modernRes, classicRes] = await Promise.allSettled([
-fetchAzDo(modernUrl, authHeader),
-fetchAzDo(classicUrl, authHeader)
+fetchAzDoPaged(modernUrl, authHeader, { pageSize: 500 }),
+fetchAzDoPaged(classicUrl, authHeader, { pageSize: 500 })
 ]);
 const pipelineMap = new Map();
 if (modernRes.status === 'fulfilled' && modernRes.value?.value) {
@@ -172,7 +172,7 @@ const bUrl =
 `&$top=${perPipelineRuns}` +
 `&queryOrder=queueTimeDescending` +
 `&api-version=${AZDO_API_VERSION}`;
-const bData = await fetchAzDo(bUrl, authHeader);
+const bData = await fetchAzDoPaged(bUrl, authHeader, { pageSize: perPipelineRuns, maxItems: perPipelineRuns });
 runsObtained = bData?.value || [];
 if (runsObtained.length === 0) {
 const rUrl =
@@ -180,7 +180,7 @@ const rUrl =
 `/_apis/pipelines/${encodeURIComponent(pipe.id)}/runs` +
 `?$top=${perPipelineRuns}` +
 `&api-version=${AZDO_API_VERSION}`;
-const rData = await fetchAzDo(rUrl, authHeader);
+const rData = await fetchAzDoPaged(rUrl, authHeader, { pageSize: perPipelineRuns, maxItems: perPipelineRuns });
 const rawYamlRuns = (rData?.value || []).slice(0, perPipelineRuns);
 runsObtained = rawYamlRuns.map(run => ({
 id: run.id,
@@ -321,10 +321,7 @@ setStatus(
 );
 } catch (err) {
 stopFetching();
-setStatus(
-`Error fetching pipelines: ${err.message}`,
-'error'
-);
+setStatus(isAzDoCancellation(err) ? 'The pipeline operation was cancelled.' : `Error fetching pipelines: ${err.message}`, isAzDoCancellation(err) ? 'info' : 'error');
 }
 }
 function renderPipelineSummaryTableBatch(append = false) {

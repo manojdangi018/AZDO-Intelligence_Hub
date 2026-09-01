@@ -95,7 +95,7 @@ continue;
 }
 try {
 const agentsUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools/${encodeURIComponent(pool.id)}/agents?includeAssignedRequest=true&includeLastCompletedRequest=true&api-version=${AZDO_STABLE_API_VERSION}`;
-const agentData = await fetchAzDo(agentsUrl, authHeader);
+const agentData = await fetchAzDoPaged(agentsUrl, authHeader, { pageSize: 500 });
 const agents = agentData.value || [];
 agents.forEach(agent => rows.push({
 poolId: pool.id,
@@ -134,7 +134,7 @@ const projectInfoUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/p
 const queueUrl = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(project)}/_apis/distributedtask/queues?$top=1000&api-version=${AZDO_STABLE_API_VERSION}`;
 const [projectInfo, queueData] = await Promise.all([
 fetchAzDo(projectInfoUrl, authHeader),
-fetchAzDo(queueUrl, authHeader)
+fetchAzDoPaged(queueUrl, authHeader, { pageSize: 500 })
 ]);
 const projectId = projectInfo.id ? String(projectInfo.id).toLowerCase() : '';
 const poolRefs = new Map();
@@ -181,7 +181,7 @@ async function fetchOrganizationServiceConnections(org, authHeader, projects) {
 const results = await Promise.all((projects || []).map(async project => {
 try {
 const url = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(project.name)}/_apis/serviceendpoint/endpoints?api-version=${AZDO_STABLE_API_VERSION}`;
-const data = await fetchAzDo(url, authHeader);
+const data = await fetchAzDoPaged(url, authHeader, { pageSize: 500 });
 return (data.value || []).map(endpoint => mapServiceConnection(endpoint, project.name));
 } catch (error) {
 console.warn(`Could not fetch service connections for project ${project.name}:`, error);
@@ -215,7 +215,7 @@ const projectScoped = Boolean(scopeProject);
 if (projectScoped) {
 const serviceUrl = `https://dev.azure.com/${encodeURIComponent(org)}/${encodeURIComponent(scopeProject)}/_apis/serviceendpoint/endpoints?api-version=${AZDO_STABLE_API_VERSION}`;
 const [serviceData, projectPools] = await Promise.all([
-fetchAzDo(serviceUrl, authHeader),
+fetchAzDoPaged(serviceUrl, authHeader, { pageSize: 500 }),
 getProjectAgentPools(org, scopeProject, authHeader)
 ]);
 serviceConnections = (serviceData.value || []).map(endpoint => mapServiceConnection(endpoint, scopeProject));
@@ -225,7 +225,7 @@ const projects = await getOrganizationProjects();
 if (!projects.length) throw new Error('No projects are loaded. Load projects from the Azure DevOps connection first.');
 const [orgServiceConnections, poolData] = await Promise.all([
 fetchOrganizationServiceConnections(org, authHeader, projects),
-fetchAzDo(`https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools?api-version=${AZDO_STABLE_API_VERSION}`, authHeader)
+fetchAzDoPaged(`https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools?api-version=${AZDO_STABLE_API_VERSION}`, authHeader, { pageSize: 500 })
 ]);
 serviceConnections = orgServiceConnections;
 pools = poolData.value || [];
@@ -248,7 +248,7 @@ setStatus(`Loaded ${serviceConnections.length} service connections, ${pools.leng
 stopFetching();
 if (serviceBody) setSafeInnerHTML(serviceBody, `<tr><td colspan="7" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`);
 if (agentsBody) setSafeInnerHTML(agentsBody, `<tr><td colspan="9" class="p-4 text-center text-red-500">${escapeHtml(error.message)}</td></tr>`);
-setStatus(`Error fetching service connections and agents: ${error.message}`, 'error');
+setStatus(isAzDoCancellation(error) ? 'The service connections and agents operation was cancelled.' : `Error fetching service connections and agents: ${error.message}`, isAzDoCancellation(error) ? 'info' : 'error');
 }
 }
 function renderServiceConnectionsTableBatch(loadMore = false) {

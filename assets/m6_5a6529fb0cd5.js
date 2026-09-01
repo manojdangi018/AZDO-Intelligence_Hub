@@ -51,7 +51,7 @@ const reposTouched = new Set();
 let foundDisplayName = '';
 try {
 const projReposUrl = `https://dev.azure.com/${org}/${encodeURIComponent(selectedProject)}/_apis/git/repositories?api-version=${API_VERSION}`;
-const projReposRes = await fetchAzDo(projReposUrl, authHeader);
+const projReposRes = await fetchAzDoPaged(projReposUrl, authHeader, { pageSize: 500 });
 const repos = projReposRes?.value || [];
 if (!repos || repos.length === 0) {
 throw new Error(`No Git repositories found in project "${selectedProject}".`);
@@ -67,7 +67,7 @@ let url = `https://dev.azure.com/${org}/${encodeURIComponent(selectedProject)}/_
 if (fromDateIso) {
 url += `&searchCriteria.fromDate=${encodeURIComponent(fromDateIso)}`;
 }
-const res = await fetchAzDo(url, authHeader);
+const res = await fetchAzDoPaged(url, authHeader, { pageSize: 1000 });
 const commits = res?.value || [];
 commits.forEach((c) => {
 if (matchesUser(c.author?.name, c.author?.email, c.committer?.name, c.committer?.email)) {
@@ -96,7 +96,7 @@ if (commits.length > 0) break; // Found commits using this author variant
 const prsPromise = (async () => {
 try {
 const prUrl = `https://dev.azure.com/${org}/${encodeURIComponent(selectedProject)}/_apis/git/repositories/${r.id}/pullrequests?searchCriteria.status=all&$top=500&api-version=${API_VERSION}`;
-const prRes = await fetchAzDo(prUrl, authHeader);
+const prRes = await fetchAzDoPaged(prUrl, authHeader, { pageSize: 500 });
 const prList = prRes?.value || [];
 prList.forEach((pr) => {
 const creatorEmail = pr.createdBy?.uniqueName || '';
@@ -188,7 +188,7 @@ setStatus(
 );
 } catch (err) {
 stopFetching();
-setStatus(`Error fetching user activity: ${err.message}`, 'error');
+setStatus(isAzDoCancellation(err) ? 'The user activity operation was cancelled.' : `Error fetching user activity: ${err.message}`, isAzDoCancellation(err) ? 'info' : 'error');
 }
 }
 function renderCommitsTableBatch(append = false) {

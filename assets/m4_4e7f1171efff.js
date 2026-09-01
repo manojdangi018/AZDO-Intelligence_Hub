@@ -441,13 +441,15 @@ refsPromise,
 prsPromise
 ] =
 await Promise.allSettled([
-fetchAzDo(
+fetchAzDoPaged(
 refsUrl,
-authHeader
+authHeader,
+{ pageSize: 500 }
 ),
-fetchAzDo(
+fetchAzDoPaged(
 prUrl,
-authHeader
+authHeader,
+{ pageSize: 100 }
 )
 ]);
 let branchDetails =
@@ -767,10 +769,7 @@ setStatus(
 );
 stopFetching();
 } catch (err) {
-setStatus(
-`Error fetching branches and policies: ${err.message}`,
-'error'
-);
+setStatus(isAzDoCancellation(err) ? 'The repository and branch policy operation was cancelled.' : `Error fetching branches and policies: ${err.message}`, isAzDoCancellation(err) ? 'info' : 'error');
 stopFetching();
 }
 }
