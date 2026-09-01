@@ -277,6 +277,77 @@
     return Number.isFinite(date.getTime()) ? date.toLocaleString() : String(value);
   }
 
+  function formatPipelineRunStatus(value) {
+    const status = String(value || '').trim().toLowerCase();
+    if (status === 'succeeded' || status === 'success' || status === 'successful') {
+      return { label: 'Succeeded', className: 'pipeline-status-succeeded' };
+    }
+    if (status === 'failed' || status === 'failure') {
+      return { label: 'Failed', className: 'pipeline-status-failed' };
+    }
+    if (status === 'canceled' || status === 'cancelled') {
+      return { label: 'Canceled', className: 'pipeline-status-canceled' };
+    }
+    if (status === 'partiallysucceeded' || status === 'partiallysucceeded') {
+      return { label: 'Partially Succeeded', className: 'pipeline-status-partial' };
+    }
+    if (status === 'inprogress' || status === 'in progress') {
+      return { label: 'In Progress', className: 'pipeline-status-progress' };
+    }
+    if (status === 'notstarted' || status === 'not started') {
+      return { label: 'Not Started', className: 'pipeline-status-pending' };
+    }
+    return { label: value ? String(value) : 'Unknown', className: 'pipeline-status-unknown' };
+  }
+
+  function buildPipelineHistoryTable(pipelineRow, runs) {
+    const pipelineName = pipelineRow?.name || 'Unknown Pipeline';
+    const pipelineRuns = (Array.isArray(runs) ? runs : [])
+      .filter(run => String(run?.name || '').toLowerCase() === String(pipelineName).toLowerCase())
+      .sort((a, b) => (Number(b?.triggerTimestamp) || Number(b?.rawTimestamp) || 0) - (Number(a?.triggerTimestamp) || Number(a?.rawTimestamp) || 0));
+
+    if (!pipelineRuns.length) {
+      return `
+        <div class="pipeline-history-empty">
+          No pipeline run history is available for <strong>${esc(pipelineName)}</strong>.
+        </div>`;
+    }
+
+    const rows = pipelineRuns.map(run => {
+      const status = formatPipelineRunStatus(run.result || run.status);
+      return `
+      <tr>
+        <td>${esc(run.branch || 'Unknown Branch')}</td>
+        <td>${esc(run.buildNumber ?? run.id ?? '—')}</td>
+        <td>${esc(run.author || '—')}</td>
+        <td>${esc(run.triggerDate || run.finishTime || '—')}</td>
+        <td><span class="pipeline-status-badge ${status.className}">${esc(status.label)}</span></td>
+      </tr>`;
+    }).join('');
+
+    return `
+      <div class="pipeline-history-title">${esc(pipelineName)}</div>
+      <div class="pipeline-run-summary">
+        <span class="pipeline-run-count">${pipelineRuns.length}</span>
+        <span>Pipeline run${pipelineRuns.length === 1 ? '' : 's'} shown</span>
+      </div>
+      <div class="pipeline-history-table-wrap">
+        <table class="pipeline-history-table">
+          <thead>
+            <tr>
+              <th>Trigger Branch Name</th>
+              <th>Build Number</th>
+              <th>Triggered By</th>
+              <th>Trigger Date &amp; Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
   function buildAgentRunsTable(runs) {
     if (!runs.length) {
       return `<div class="agent-run-empty">No pipeline run history was returned for this agent/pool.</div>`;
@@ -564,6 +635,14 @@
             <div class="user-project-header"><div>PROJECT NAME</div><div>PERMISSIONS</div></div>
             ${projectRows}
           </div>
+        </div>
+      `;
+    } else if (type === 'pipeline-summary') {
+      const allPipelineRuns = Array.isArray(store?.pipelines) ? store.pipelines : [];
+      document.getElementById('dataDetailDetails').innerHTML = `
+        <div class="detail-section-card pipeline-history-card">
+          <div class="detail-section-heading"><span class="detail-section-icon">⌁</span> PIPELINE RUN HISTORY</div>
+          ${buildPipelineHistoryTable(row, allPipelineRuns)}
         </div>
       `;
     } else if (type === 'agent') {

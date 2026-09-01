@@ -376,8 +376,21 @@ async function fetchPipelineData() {
               b.queueTime ||
               b.createdDate;
 
+            // Keep the actual trigger/queue timestamp separately from the
+            // completion timestamp. The pipeline detail popup uses this to
+            // show when the run was triggered, not when it finished.
+            const rawTriggerTime =
+              b.queueTime ||
+              b.createdDate ||
+              b.startTime ||
+              b.finishTime;
+
             const parsedDate = rawTime
               ? new Date(rawTime)
+              : new Date(0);
+
+            const parsedTriggerDate = rawTriggerTime
+              ? new Date(rawTriggerTime)
               : new Date(0);
 
             summaryMap[pipe.name].latestRunTimestamp = Math.max(
@@ -396,7 +409,11 @@ async function fetchPipelineData() {
               rawTimestamp: parsedDate.getTime(),
               finishTime: rawTime
                 ? parsedDate.toLocaleString()
-                : (b.startTime ? 'In Progress' : 'Queued')
+                : (b.startTime ? 'In Progress' : 'Queued'),
+              triggerDate: rawTriggerTime
+                ? parsedTriggerDate.toLocaleString()
+                : '—',
+              triggerTimestamp: parsedTriggerDate.getTime() || 0
             });
           });
         } catch (err) {

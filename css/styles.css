@@ -1533,3 +1533,93 @@ table tbody tr.data-detail-row:focus {
   .user-project-header > div:first-child { display: none; }
   .user-project-row > div + div { padding-top: 0; }
 }
+
+
+/* Pipeline summary detail: run history for the selected pipeline */
+.pipeline-history-card { overflow: hidden; }
+.pipeline-history-title {
+  margin: 0 0 12px;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 900;
+}
+.pipeline-run-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 700;
+}
+.pipeline-run-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 900;
+}
+.pipeline-history-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+}
+.pipeline-history-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  background: #fff;
+}
+.pipeline-history-table th {
+  padding: 11px 12px;
+  border-bottom: 1px solid #dbe3ee;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.pipeline-history-table td {
+  padding: 12px;
+  border-bottom: 1px solid #edf2f7;
+  color: #334155;
+  font-size: 12px;
+  vertical-align: middle;
+}
+.pipeline-history-table tbody tr:last-child td { border-bottom: 0; }
+.pipeline-history-table tbody tr:hover { background: #f8fafc; }
+.pipeline-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.pipeline-status-succeeded { background: #dcfce7; color: #166534; }
+.pipeline-status-failed { background: #fee2e2; color: #b91c1c; }
+.pipeline-status-canceled { background: #fef3c7; color: #92400e; }
+.pipeline-status-partial { background: #fef3c7; color: #92400e; }
+.pipeline-status-progress { background: #dbeafe; color: #1d4ed8; }
+.pipeline-status-pending { background: #e2e8f0; color: #475569; }
+.pipeline-status-unknown { background: #e2e8f0; color: #475569; }
+.pipeline-history-empty {
+  padding: 18px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 13px;
+}
