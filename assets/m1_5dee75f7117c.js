@@ -26,43 +26,90 @@ return String(value ?? '').replace(/[&<>'"`]/g, ch => ({
 }[ch]));
 }
 
-function sanitizeHtml(html) {
+function sanitizeHtml(html, contextElement = null) {
 if (html == null) return '';
-const parser = new DOMParser();
-const doc = parser.parseFromString(String(html), 'text/html');
-const blockedTags = ['script', 'iframe', 'object', 'embed', 'applet', 'base', 'meta', 'link'];
-blockedTags.forEach(tag => doc.querySelectorAll(tag).forEach(node => node.remove()));
+const source = String(html);
+let root = null;
+let host = null;
+const tag = contextElement?.tagName?.toLowerCase() || '';
 
-doc.querySelectorAll('*').forEach(node => {
-Array.from(node.attributes).forEach(attr => {
-const name = attr.name.toLowerCase();
-const value = String(attr.value || '').trim().toLowerCase();
-if (name.startsWith('on')) {
-node.removeAttribute(attr.name);
-return;
+// HTML parsing is context-sensitive. In particular, parsing a <tr> or <td>
+// through DOMParser/body turns table rows/cells into invalid body content and
+// breaks table rendering. Build the same DOM context as the real target first.
+if (['tbody', 'thead', 'tfoot'].includes(tag)) {
+  host = document.createElement('table');
+  root = document.createElement(tag);
+  host.appendChild(root);
+  root.innerHTML = source;
+} else if (tag === 'tr') {
+  host = document.createElement('table');
+  const tbody = document.createElement('tbody');
+  root = document.createElement('tr');
+  tbody.appendChild(root);
+  host.appendChild(tbody);
+  root.innerHTML = source;
+} else if (['td', 'th'].includes(tag)) {
+  host = document.createElement('table');
+  const tbody = document.createElement('tbody');
+  const tr = document.createElement('tr');
+  root = document.createElement(tag);
+  tr.appendChild(root);
+  tbody.appendChild(tr);
+  host.appendChild(tbody);
+  root.innerHTML = source;
+} else if (tag === 'select') {
+  root = document.createElement('select');
+  root.innerHTML = source;
+} else if (tag === 'datalist') {
+  root = document.createElement('datalist');
+  root.innerHTML = source;
+} else {
+  const template = document.createElement('template');
+  template.innerHTML = source;
+  root = template.content;
 }
-if (['href', 'src', 'action', 'formaction', 'xlink:href'].includes(name)) {
-if (/^(javascript|vbscript):/i.test(value) || (value.startsWith('data:') && !value.startsWith('data:image/'))) {
-node.removeAttribute(attr.name);
-}
-}
+
+const blockedTags = [
+  'script', 'iframe', 'object', 'embed', 'applet', 'base',
+  'meta', 'link', 'style', 'form'
+];
+blockedTags.forEach(tagName => {
+  root.querySelectorAll(tagName).forEach(node => node.remove());
 });
+
+root.querySelectorAll('*').forEach(node => {
+  Array.from(node.attributes).forEach(attr => {
+    const name = attr.name.toLowerCase();
+    const value = String(attr.value || '').trim();
+
+    // Never allow inline event handlers.
+    if (name.startsWith('on')) {
+      node.removeAttribute(attr.name);
+      return;
+    }
+
+    // Prevent scriptable URL schemes and unsafe data URLs.
+    if (['href', 'src', 'action', 'formaction', 'xlink:href'].includes(name)) {
+      if (/^(javascript|vbscript):/i.test(value) ||
+          (value.toLowerCase().startsWith('data:') &&
+           !value.toLowerCase().startsWith('data:image/'))) {
+        node.removeAttribute(attr.name);
+      }
+    }
+  });
 });
-return doc.body.innerHTML;
+
+return root.innerHTML;
 }
 
 function setSafeInnerHTML(element, html) {
 if (!element) return;
-const safe = sanitizeHtml(html);
-// This assignment is intentionally kept here so callers can safely render trusted markup
-// together with escaped API data without allowing executable HTML attributes or script nodes.
-element.innerHTML = safe;
+element.innerHTML = sanitizeHtml(html, element);
 }
 
 function insertSafeAdjacentHTML(element, position, html) {
 if (!element) return;
-const safe = sanitizeHtml(html);
-element.insertAdjacentHTML(position, safe);
+element.insertAdjacentHTML(position, sanitizeHtml(html, element));
 }
 
 function createBasicAuthHeader(pat) {

@@ -18,3 +18,7 @@
 This is still a browser-only application. A PAT must be supplied to the browser to call Azure DevOps directly. Keeping the PAT out of browser storage reduces persistence/exposure risk, but it does not make a frontend PAT fundamentally secret from browser code or browser extensions.
 
 For stronger enterprise security, a future phase should move Azure DevOps authentication behind a backend service or use an appropriate delegated OAuth/Entra ID flow.
+
+### Phase 1.1 regression fix
+- Safe HTML rendering is context-aware for table elements (`tbody`, `thead`, `tfoot`, `tr`, `td`, `th`) so sanitization does not strip or flatten valid table rows/cells.
+- API-originated values remain protected by the shared HTML sanitization layer while preserving existing table rendering behavior.
