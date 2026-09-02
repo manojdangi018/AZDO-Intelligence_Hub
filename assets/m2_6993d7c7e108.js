@@ -487,8 +487,13 @@ users: 'users',
 advanced_analytics: 'advanced'
 };
 const viewId = viewMap[category] || 'repositories';
+const isAdvanced = viewId === 'advanced';
 const projectSelectionBox = document.querySelector('.project-selection-box');
-if (projectSelectionBox) projectSelectionBox.classList.toggle('hidden', viewId === 'advanced');
+if (projectSelectionBox) projectSelectionBox.classList.toggle('hidden', isAdvanced);
+const activePathRow = document.querySelector('.active-path-row');
+if (activePathRow) activePathRow.classList.toggle('hidden', isAdvanced);
+const overviewHeading = document.querySelector('.overview-heading');
+if (overviewHeading) overviewHeading.classList.toggle('hidden', isAdvanced);
 document.querySelectorAll('.sidebar-item').forEach(btn => {
 btn.classList.toggle('active', btn.dataset.view === viewId);
 });
