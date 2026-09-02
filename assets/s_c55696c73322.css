@@ -423,7 +423,7 @@ background: #0e2756;
 color: #fff;
 }
 .sidebar-item.active {
-background: #113374;
+background: #1d4ed8;
 color: #fff;
 border-left: 3px solid var(--azure-cyan);
 }
