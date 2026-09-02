@@ -487,6 +487,8 @@ users: 'users',
 advanced_analytics: 'advanced'
 };
 const viewId = viewMap[category] || 'repositories';
+const projectSelectionBox = document.querySelector('.project-selection-box');
+if (projectSelectionBox) projectSelectionBox.classList.toggle('hidden', viewId === 'advanced');
 document.querySelectorAll('.sidebar-item').forEach(btn => {
 btn.classList.toggle('active', btn.dataset.view === viewId);
 });
