@@ -490,14 +490,21 @@ const viewId = viewMap[category] || 'repositories';
 const isAdvanced = viewId === 'advanced';
 const workspaceControls = document.querySelector('.workspace-controls');
 if (workspaceControls) {
-    workspaceControls.style.display = isAdvanced ? 'none' : '';
+    if (isAdvanced) {
+        workspaceControls.style.setProperty('display', 'none', 'important');
+    } else {
+        workspaceControls.style.removeProperty('display');
+    }
 }
 const overviewHeading = document.querySelector('.overview-heading');
 if (overviewHeading) {
-    overviewHeading.style.display = isAdvanced ? 'none' : '';
+    if (isAdvanced) {
+        overviewHeading.style.setProperty('display', 'none', 'important');
+    } else {
+        overviewHeading.style.removeProperty('display');
+    }
 }
 document.querySelectorAll('.sidebar-item').forEach(btn => {
-btn.classList.toggle('active', btn.dataset.view === viewId);
 });
 if (typeof showSection === 'function') showSection(viewId);
 if (typeof configureServiceAgentsOverview === 'function') {
