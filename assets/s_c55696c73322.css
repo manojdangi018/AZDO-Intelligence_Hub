@@ -425,8 +425,8 @@ color: #fff;
 .sidebar-item.active {
     background: #1d4ed8 !important;
     color: #ffffff !important;
-    border: 1px solid var(--border-dark) !important;
-    border-left: 3px solid var(--border-dark) !important;
+    border: 1px solid var(--border-glow) !important;
+    border-left: 3px solid var(--border-glow) !important;
     box-shadow: none !important;
 }
 .sidebar-connection-note {
