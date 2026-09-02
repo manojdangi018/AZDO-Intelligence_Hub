@@ -625,11 +625,18 @@ const policyInfo =
 parsePolicyInformation(
 policies
 );
-const actualReviewers =
-(
-pr.reviewers ||
-[]
-).length;
+const reviewerDetails =
+Array.isArray(pr.reviewers)
+? pr.reviewers.map(reviewer => ({
+name: reviewer?.displayName || reviewer?.uniqueName || 'Unknown Reviewer',
+vote: Number.isFinite(Number(reviewer?.vote)) ? Number(reviewer.vote) : 0,
+isRequired: reviewer?.isRequired === true,
+hasDeclined: reviewer?.hasDeclined === true
+}))
+: [];
+const actualReviewers = reviewerDetails.length;
+const autoCompleteSetBy = pr.autoCompleteSetBy?.displayName || '';
+const completionMethod = autoCompleteSetBy ? 'Auto-complete' : 'Manual';
 return {
 id:
 pr.pullRequestId ||
@@ -664,13 +671,25 @@ pr.creationDate
 : null,
 reviewersCount:
 actualReviewers,
+reviewers:
+reviewerDetails,
 minRequiredReviewers:
 policyInfo.minReviewers,
 targetPolicies:
 policyInfo.policies,
 blockingPolicyCount: policyInfo.blockingPolicyCount,
 requiredReviewerCount: policyInfo.requiredReviewerCount,
-policyCount: policyInfo.policyCount
+policyCount: policyInfo.policyCount,
+completionMethod,
+autoCompleteSetBy,
+closedBy: pr.closedBy?.displayName || '',
+closedDate: pr.closedDate
+? new Date(pr.closedDate).getTime()
+: null,
+mergeStatus: pr.mergeStatus || '',
+completionQueueTime: pr.completionQueueTime
+? new Date(pr.completionQueueTime).getTime()
+: null
 };
 }
 )

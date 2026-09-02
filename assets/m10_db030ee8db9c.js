@@ -145,9 +145,132 @@ return value.length
 }
 return `<span class="detail-value">${esc(text)}</span>`;
 }
+function getPrApprovalTelemetry(row) {
+const reviewers = Array.isArray(row?.reviewers) ? row.reviewers : [];
+const requiredReviewers = reviewers.filter(reviewer => reviewer?.isRequired === true);
+const approvalPool = requiredReviewers.length ? requiredReviewers : reviewers;
+const approved = approvalPool.filter(reviewer => Number(reviewer?.vote) >= 5);
+const rejected = approvalPool.filter(reviewer => Number(reviewer?.vote) <= -10);
+const pending = approvalPool.filter(reviewer => Number(reviewer?.vote) === 0 || Number(reviewer?.vote) === -5);
+const declined = approvalPool.filter(reviewer => reviewer?.hasDeclined === true);
+const requiredCount = Number(row?.minRequiredReviewers) > 0
+? Number(row.minRequiredReviewers)
+: (requiredReviewers.length || approvalPool.length);
+return {
+reviewers,
+requiredReviewers,
+approvalPool,
+approved,
+rejected,
+pending,
+declined,
+requiredCount
+};
+}
+function buildPullRequestLifecycle(row) {
+const status = String(row?.status || '').toLowerCase();
+const approval = getPrApprovalTelemetry(row);
+const isCompleted = status === 'completed';
+const isAbandoned = status === 'abandoned';
+const isActive = status === 'active';
+let statusLabel = row?.status || 'Unknown';
+let statusClassName = 'detail-status detail-status-neutral';
+let statusIcon = '•';
+if (isCompleted) {
+statusLabel = 'Completed';
+statusClassName = 'detail-status detail-status-success';
+statusIcon = '✓';
+} else if (isAbandoned) {
+statusLabel = 'Abandoned';
+statusClassName = 'detail-status detail-status-danger';
+statusIcon = '✕';
+} else if (isActive) {
+statusLabel = approval.rejected.length
+? 'Approval Rejected'
+: approval.pending.length || approval.approved.length < approval.requiredCount
+? 'Approval Pending'
+: 'Approval Ready';
+statusClassName = approval.rejected.length
+? 'detail-status detail-status-danger'
+: approval.pending.length || approval.approved.length < approval.requiredCount
+? 'detail-status detail-status-warning'
+: 'detail-status detail-status-success';
+statusIcon = approval.rejected.length ? '!' : approval.pending.length || approval.approved.length < approval.requiredCount ? '⏳' : '✓';
+}
+const reviewerRows = approval.reviewers.length
+? approval.reviewers.map(reviewer => {
+const vote = Number(reviewer?.vote);
+const approvedVote = vote >= 5;
+const rejectedVote = vote <= -10 || reviewer?.hasDeclined === true;
+const voteLabel = approvedVote
+? (vote >= 10 ? 'Approved' : 'Approved with suggestions')
+: rejectedVote
+? (reviewer?.hasDeclined ? 'Declined' : 'Rejected')
+: vote === -5
+? 'Waiting for author'
+: 'Pending';
+const icon = approvedVote ? '✓' : rejectedVote ? '✕' : '⏳';
+return `<div class="detail-field"><div class="detail-field-label"><span>${icon}</span> ${esc(reviewer?.name || 'Unknown Reviewer')}</div><div class="detail-field-value"><span class="detail-value">${esc(voteLabel)}</span></div></div>`;
+}).join('')
+: '<div class="pr-lifecycle-empty">No reviewer details returned by Azure DevOps.</div>';
+const pendingRows = approval.pending.length
+? approval.pending.map(reviewer => `<span class="detail-tag">${esc(reviewer?.name || 'Unknown Reviewer')}</span>`).join('')
+: '<span class="text-slate-400">None</span>';
+const approvedNames = approval.approved.length
+? approval.approved.map(reviewer => `<span class="detail-tag">${esc(reviewer?.name || 'Unknown Reviewer')}</span>`).join('')
+: '<span class="text-slate-400">None</span>';
+const lifecycleFields = [];
+if (isCompleted) {
+ lifecycleFields.push(['Completion', row?.completionMethod || 'Manual']);
+ if (row?.autoCompleteSetBy) lifecycleFields.push(['Auto-complete Enabled By', row.autoCompleteSetBy]);
+ lifecycleFields.push(['Completed By', row?.closedBy || 'N/A']);
+ lifecycleFields.push(['Completion Date', row?.closedDate || null]);
+} else if (isAbandoned) {
+ lifecycleFields.push(['Abandoned By', row?.closedBy || 'N/A']);
+ lifecycleFields.push(['Abandoned Date', row?.closedDate || null]);
+} else if (isActive) {
+ lifecycleFields.push(['Approval Progress', `${approval.approved.length} of ${approval.requiredCount || approval.approvalPool.length} approved`]);
+ lifecycleFields.push(['Required Reviewers', approval.requiredCount || 0]);
+ lifecycleFields.push(['Approvals Received', approvedNames]);
+ lifecycleFields.push(['Approval Pending From', pendingRows]);
+}
+return `
+<div class="detail-section-card pr-lifecycle-card">
+<div class="detail-section-heading"><span class="detail-section-icon">◷</span> PR LIFECYCLE &amp; APPROVALS</div>
+<div class="pr-lifecycle-status"><span class="${statusClassName}">${statusIcon} ${esc(statusLabel)}</span></div>
+<div class="detail-grid">${fieldGrid(lifecycleFields)}</div>
+${approval.reviewers.length ? `
+<div class="pr-reviewers-block">
+<div class="detail-field-label">APPROVERS &amp; REVIEWERS</div>
+<div class="pr-reviewer-list">${reviewerRows}</div>
+</div>` : ''}
+</div>`;
+}
 function makeFields(row, type) {
 const omit = new Set(['rawDate', 'rawTimestamp', 'isSyntheticHosted', 'projectScoped', 'raw']);
 const entries = Object.entries(row || {}).filter(([key]) => !omit.has(key));
+if (type === 'repository-pr' || type === 'user-pr') {
+const primary = [
+['Repository', row.repo],
+['Title', row.title],
+['Source Branch', row.source],
+['Target Branch', row.target],
+['Status', row.status],
+['Creator', row.creator],
+['Created Date', row.createdDate],
+['Reviewer Count', row.reviewersCount || 0],
+['Required Reviewers', row.minRequiredReviewers || 0]
+];
+const secondary = [
+['Target Branch Policies', row.targetPolicies || []],
+['Merge Status', row.mergeStatus || 'N/A'],
+['Completion Method', row.completionMethod || 'Manual'],
+['Auto-complete Enabled By', row.autoCompleteSetBy || 'N/A'],
+['Closed / Completed By', row.closedBy || 'N/A'],
+['Closed / Completion Date', row.closedDate || null]
+];
+return { primary, secondary };
+}
 if (type === 'repository-branch') {
 const primary = [
 ['Repository', row.repo],
@@ -550,6 +673,7 @@ setSafeInnerHTML(document.getElementById('dataDetailOverview'), `
 <div class="detail-section-heading"><span class="detail-section-icon">◷</span> ${esc(type === 'repository-branch' || type === 'policy-branch' ? 'Branch Health & Metadata' : 'Record Overview')}</div>
 <div class="detail-grid">${fieldGrid(fields.primary)}</div>
 </div>
+${type === 'repository-pr' || type === 'user-pr' ? buildPullRequestLifecycle(row) : ''}
 `);
 if (type === 'user-directory') {
 const projects = Array.isArray(row.projects) ? row.projects : [];
