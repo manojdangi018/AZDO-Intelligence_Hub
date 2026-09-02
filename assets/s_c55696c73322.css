@@ -423,11 +423,12 @@ background: #0e2756;
 color: #fff;
 }
 .sidebar-item.active {
-    background: #1d4ed8;
-    color: #fff;
-    border: 1px solid var(--azure-cyan);
-    border-left: 3px solid var(--azure-cyan);
-    box-shadow: 0 0 10px rgba(0, 217, 255, 0.25);
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+    border-left: 3px solid var(--azure-cyan) !important;
+    outline: 1px solid var(--azure-cyan);
+    outline-offset: -1px;
+    box-shadow: 0 0 12px rgba(0, 217, 255, 0.35);
 }
 .sidebar-connection-note {
 margin: auto 14px 16px;
