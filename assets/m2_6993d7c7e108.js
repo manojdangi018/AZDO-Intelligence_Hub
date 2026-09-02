@@ -503,6 +503,7 @@ function applyAdvancedAnalyticsVisibility() {
 }
 
 document.querySelectorAll('.sidebar-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === viewId);
 });
 if (typeof showSection === 'function') showSection(viewId);
 if (typeof configureServiceAgentsOverview === 'function') {
