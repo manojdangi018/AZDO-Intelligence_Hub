@@ -17,7 +17,7 @@ function configureServiceAgentsOverview(isActive) {
 const chartSection = document.getElementById('chartSection');
 const kpiGrid = document.querySelector('.kpi-grid');
 const cards = [1, 2, 3, 4, 5].map(i => document.getElementById(`kpi-card-${i}`));
-if (chartSection) chartSection.classList.toggle('hidden', isActive);
+if (chartSection) chartSection.classList.remove('hidden');
 if (kpiGrid) kpiGrid.classList.toggle('serviceagents-kpi-grid', isActive);
 if (isActive) {
 cards.forEach((card, index) => { if (card) card.classList.toggle('hidden', index >= 3); });
@@ -28,13 +28,49 @@ cards.forEach(card => { if (card) card.classList.remove('hidden'); });
 if (kpiGrid) kpiGrid.classList.remove('serviceagents-kpi-grid');
 }
 }
+function renderAgentPoolInventoryChart() {
+const pools = Array.isArray(rawStore.agentPools) ? rawStore.agentPools : [];
+const agents = Array.isArray(rawStore.agents) ? rawStore.agents : [];
+const labels = [];
+const values = [];
+const agentCounts = new Map();
+
+agents.forEach(agent => {
+if (!agent || agent.isSyntheticHosted || agent.name === 'Unable to read agents') return;
+const poolId = agent.poolId !== undefined && agent.poolId !== null ? String(agent.poolId) : '';
+if (!poolId) return;
+agentCounts.set(poolId, (agentCounts.get(poolId) || 0) + 1);
+});
+
+pools.forEach(pool => {
+if (!pool) return;
+const poolId = pool.id !== undefined && pool.id !== null ? String(pool.id) : '';
+const poolName = String(pool.name || `Pool ${poolId || '—'}`);
+let count;
+
+if (pool.isHosted === true) {
+const size = Number(pool.size);
+count = Number.isFinite(size) && size >= 0 ? size : (agentCounts.get(poolId) || 0);
+} else {
+count = agentCounts.get(poolId) || 0;
+}
+
+labels.push(poolName);
+values.push(count);
+});
+
+if (typeof renderChart === 'function') {
+renderChart(labels, values, 'Agent Count');
+}
+}
+
 function updateServiceAgentsOverview() {
 const serviceConnectionCount = (rawStore.serviceConnections || []).length;
 const validAgents = (rawStore.agents || []).filter(a => !a.isSyntheticHosted && a.name && a.name !== 'Unable to read agents');
 const hostedPoolCount = (rawStore.agentPools || []).filter(p => p.isHosted === true).length;
-const selfHostedAgentCount = validAgents.filter(a => a.isHosted === 'No').length;
-const values = [serviceConnectionCount, hostedPoolCount, selfHostedAgentCount];
-const labels = ['Total Service Connections', 'Microsoft-hosted Pools', 'Self-hosted Agents'];
+const totalAgentPoolCount = (rawStore.agentPools || []).length;
+const values = [serviceConnectionCount, hostedPoolCount, totalAgentPoolCount];
+const labels = ['Total Service Connections', 'Microsoft-hosted Pools', 'Total Agent Pools'];
 const classes = [
 'text-2xl font-extrabold text-slate-800 mt-1 truncate',
 'text-2xl font-extrabold text-blue-600 mt-1',
@@ -61,7 +97,9 @@ isReady: endpoint.isReady === true ? 'Yes' : endpoint.isReady === false ? 'No' :
 isShared: endpoint.isShared ? 'Yes' : 'No',
 createdBy: displayIdentity(endpoint.createdBy),
 projectName: projectName || endpoint.serviceEndpointProjectReferences?.[0]?.projectReference?.name || '—',
-rawCreatedTimestamp: endpoint.creationDate ? new Date(endpoint.creationDate).getTime() : null
+rawCreatedTimestamp: endpoint.creationDate ? new Date(endpoint.creationDate).getTime() : null,
+lastUsedDate: endpoint.lastUsedDate || endpoint.lastUsedOn || endpoint.lastUsedAt || endpoint.data?.lastUsedDate || '',
+rawLastUsedTimestamp: (endpoint.lastUsedDate || endpoint.lastUsedOn || endpoint.lastUsedAt || endpoint.data?.lastUsedDate) ? new Date(endpoint.lastUsedDate || endpoint.lastUsedOn || endpoint.lastUsedAt || endpoint.data?.lastUsedDate).getTime() : null
 };
 }
 function statusBadge(status) {
@@ -139,7 +177,7 @@ fetchAzDoPaged(queueUrl, authHeader, { pageSize: 500 })
 const projectId = projectInfo.id ? String(projectInfo.id).toLowerCase() : '';
 const poolRefs = new Map();
 (queueData.value || []).forEach(queue => {
-if (projectId && queue.projectId && String(queue.projectId).toLowerCase() !== projectId) return;
+if (!projectId || !queue.projectId || String(queue.projectId).toLowerCase() !== projectId) return;
 const pool = queue.pool || {};
 if (pool.id !== undefined && pool.id !== null) {
 poolRefs.set(String(pool.id), {
@@ -156,19 +194,22 @@ if (!ids.length) return [];
 const poolUrl = `https://dev.azure.com/${encodeURIComponent(org)}/_apis/distributedtask/pools?poolIds=${ids.map(encodeURIComponent).join(',')}&api-version=${AZDO_STABLE_API_VERSION}`;
 const poolData = await fetchAzDo(poolUrl, authHeader);
 const poolById = new Map((poolData.value || []).map(pool => [String(pool.id), pool]));
-return ids.map(id => {
-const ref = poolRefs.get(id);
-const pool = poolById.get(id) || {};
-return {
-...pool,
-id: Number(id),
-queueId: ref.queueId ?? pool.queueId ?? null,
-name: pool.name || ref.name || `Pool ${id}`,
-isHosted: pool.isHosted === true || ref.isHosted === true,
-poolType: pool.poolType || ref.poolType || '—',
-projectId: projectId
-};
-});
+return ids
+    .map(id => {
+        const ref = poolRefs.get(id);
+        const pool = poolById.get(id) || {};
+
+        return {
+            ...pool,
+            id: Number(id),
+            queueId: ref.queueId ?? pool.queueId ?? null,
+            name: pool.name || ref.name || `Pool ${id}`,
+            isHosted: pool.isHosted === true || ref.isHosted === true,
+            poolType: pool.poolType || ref.poolType || '—',
+            projectId: projectId
+        };
+    })
+    .filter(pool => pool.isLegacy !== true && pool.poolType === 'automation');
 }
 async function getOrganizationProjects() {
 const projectSelect = document.getElementById('projectSelect');
@@ -240,6 +281,7 @@ rawStore.agentsIndex = 0;
 renderServiceConnectionsTableBatch(false);
 renderAgentsTableBatch(false);
 updateServiceAgentsOverview();
+renderAgentPoolInventoryChart();
 const realAgentCount = rawStore.agents.filter(a => !a.isSyntheticHosted && a.name !== 'Unable to read agents').length;
 const hostedPoolCount = pools.filter(p => p.isHosted === true).length;
 stopFetching();

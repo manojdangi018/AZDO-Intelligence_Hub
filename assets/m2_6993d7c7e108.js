@@ -78,6 +78,8 @@ return (rawStore.serviceConnections?.length || 0) > 0 ||
 (rawStore.agentPools?.length || 0) > 0;
 case 'users':
 return (rawStore.userEntitlements?.length || 0) > 0;
+case 'advanced_analytics':
+return Object.values(rawStore).some(v => Array.isArray(v) && v.length > 0);
 default:
 return false;
 }
@@ -461,7 +463,7 @@ subWorkItems.classList.remove('hidden');
 }
 function showSection(viewId) {
 activeViewSection = `view-${viewId}`;
-['repositories', 'access', 'activity', 'pipelines', 'serviceagents', 'users', 'workitems'].forEach(v => {
+['repositories', 'access', 'activity', 'pipelines', 'serviceagents', 'users', 'workitems', 'advanced'].forEach(v => {
 document.getElementById(`view-${v}`).classList.toggle('hidden', v !== viewId);
 });
 }
@@ -481,7 +483,8 @@ work_items: 'workitems',
 user_activity: 'activity',
 user_access: 'access',
 service_agents: 'serviceagents',
-users: 'users'
+users: 'users',
+advanced_analytics: 'advanced'
 };
 const viewId = viewMap[category] || 'repositories';
 document.querySelectorAll('.sidebar-item').forEach(btn => {
@@ -490,6 +493,9 @@ btn.classList.toggle('active', btn.dataset.view === viewId);
 if (typeof showSection === 'function') showSection(viewId);
 if (typeof configureServiceAgentsOverview === 'function') {
 configureServiceAgentsOverview(viewId === 'serviceagents');
+}
+if (typeof configureAdvancedAnalytics === 'function') {
+configureAdvancedAnalytics(viewId === 'advanced');
 }
 renderActiveSubstep();
 restoreWorkspaceDisplayState(category);
