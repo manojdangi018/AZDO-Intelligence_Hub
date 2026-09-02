@@ -423,7 +423,7 @@ background: #0e2756;
 color: #fff;
 }
 .sidebar-item.active {
-    background: #162f65  !important;
+    background: #1d4ed8 !important;
     color: #ffffff !important;
     border: 1px solid var(--border-glow) !important;
     border-left: 3px solid var(--border-glow) !important;

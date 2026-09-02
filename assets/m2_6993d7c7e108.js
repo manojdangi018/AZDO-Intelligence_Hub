@@ -487,23 +487,21 @@ users: 'users',
 advanced_analytics: 'advanced'
 };
 const viewId = viewMap[category] || 'repositories';
-const isAdvanced = viewId === 'advanced';
-const workspaceControls = document.querySelector('.workspace-controls');
-if (workspaceControls) {
-    if (isAdvanced) {
-        workspaceControls.style.setProperty('display', 'none', 'important');
-    } else {
-        workspaceControls.style.removeProperty('display');
+
+function applyAdvancedAnalyticsVisibility() {
+    const hide = viewId === 'advanced';
+    const workspaceControls = document.querySelector('.workspace-controls');
+    const overviewHeading = document.querySelector('.overview-heading');
+
+    if (workspaceControls) {
+        workspaceControls.style.setProperty('display', hide ? 'none' : '', 'important');
+    }
+
+    if (overviewHeading) {
+        overviewHeading.style.setProperty('display', hide ? 'none' : '', 'important');
     }
 }
-const overviewHeading = document.querySelector('.overview-heading');
-if (overviewHeading) {
-    if (isAdvanced) {
-        overviewHeading.style.setProperty('display', 'none', 'important');
-    } else {
-        overviewHeading.style.removeProperty('display');
-    }
-}
+
 document.querySelectorAll('.sidebar-item').forEach(btn => {
 });
 if (typeof showSection === 'function') showSection(viewId);
@@ -515,6 +513,7 @@ configureAdvancedAnalytics(viewId === 'advanced');
 }
 renderActiveSubstep();
 restoreWorkspaceDisplayState(category);
+applyAdvancedAnalyticsVisibility();
 }
 function setConnectionBadge(connected) {
 const text = document.getElementById('connectionBadgeText');
