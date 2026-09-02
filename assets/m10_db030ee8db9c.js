@@ -210,7 +210,12 @@ const voteLabel = approvedVote
 ? 'Waiting for author'
 : 'Pending';
 const icon = approvedVote ? '✓' : rejectedVote ? '✕' : '⏳';
-return `<div class="detail-field"><div class="detail-field-label"><span>${icon}</span> ${esc(reviewer?.name || 'Unknown Reviewer')}</div><div class="detail-field-value"><span class="detail-value">${esc(voteLabel)}</span></div></div>`;
+const nameClass = approvedVote
+? 'pr-reviewer-name pr-reviewer-approved'
+: rejectedVote
+? 'pr-reviewer-name pr-reviewer-rejected'
+: 'pr-reviewer-name pr-reviewer-pending';
+return `<div class="detail-field"><div class="detail-field-label ${nameClass}"><span>${icon}</span> ${esc(reviewer?.name || 'Unknown Reviewer')}</div><div class="detail-field-value"><span class="detail-value">${esc(voteLabel)}</span></div></div>`;
 }).join('')
 : '<div class="pr-lifecycle-empty">No reviewer details returned by Azure DevOps.</div>';
 const pendingRows = approval.pending.length
@@ -263,11 +268,7 @@ const primary = [
 ];
 const secondary = [
 ['Target Branch Policies', row.targetPolicies || []],
-['Merge Status', row.mergeStatus || 'N/A'],
-['Completion Method', row.completionMethod || 'Manual'],
-['Auto-complete Enabled By', row.autoCompleteSetBy || 'N/A'],
-['Closed / Completed By', row.closedBy || 'N/A'],
-['Closed / Completion Date', row.closedDate || null]
+['Merge Status', row.mergeStatus || 'N/A']
 ];
 return { primary, secondary };
 }
@@ -673,7 +674,6 @@ setSafeInnerHTML(document.getElementById('dataDetailOverview'), `
 <div class="detail-section-heading"><span class="detail-section-icon">◷</span> ${esc(type === 'repository-branch' || type === 'policy-branch' ? 'Branch Health & Metadata' : 'Record Overview')}</div>
 <div class="detail-grid">${fieldGrid(fields.primary)}</div>
 </div>
-${type === 'repository-pr' || type === 'user-pr' ? buildPullRequestLifecycle(row) : ''}
 `);
 if (type === 'user-directory') {
 const projects = Array.isArray(row.projects) ? row.projects : [];
@@ -718,6 +718,7 @@ setSafeInnerHTML(document.getElementById('dataDetailDetails'), `
 `);
 } else {
 setSafeInnerHTML(document.getElementById('dataDetailDetails'), `
+${type === 'repository-pr' || type === 'user-pr' ? buildPullRequestLifecycle(row) : ''}
 <div class="detail-section-card">
 <div class="detail-section-heading"><span class="detail-section-icon">⌁</span> Additional Details</div>
 <div class="detail-grid">${fieldGrid(fields.secondary.length ? fields.secondary : [['Record Type', typeLabel]])}</div>

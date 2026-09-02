@@ -1035,7 +1035,7 @@ display: flex;
 align-items: center;
 gap: 10px;
 margin-bottom: 24px;
-color: #334155;
+color: #000000;
 font-size: 15px;
 font-weight: 900;
 letter-spacing: .01em;
@@ -1056,12 +1056,18 @@ min-width: 0;
 }
 .detail-field-label {
 margin-bottom: 6px;
-color: #64748b;
+color: #000000;
 font-size: 11px;
-font-weight: 800;
+font-weight: 900;
 text-transform: uppercase;
 letter-spacing: .04em;
 }
+.pr-reviewer-name {
+font-weight: 900;
+}
+.pr-reviewer-approved { color: #15803d !important; }
+.pr-reviewer-pending { color: #b45309 !important; }
+.pr-reviewer-rejected { color: #b91c1c !important; }
 .detail-field-value {
 min-width: 0;
 color: #1e293b;
