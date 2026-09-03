@@ -245,12 +245,23 @@ async function getGroupDirectMembers(org, groupDescriptor, authHeader) {
   return result?.value || [];
 }
 
-async function expandGroupUsers(org, groupDescriptor, authHeader, descriptorCache, visited = new Set(), depth = 0) {
+async function expandGroupUsers(
+  org,
+  groupDescriptor,
+  authHeader,
+  descriptorCache,
+  visited = new Set(),
+  depth = 0,
+  relationshipMap = null,
+  effectiveGroupUsers = null
+) {
   if (!groupDescriptor || visited.has(groupDescriptor) || depth > 5) return [];
   visited.add(groupDescriptor);
 
   const members = await getGroupDirectMembers(org, groupDescriptor, authHeader);
   const users = [];
+  const directUsers = [];
+  const nestedGroups = [];
 
   for (const member of members) {
     const descriptor = member?.memberDescriptor;
@@ -265,21 +276,41 @@ async function expandGroupUsers(org, groupDescriptor, authHeader, descriptorCach
     if (!identity) continue;
 
     if (identity.subjectKind === 'group') {
+      nestedGroups.push({
+        descriptor,
+        name: identity.name || 'Unnamed Group'
+      });
+
       const nestedUsers = await expandGroupUsers(
         org,
         descriptor,
         authHeader,
         descriptorCache,
         visited,
-        depth + 1
+        depth + 1,
+        relationshipMap,
+        effectiveGroupUsers
       );
       users.push(...nestedUsers);
     } else {
+      directUsers.push(identity);
       users.push(identity);
     }
   }
 
-  return users;
+  if (relationshipMap) {
+    relationshipMap.set(groupDescriptor, {
+      directUsers: uniqueAccessUsers(directUsers),
+      nestedGroups
+    });
+  }
+
+  const uniqueUsers = uniqueAccessUsers(users);
+  if (effectiveGroupUsers) {
+    effectiveGroupUsers.set(groupDescriptor, uniqueUsers);
+  }
+
+  return uniqueUsers;
 }
 
 function uniqueAccessUsers(users) {
@@ -343,6 +374,17 @@ async function fetchProjectLevelAccess(context, org, project, authHeader) {
   const rows = [];
   const groupCounts = {};
   const groupUserSets = new Map();
+  const groupRelationshipMap = new Map();
+  const effectiveGroupUsers = new Map();
+  const groupNameByDescriptor = new Map();
+
+  for (const group of context.groups) {
+    groupNameByDescriptor.set(
+      group.descriptor,
+      String(group.displayName || group.principalName || 'Unnamed Group')
+      .replace(new RegExp(`^\\[${String(project).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]\\\\`), '')
+    );
+  }
 
   for (const group of context.groups) {
     const groupName = String(group.displayName || group.principalName || 'Unnamed Group')
@@ -350,7 +392,16 @@ async function fetchProjectLevelAccess(context, org, project, authHeader) {
 
     try {
       const users = uniqueAccessUsers(
-        await expandGroupUsers(org, group.descriptor, authHeader, descriptorCache)
+        await expandGroupUsers(
+          org,
+          group.descriptor,
+          authHeader,
+          descriptorCache,
+          new Set(),
+          0,
+          groupRelationshipMap,
+          effectiveGroupUsers
+        )
       );
 
       groupUserSets.set(group.descriptor, users);
@@ -394,7 +445,21 @@ async function fetchProjectLevelAccess(context, org, project, authHeader) {
     groupCounts,
     totalTeams: context.teams.length,
     totalGroups: context.groups.length,
-    totalMembers: uniqueMembers.length
+    totalMembers: uniqueMembers.length,
+    groupHierarchy: context.groups.map(group => ({
+      descriptor: group.descriptor,
+      name: groupNameByDescriptor.get(group.descriptor) || group.displayName || group.principalName || 'Unnamed Group',
+      directUsers: (groupRelationshipMap.get(group.descriptor)?.directUsers || []).map(user => ({
+        name: user.name || 'Unknown',
+        email: user.email || 'N/A',
+        descriptor: user.descriptor || ''
+      })),
+      nestedGroups: (groupRelationshipMap.get(group.descriptor)?.nestedGroups || []).map(nested => ({
+        descriptor: nested.descriptor,
+        name: groupNameByDescriptor.get(nested.descriptor) || nested.name || 'Unnamed Group'
+      })),
+      effectiveUserCount: (effectiveGroupUsers.get(group.descriptor) || groupUserSets.get(group.descriptor) || []).length
+    }))
   };
 }
 
@@ -624,6 +689,7 @@ async function fetchUserAccessData() {
     rawStore.accessIndex = 0;
     rawStore.accessMode = userQuery ? 'user' : 'project';
     rawStore.accessSummary = result;
+    renderGroupHierarchy();
 
     // KPI 1: active scope
     document.getElementById('kpi-1-label').textContent = 'Active Scope';
@@ -704,6 +770,73 @@ async function fetchUserAccessData() {
       isAzDoCancellation(err) ? 'info' : 'error'
     );
   }
+}
+
+function renderGroupHierarchy() {
+  const container = document.getElementById('groupHierarchyContainer');
+  if (!container) return;
+
+  const hierarchy = rawStore.accessSummary?.groupHierarchy || [];
+  if (!hierarchy.length) {
+    setSafeInnerHTML(
+      container,
+      '<div class="p-5 text-sm text-slate-500">No project security-group relationships were found.</div>'
+    );
+    return;
+  }
+
+  const byDescriptor = new Map(hierarchy.map(group => [group.descriptor, group]));
+  const roots = hierarchy.filter(group =>
+    !hierarchy.some(parent => (parent.nestedGroups || []).some(nested => nested.descriptor === group.descriptor))
+  );
+  const groupsToRender = roots.length ? roots : hierarchy;
+
+  const renderGroup = (group, path = new Set()) => {
+    if (!group || path.has(group.descriptor)) return '';
+    const nextPath = new Set(path);
+    nextPath.add(group.descriptor);
+
+    const directUsers = group.directUsers || [];
+    const nestedGroups = group.nestedGroups || [];
+    const nestedHtml = nestedGroups.map(nested => {
+      const child = byDescriptor.get(nested.descriptor) || {
+        descriptor: nested.descriptor,
+        name: nested.name || 'Unnamed Group',
+        directUsers: [],
+        nestedGroups: [],
+        effectiveUserCount: 0
+      };
+      return renderGroup(child, nextPath);
+    }).join('');
+
+    return `
+      <details class="group-hierarchy-item" ${path.size === 0 ? 'open' : ''}>
+        <summary class="group-hierarchy-summary">
+          <span class="group-hierarchy-name">${escapeHtml(group.name || 'Unnamed Group')}</span>
+          <span class="group-hierarchy-meta">${group.effectiveUserCount || 0} effective user${(group.effectiveUserCount || 0) === 1 ? '' : 's'}</span>
+        </summary>
+        <div class="group-hierarchy-body">
+          ${nestedGroups.length ? `
+            <div class="group-hierarchy-label">Nested Groups (${nestedGroups.length})</div>
+            <div class="group-hierarchy-children">${nestedHtml}</div>
+          ` : ''}
+          ${directUsers.length ? `
+            <div class="group-hierarchy-label">Direct Users (${directUsers.length})</div>
+            <div class="group-hierarchy-users">
+              ${directUsers.map(user => `
+                <div class="group-hierarchy-user">
+                  <span class="group-hierarchy-user-name">${escapeHtml(user.name || 'Unknown')}</span>
+                  <span class="group-hierarchy-user-email">${escapeHtml(user.email || 'N/A')}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+          ${!nestedGroups.length && !directUsers.length ? '<div class="text-xs text-slate-400">No direct members returned.</div>' : ''}
+        </div>
+      </details>`;
+  };
+
+  setSafeInnerHTML(container, groupsToRender.map(group => renderGroup(group)).join(''));
 }
 
 function renderAccessTableBatch(append = false) {

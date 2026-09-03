@@ -748,7 +748,50 @@ if (!accessData.length) {
 if (typeof showModal === 'function') showModal('No access and permission records are available to export.');
 return;
 }
-exportToExcelFile({ "Access & Permissions": accessData }, "AzureDevOps_Security_Access");
+
+const hierarchyData = [];
+const hierarchy = rawStore.accessSummary?.groupHierarchy || [];
+const byDescriptor = new Map(hierarchy.map(group => [group.descriptor, group]));
+
+const addHierarchyRows = (group, parentPath = '', visited = new Set()) => {
+if (!group || visited.has(group.descriptor)) return;
+const nextVisited = new Set(visited);
+nextVisited.add(group.descriptor);
+const groupPath = parentPath ? `${parentPath} > ${group.name}` : group.name;
+
+(group.directUsers || []).forEach(user => {
+  hierarchyData.push({
+    "Parent Group": group.name,
+    "Member Type": "Direct User",
+    "Member Name": user.name || 'Unknown',
+    "User Principal / Email": user.email || 'N/A',
+    "Membership Path": groupPath,
+    "Effective User Count": group.effectiveUserCount || 0
+  });
+});
+
+(group.nestedGroups || []).forEach(nested => {
+  const child = byDescriptor.get(nested.descriptor);
+  hierarchyData.push({
+    "Parent Group": group.name,
+    "Member Type": "Nested Group",
+    "Member Name": nested.name || child?.name || 'Unnamed Group',
+    "User Principal / Email": '',
+    "Membership Path": groupPath,
+    "Effective User Count": group.effectiveUserCount || 0
+  });
+  if (child) addHierarchyRows(child, groupPath, nextVisited);
+});
+};
+
+const nestedDescriptors = new Set(
+  hierarchy.flatMap(group => (group.nestedGroups || []).map(nested => nested.descriptor))
+);
+hierarchy.filter(group => !nestedDescriptors.has(group.descriptor)).forEach(group => addHierarchyRows(group));
+
+const sheets = { "Access & Permissions": accessData };
+if (hierarchyData.length) sheets["Group Hierarchy"] = hierarchyData;
+exportToExcelFile(sheets, "AzureDevOps_Security_Access");
 }
 
 function changeChartType(type) {
