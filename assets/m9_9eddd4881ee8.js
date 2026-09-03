@@ -107,16 +107,15 @@ rawStore.userEntitlements = scopedRows;
 rawStore.userDirectoryIndex = 0;
 const totalUsers = scopedRows.length;
 const activeUsers = scopedRows.filter(u => String(u.status).toLowerCase() === 'active').length;
-const basicStakeholder = scopedRows.filter(u => /basic|stakeholder|express|professional/i.test(u.accessLevel)).length;
-const projectAccessCount = project
-? scopedRows.length
-: scopedRows.reduce((sum, u) => sum + u.projectCount, 0);
+const basicUsers = scopedRows.filter(u => String(u.accessLevel || '').trim().toLowerCase() === 'basic').length;
+const stakeholderUsers = scopedRows.filter(u => String(u.accessLevel || '').trim().toLowerCase() === 'stakeholder').length;
+const otherUsers = Math.max(0, totalUsers - basicUsers - stakeholderUsers);
 const kpis = [
 ['Total Users', totalUsers, 'text-2xl font-extrabold text-slate-800 mt-1 truncate'],
 ['Active Users', activeUsers, 'text-2xl font-extrabold text-emerald-600 mt-1'],
-['Licensed Users', basicStakeholder, 'text-2xl font-extrabold text-blue-600 mt-1'],
-[project ? 'Project Users' : 'Project Access', projectAccessCount, 'text-2xl font-extrabold text-indigo-600 mt-1'],
-['Scope', project || 'Organization', 'text-2xl font-extrabold text-slate-800 mt-1 truncate']
+['Basic Users', basicUsers, 'text-2xl font-extrabold text-blue-600 mt-1'],
+['Stakeholder Users', stakeholderUsers, 'text-2xl font-extrabold text-amber-600 mt-1'],
+['Other Users', otherUsers, 'text-2xl font-extrabold text-indigo-600 mt-1']
 ];
 kpis.forEach((item, i) => {
 const label = document.getElementById(`kpi-${i + 1}-label`);
